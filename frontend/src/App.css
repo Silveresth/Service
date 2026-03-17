@@ -1,0 +1,4 @@
+/* ✅ FIX: Suppression de text-align: center qui cassait les labels de formulaires */
+.App {
+  /* text-align: center; ← SUPPRIMÉ */
+}
