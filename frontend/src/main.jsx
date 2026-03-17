@@ -4,11 +4,10 @@ import { AuthProvider } from './context/AuthContext';
 import './index.css';
 import App from './App';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>
       <App />
     </AuthProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );
