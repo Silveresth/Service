@@ -1,0 +1,23 @@
+# Python 
+venv/ 
+env/ 
+__pycache__/ 
+*.pyc 
+# Django 
+*.sqlite3 
+media/ 
+staticfiles/ 
+# Env 
+.env 
+.env.local 
+# Node 
+node_modules/ 
+npm-debug.log* 
+# React build 
+frontend/build/ 
+# IDE 
+.vscode/ 
+.idea/ 
+# OS 
+.DS_Store 
+Thumbs.db 
