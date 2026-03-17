@@ -38,19 +38,17 @@ import AdminAllReservations from './pages/AdminAllReservations';
 import AdminAllComptes from './pages/AdminAllComptes';
 import AdminEvaluations from './pages/AdminEvaluations';
 
-import AppQueryProvider from './lib/QueryClientProvider';
+import './App.css';
 import './styles/global.css';
 import './styles/admin.css';
 
 function App() {
   return (
-    <AppQueryProvider>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <div className="App">
-          <Navbar />
-          <main>
-            <Routes>
-
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <div className="App">
+        <Navbar />
+        <main>
+          <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/services" element={<Services />} />
             <Route path="/services/:id" element={<Servicedetail />} />
@@ -91,13 +89,12 @@ function App() {
 
             {/* Aliases pour les anciens liens */}
             <Route path="/inscription-client" element={<Register />} />
-            <Route path="/inscription-prestataire" element={<RegisterPrestataire />} />
+<Route path="/inscription-prestataire" element={<RegisterPrestataire />} />
           </Routes>
         </main>
         <Footer />
       </div>
     </BrowserRouter>
-    </AppQueryProvider>
   );
 }
 

@@ -29,15 +29,13 @@ export default function FormField({
 
   let input;
 
-  const inputClass = error ? 'reg-input has-error' : 'reg-input';
-
   switch (type) {
     case 'textarea':
-      input = <textarea {...inputProps} rows={rows} className={inputClass} />;
+      input = <textarea {...inputProps} rows={rows} className="form-control-custom" />;
       break;
     case 'select':
       input = (
-        <select {...inputProps} className={inputClass}>
+        <select {...inputProps} className="form-control-custom">
           <option value="">{placeholder || 'Sélectionner...'}</option>
           {options.map(opt => (
             <option key={opt.id || opt.value} value={opt.id || opt.value}>
@@ -52,23 +50,22 @@ export default function FormField({
     case 'password':
     case 'date':
     case 'datetime-local':
-      input = <input {...inputProps} type={type} className={inputClass} />;
+      input = <input {...inputProps} type={type} className="form-control-custom" />;
       break;
     default:
-      input = <input {...inputProps} type="text" className={inputClass} />;
+      input = <input {...inputProps} type="text" className="form-control-custom" />;
   }
 
   return (
     <div className="form-group-custom" style={{ marginBottom: '15px' }}>
       {label && (
-        <label className="reg-label">
-          <i className="bi bi-circle-fill" style={{opacity: 0, marginRight: '5px'}}></i>
+        <label className="form-label-custom">
           {label}
           {required && <span style={{ color: 'red' }}> *</span>}
         </label>
       )}
       {input}
-{error && <small className="reg-error-msg"><i className="bi bi-exclamation-circle"></i> {String(error)}</small>}
+{error && <small className="text-danger" style={{ display: 'block', marginTop: '5px' }}>{String(error)}</small>}
     </div>
   );
 }
