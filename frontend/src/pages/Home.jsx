@@ -3,12 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
 const CATEGORIES = [
-  { label: 'Plomberie', icon: 'droplet', q: 'plomberie' },
-  { label: 'Électricité', icon: 'lightning-charge', q: 'electricite' },
-  { label: 'Ménage', icon: 'house', q: 'menage' },
-  { label: 'Jardinage', icon: 'flower1', q: 'jardinage' },
-  { label: 'Peinture', icon: 'palette', q: 'peinture' },
-  { label: 'Déménagement', icon: 'truck', q: 'deplacement' },
+  { label: 'Plomberie', icon: 'droplet-fill', color: '#0ea5e9', q: 'plomberie' },
+  { label: 'Électricité', icon: 'lightning-charge-fill', color: '#f59e0b', q: 'electricite' },
+  { label: 'Ménage', icon: 'house-fill', color: '#10b981', q: 'menage' },
+  { label: 'Jardinage', icon: 'flower1', color: '#ec4899', q: 'jardinage' },
+  { label: 'Peinture', icon: 'palette-fill', color: '#8b5cf6', q: 'peinture' },
+  { label: 'Déménagement', icon: 'truck', color: '#6366f1', q: 'deplacement' },
 ];
 
 export default function Home() {
@@ -28,7 +28,7 @@ export default function Home() {
   return (
     <>
       {/* ── Hero ── */}
-      <section style={{
+      <section className="hero-section" style={{
         background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
         padding: '80px 0 100px', position: 'relative', overflow: 'hidden'
       }}>
@@ -36,36 +36,30 @@ export default function Home() {
         <div style={{ position: 'absolute', bottom: -120, left: -60, width: 300, height: 300, borderRadius: '50%', background: 'rgba(0,168,89,0.06)', pointerEvents: 'none' }}></div>
 
         <div className="container" style={{ position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-            <div style={{ flex: '0 0 60%', maxWidth: '60%', padding: '0 12px' }}>
-              <h1 style={{ color: 'white', fontSize: '2.8rem', fontWeight: 800, lineHeight: 1.2, marginBottom: 20 }}>
+          <div className="row" style={{ alignItems: 'center' }}>
+            <div className="col-lg-8 col-12" style={{ padding: '0 12px' }}>
+              <h1 className="hero-title" style={{ color: 'white', fontWeight: 800, lineHeight: 1.2, marginBottom: 20 }}>
                 Trouvez le meilleur prestataire pour vos services
               </h1>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.15rem', marginBottom: 32 }}>
+              <p className="hero-subtitle" style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 32 }}>
                 Des professionnels qualifiés près de chez vous. Qualité garantie, paiement sécurisé.
               </p>
 
               {/* Search */}
-              <form onSubmit={handleSearch} style={{
-                display: 'flex', background: 'white', borderRadius: 12, overflow: 'hidden',
-                boxShadow: '0 8px 30px rgba(0,0,0,0.2)', marginBottom: 32
-              }}>
+              <form onSubmit={handleSearch} className="hero-search">
                 <input
                   type="text" value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Rechercher un service (plomberie, électricité, ménage...)"
                   style={{ flex: 1, padding: '16px 20px', border: 'none', outline: 'none', fontSize: '1rem', fontFamily: 'inherit' }}
                 />
-                <button type="submit" style={{
-                  background: 'linear-gradient(135deg,#00a859,#007a40)', color: 'white',
-                  border: 'none', padding: '16px 24px', cursor: 'pointer', fontSize: '0.95rem',
-                  fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0
-                }}>
-                  <i className="bi bi-search"></i> Rechercher
+                <button type="submit" className="hero-search-btn">
+                  <i className="bi bi-search d-sm-none"></i>
+                  <span className="d-none d-sm-inline">Rechercher</span>
                 </button>
               </form>
 
               {/* Stats */}
-              <div style={{ display: 'flex', gap: 32 }}>
+              <div className="hero-stats">
                 {[['500+', 'Prestataires'], ['1000+', 'Services'], ['98%', 'Satisfaction']].map(([num, label]) => (
                   <div key={label}>
                     <span style={{ color: 'white', fontWeight: 800, fontSize: '1.3rem' }}>{num}</span>
@@ -75,7 +69,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div style={{ flex: '0 0 40%', maxWidth: '40%', padding: '0 12px', textAlign: 'right' }}>
+            <div className="col-lg-4 hide-mobile" style={{ padding: '0 12px', textAlign: 'right' }}>
               <i className="bi bi-briefcase-fill" style={{ fontSize: '14rem', color: 'rgba(255,255,255,0.07)' }}></i>
             </div>
           </div>
@@ -89,13 +83,18 @@ export default function Home() {
             <h2 style={{ fontWeight: 800 }}><i className="bi bi-grid-3x3-gap text-primary me-2"></i>Catégories populaires</h2>
             <p className="text-muted">Choisissez parmi nos catégories de services</p>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 0, margin: '0 -12px' }}>
+<div className="home-cat-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: 0, margin: '0 -12px' }}>
             {CATEGORIES.map(cat => (
-              <div key={cat.q} style={{ flex: '0 0 16.666%', maxWidth: '16.666%', padding: '0 12px 24px' }}>
+              <div key={cat.q} style={{ padding: '0 12px 24px' }}>
                 <Link to={`/services?q=${cat.q}`} style={{ textDecoration: 'none' }}>
                   <div className="card-custom" style={{ textAlign: 'center', padding: '28px 16px', cursor: 'pointer' }}>
-                    <div className="icon-box primary" style={{ margin: '0 auto 14px', width: 52, height: 52, fontSize: '1.4rem' }}>
-                      <i className={`bi bi-${cat.icon}`}></i>
+                    <div style={{
+                      margin: '0 auto 14px', width: 56, height: 56, borderRadius: 14,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: `linear-gradient(135deg, ${cat.color}22, ${cat.color}44)`,
+                      border: `2px solid ${cat.color}33`
+                    }}>
+                      <i className={`bi bi-${cat.icon}`} style={{ fontSize: '1.5rem', color: cat.color }}></i>
                     </div>
                     <h6 style={{ fontWeight: 700, color: 'var(--text-dark)', margin: 0 }}>{cat.label}</h6>
                   </div>
@@ -115,9 +114,9 @@ export default function Home() {
           </div>
           {services.length > 0 ? (
             <>
-              <div style={{ display: 'flex', flexWrap: 'wrap', margin: '0 -12px' }}>
+              <div className="home-service-grid" style={{ display: 'flex', flexWrap: 'wrap', margin: '0 -12px' }}>
                 {services.map(service => (
-                  <div key={service.id} style={{ flex: '0 0 33.333%', maxWidth: '33.333%', padding: '0 12px 24px' }}>
+                  <div key={service.id} style={{ padding: '0 12px 24px' }}>
                     <div className="card-custom service-card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                       <div className="service-card-img">
                         <i className="bi bi-briefcase" style={{ fontSize: '3.5rem', color: 'var(--primary-color)', opacity: 0.6 }}></i>
@@ -143,8 +142,8 @@ export default function Home() {
                 ))}
               </div>
               <div style={{ textAlign: 'center', marginTop: 40 }}>
-                <Link to="/services" className="btn-secondary-custom">
-                  <i className="bi bi-arrow-right"></i> Voir tous les services
+                <Link to="/services" className="btn-secondary-custom me-3">
+                  <i className="bi bi-grid-3x3-gap me-1"></i> Services
                 </Link>
               </div>
             </>
@@ -164,14 +163,20 @@ export default function Home() {
             <h2 style={{ fontWeight: 800 }}><i className="bi bi-question-circle text-primary me-2"></i>Comment ça marche</h2>
             <p className="text-muted">Trouvez et réservez un service en 3 étapes simples</p>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', margin: '0 -12px' }}>
+<div className="home-step-grid" style={{ display: 'flex', flexWrap: 'wrap', margin: '0 -12px' }}>
             {[
-              { icon: 'search', title: '1. Recherchez', desc: "Parcourez notre catalogue de services et trouvez celui qu'il vous faut." },
-              { icon: 'calendar-check', title: '2. Réservez', desc: 'Choisissez votre prestataire et réservez directement en ligne.' },
-              { icon: 'check-circle', title: '3. Profitez', desc: 'Recevez le service et évaluez votre expérience.' },
-            ].map(step => (
-              <div key={step.title} style={{ flex: '0 0 33.333%', maxWidth: '33.333%', padding: '0 12px 24px', textAlign: 'center' }}>
-                <div className="icon-box accent" style={{ margin: '0 auto 24px', width: 80, height: 80, fontSize: '2rem' }}>
+              { icon: 'magnifying-glass', color: '#0284c7', title: '1. Recherchez', desc: "Parcourez notre catalogue de services et trouvez celui qu'il vous faut." },
+              { icon: 'calendar-check', color: '#10b981', title: '2. Réservez', desc: 'Choisissez votre prestataire et réservez directement en ligne.' },
+              { icon: 'check-circle', color: '#8b5cf6', title: '3. Profitez', desc: 'Recevez le service et évaluez votre expérience.' },
+            ].map((step, idx) => (
+              <div key={step.title} style={{ padding: '0 12px 24px', textAlign: 'center' }}>
+                <div style={{
+                  margin: '0 auto 24px', width: 80, height: 80, borderRadius: 20,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: `linear-gradient(135deg, ${step.color}, ${step.color}cc)`,
+                  boxShadow: `0 8px 24px ${step.color}44`,
+                  fontSize: '2rem', color: 'white'
+                }}>
                   <i className={`bi bi-${step.icon}`}></i>
                 </div>
                 <h4 style={{ fontWeight: 800, marginBottom: 12 }}>{step.title}</h4>

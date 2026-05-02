@@ -1,10 +1,14 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api/'
+  baseURL: process.env.REACT_APP_API_URL
+    ? `${process.env.REACT_APP_API_URL}/api/`
+    : '/api/',
+  headers: {
+    // 'ngrok-skip-browser-warning': 'true', /* Disabled for local dev */
+  }
 });
 
-// ✅ FIX: Ajout du token JWT dans chaque requête
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -13,7 +17,6 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// ✅ FIX: Déconnexion automatique si le token expire (401)
 api.interceptors.response.use(
   response => response,
   error => {
