@@ -14,10 +14,15 @@ export default function Footer() {
               Votre marketplace de confiance pour trouver les meilleurs prestataires
               de services au Togo. Qualité, fiabilité et satisfaction garantis.
             </p>
-            <div style={{ display: 'flex', gap: 12 }}>
-              {['facebook', 'instagram', 'linkedin', 'twitter-x'].map(icon => (
-                <a key={icon} href="#" style={{ fontSize: '1.2rem' }}>
-                  <i className={`bi bi-${icon}`}></i>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[
+                { icon: 'facebook', color: '#1877f2' },
+                { icon: 'instagram', color: '#e4405f' },
+                { icon: 'linkedin', color: '#0a66c2' },
+                { icon: 'twitter-x', color: '#000000' }
+              ].map(social => (
+                <a key={social.icon} href="#" className="social-icon" style={{ background: 'rgba(255,255,255,0.1)', color: social.color }}>
+                  <i className={`bi bi-${social.icon}`}></i>
                 </a>
               ))}
             </div>
@@ -34,7 +39,7 @@ export default function Footer() {
                 ['/register', 'Inscription'],
               ].map(([to, label]) => (
                 <li key={to}>
-                  <Link to={to}>{label}</Link>
+                  <Link to={to}><i className="bi bi-chevron-right" style={{ fontSize: '0.7rem', marginRight: 6 }}></i>{label}</Link>
                 </li>
               ))}
             </ul>
@@ -45,7 +50,7 @@ export default function Footer() {
             <h5>Nos services</h5>
             <ul>
               {['Plomberie', 'Électricité', 'Ménage', 'Jardinage', 'Dépannage'].map(s => (
-                <li key={s}><a href="#">{s}</a></li>
+                <li key={s}><a href="#"><i className="bi bi-chevron-right" style={{ fontSize: '0.7rem', marginRight: 6 }}></i>{s}</a></li>
               ))}
             </ul>
           </div>
@@ -55,13 +60,13 @@ export default function Footer() {
             <h5>Contact</h5>
             <ul>
               {[
-                ['geo-alt', 'Lomé, Togo'],
-                ['telephone', '+228 90 00 00 00'],
-                ['envelope', 'contact@servicemarket.tg'],
-                ['whatsapp', '+228 90 00 00 00'],
-              ].map(([icon, text]) => (
-                <li key={icon} style={{ color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <i className={`bi bi-${icon}`} style={{ flexShrink: 0 }}></i> {text}
+                { icon: 'geo-alt-fill', text: 'Lomé, Togo', color: '#ef4444' },
+                { icon: 'telephone-fill', text: '+228 90 00 00 00', color: '#10b981' },
+                { icon: 'envelope-fill', text: 'contact@servicemarket.tg', color: '#0284c7' },
+                { icon: 'whatsapp', text: '+228 90 00 00 00', color: '#25D366' },
+              ].map(item => (
+                <li key={item.icon} style={{ color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <i className={`bi bi-${item.icon}`} style={{ flexShrink: 0, color: item.color }}></i> {item.text}
                 </li>
               ))}
             </ul>
@@ -70,7 +75,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-bottom">
-          <p>© 2024 Service Market. Tous droits réservés. Créé avec <i className="bi bi-heart-fill" style={{ color: '#e74c3c' }}></i> au Togo</p>
+          <p>© 2024 Service Market. Tous droits réservés. Créé avec <i className="bi bi-heart-fill" style={{ color: '#e74c3c', margin: '0 4px' }}></i> au Togo</p>
         </div>
       </div>
     </footer>
