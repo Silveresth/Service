@@ -16,11 +16,16 @@ export default function Login() {
     try {
       const res = await api.post('/auth/login/', form);
       login(res.data);
-      navigate('/');
+      const type = res.data?.user?.type_compte;
+      const isAdmin = !!res.data?.user?.is_staff || type === 'admin';
+      if (isAdmin) navigate('/admin-dashboard');
+      else if (type === 'prestataire') navigate('/prestataire-dashboard');
+      else navigate('/services');
     } catch {
       setError("Nom d'utilisateur ou mot de passe incorrect.");
     } finally { setLoading(false); }
   };
+
 
   return (
     <div className="auth-container">

@@ -18,6 +18,17 @@ frontend/build/
 # IDE 
 .vscode/ 
 .idea/ 
+# Logs et temporaires
+logs/
+*.log
+*.rar
+*.zip
+backend.rar
+frontend.rar
+Lib/
+# Django migrations custom
+service/migrations/migration_fidelite.py
+
 # OS 
 .DS_Store 
 Thumbs.db 

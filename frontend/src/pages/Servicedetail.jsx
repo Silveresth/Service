@@ -27,7 +27,7 @@ function StarRating({ value, onChange, size = '1.5rem', readOnly = false }) {
 /* ─────────────────────────────────────────────
    Evaluation Form Modal
 ───────────────────────────────────────────── */
-function EvalForm({ serviceId, onClose, onSubmitted }) {
+function EvalForm({ reservationId, onClose, onSubmitted }) {
   const [note, setNote]       = useState(0);
   const [comm, setComm]       = useState('');
   const [submitting, setSub]  = useState(false);
@@ -35,13 +35,14 @@ function EvalForm({ serviceId, onClose, onSubmitted }) {
 
   const handleSubmit = async () => {
     if (!note) { setError('Veuillez sélectionner une note.'); return; }
+    if (!reservationId) { setError('Impossible de soumettre : aucune réservation éligible trouvée.'); return; }
     setSub(true); setError('');
     try {
-      await api.post('/evaluations/', { service: serviceId, note, commentaire: comm });
+      await api.post(`/reservations/${reservationId}/evaluer/`, { note, commentaire: comm });
       onSubmitted();
       onClose();
     } catch(e) {
-      setError(e.response?.data?.detail || 'Erreur lors de l\'envoi.');
+      setError(e.response?.data?.error || e.response?.data?.detail || 'Erreur lors de l\'envoi.');
     } finally { setSub(false); }
   };
 
@@ -99,8 +100,11 @@ function EvalForm({ serviceId, onClose, onSubmitted }) {
    Evaluation Card
 ───────────────────────────────────────────── */
 function EvalCard({ ev }) {
-  const initials = ev.client?.username?.[0]?.toUpperCase() || '?';
-  const date = new Date(ev.created_at || ev.date_creation || Date.now());
+  // EvaluationSerializer retourne client comme string (nom), pas comme objet
+  const clientNom = typeof ev.client === 'string' ? ev.client
+    : ((`${ev.client?.user?.first_name || ''} ${ev.client?.user?.last_name || ''}`.trim() || ev.client?.user?.username || ev.client?.username || 'Utilisateur'));
+  const initials = clientNom?.[0]?.toUpperCase() || '?';
+  const date = new Date(ev.date_eval || ev.created_at || Date.now());
   return (
     <div style={{ background:'white',border:'1.5px solid #f1f5f9',borderRadius:14,padding:'18px 20px',boxShadow:'0 2px 8px rgba(0,0,0,0.04)' }}>
       <div style={{ display:'flex',alignItems:'flex-start',gap:12,marginBottom:10 }}>
@@ -109,7 +113,7 @@ function EvalCard({ ev }) {
         </div>
         <div style={{ flex:1 }}>
           <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:3 }}>
-            <span style={{ fontWeight:700,fontSize:'0.9rem',color:'#1e293b' }}>{ev.client?.username || 'Utilisateur'}</span>
+            <span style={{ fontWeight:700,fontSize:'0.9rem',color:'#1e293b' }}>{clientNom}</span>
             <span style={{ fontSize:'0.75rem',color:'#94a3b8' }}>
               {date.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}
             </span>
@@ -140,17 +144,30 @@ export default function ServiceDetail() {
   const [loading,      setLoading]     = useState(true);
   const [showEvalForm, setShowEvalForm]= useState(false);
   const [activeTab,    setActiveTab]   = useState('description');
+  const [eligibleReservationId, setEligibleReservationId] = useState(null);
 
   const fetchData = () => {
-    Promise.all([
-      api.get(`/services/${id}/`),
-      api.get(`/evaluations/?service=${id}`).catch(() => ({ data: [] })),
-    ]).then(([sRes, eRes]) => {
-      setService(sRes.data);
-      // Supporte les réponses paginées { results: [...] } et les tableaux directs
-      const rawEvals = eRes.data?.results ?? eRes.data ?? [];
-      setEvaluations(Array.isArray(rawEvals) ? rawEvals : []);
-    }).catch(console.error).finally(() => setLoading(false));
+    const evalPromise = api.get(`/evaluations/?service=${id}`).catch(() => ({ data: [] }));
+    const servicePromise = api.get(`/services/${id}/`);
+    // Charger les réservations du client pour trouver celle éligible à l'évaluation
+    const reservationPromise = user
+      ? api.get('/reservations/').catch(() => ({ data: [] }))
+      : Promise.resolve({ data: [] });
+
+    Promise.all([servicePromise, evalPromise, reservationPromise])
+      .then(([sRes, eRes, rRes]) => {
+        setService(sRes.data);
+        const rawEvals = eRes.data?.results ?? eRes.data ?? [];
+        setEvaluations(Array.isArray(rawEvals) ? rawEvals : []);
+        // Trouver une réservation confirmée ou terminée pour ce service sans évaluation
+        const reservations = Array.isArray(rRes.data) ? rRes.data : (rRes.data?.results ?? []);
+        const eligible = reservations.find(r =>
+          (r.service?.id === parseInt(id) || r.service === parseInt(id)) &&
+          ['confirmee', 'terminee'].includes(r.statut) &&
+          !r.evaluation
+        );
+        setEligibleReservationId(eligible?.id || null);
+      }).catch(console.error).finally(() => setLoading(false));
   };
   useEffect(fetchData, [id]);
 
@@ -179,7 +196,7 @@ export default function ServiceDetail() {
 
   return (
     <div style={{ background:'#f8fafb', minHeight:'100vh' }}>
-      {showEvalForm && <EvalForm serviceId={id} onClose={()=>setShowEvalForm(false)} onSubmitted={fetchData} />}
+      {showEvalForm && <EvalForm reservationId={eligibleReservationId} onClose={()=>setShowEvalForm(false)} onSubmitted={fetchData} />}
 
       {/* ── Hero ── */}
       <div style={{ background:'linear-gradient(135deg,#0c2340 0%,#1e3a5f 50%,var(--primary-color) 100%)', paddingTop:40, paddingBottom:50, position:'relative', overflow:'hidden' }}>
@@ -242,7 +259,7 @@ export default function ServiceDetail() {
             {/* CTA block */}
             <div className="service-detail-cta" style={{ background:'white',borderRadius:16,padding:20,width:220,flexShrink:0,boxShadow:'0 8px 30px rgba(0,0,0,0.2)' }}>
               <div style={{ fontWeight:800,fontSize:'1.4rem',color:'var(--primary-color)',marginBottom:2 }}>{prix.toLocaleString()} Fcfa</div>
-              <div style={{ fontSize:'0.78rem',color:'#94a3b8',marginBottom:16 }}>+ 3% frais de service</div>
+              <div style={{ fontSize:'0.78rem',color:'#94a3b8',marginBottom:16 }}>3% de frais déduits du montant prestataire</div>
 
               {user ? (
                 service.disponibilite ? (
@@ -261,17 +278,17 @@ export default function ServiceDetail() {
                 </Link>
               )}
 
-              {user && user.type_compte === 'client' && (
+              {user && user.type_compte === 'client' && eligibleReservationId && (
                 <button onClick={() => setShowEvalForm(true)}
                   className="btn-secondary-custom" style={{ width:'100%',justifyContent:'center',padding:'10px',fontSize:'0.88rem' }}>
-                  <i className="bi bi-star me-2"></i>Évaluer
+                  <i className="bi bi-star me-2"></i>Évaluer ce service
                 </button>
               )}
 
               <div style={{ marginTop:14,padding:'10px 0',borderTop:'1px solid #f1f5f9' }}>
                 <div style={{ display:'flex',justifyContent:'space-between',fontSize:'0.8rem',color:'#94a3b8',marginBottom:6 }}>
                   <span>Total estimé</span>
-                  <strong style={{ color:'#1e293b' }}>{(prix*1.03).toLocaleString()} Fcfa</strong>
+                  <strong style={{ color:'#1e293b' }}>{prix.toLocaleString()} Fcfa</strong>
                 </div>
                 <div style={{ fontSize:'0.72rem',color:'#94a3b8',textAlign:'center' }}>
                   <i className="bi bi-shield-check me-1 text-success"></i>Paiement sécurisé PayGate
@@ -334,10 +351,10 @@ export default function ServiceDetail() {
                 <h4 style={{ fontWeight:700,color:'#0c2340',marginBottom:20 }}>À propos du prestataire</h4>
                 <div style={{ display:'flex',gap:20,alignItems:'flex-start',flexWrap:'wrap' }}>
                   <div style={{ width:70,height:70,borderRadius:'50%',background:'linear-gradient(135deg,var(--primary-color),#0369a1)',color:'white',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:'1.8rem',flexShrink:0 }}>
-                    {service.prestataire?.user?.username?.[0]?.toUpperCase()||'P'}
+                    {((service.prestataire?.user?.first_name?.[0] || service.prestataire?.user?.username?.[0] || 'P').toUpperCase())}
                   </div>
                   <div style={{ flex:1 }}>
-                    <h5 style={{ fontWeight:800,color:'#0c2340',marginBottom:4 }}>{service.prestataire?.user?.username}</h5>
+                    <h5 style={{ fontWeight:800,color:'#0c2340',marginBottom:4 }}>{(`${service.prestataire?.user?.first_name || ''} ${service.prestataire?.user?.last_name || ''}`.trim() || service.prestataire?.user?.username)}</h5>
                     {service.prestataire?.specialite && (
                       <span style={{ background:'#e0f2fe',color:'#0369a1',padding:'3px 12px',borderRadius:20,fontSize:'0.8rem',fontWeight:600 }}>
                         {service.prestataire.specialite}
@@ -397,7 +414,7 @@ export default function ServiceDetail() {
                   <h5 style={{ fontWeight:700,color:'#0c2340',margin:0 }}>
                     {evaluations.length===0 ? 'Aucun avis pour l\'instant' : 'Avis des clients'}
                   </h5>
-                  {user && user.type_compte === 'client' && (
+                  {user && user.type_compte === 'client' && eligibleReservationId && (
                     <button onClick={() => setShowEvalForm(true)} className="btn-primary-custom btn-sm-custom">
                       <i className="bi bi-star me-1"></i> Laisser un avis
                     </button>
@@ -436,7 +453,7 @@ export default function ServiceDetail() {
               ) : (
                 <div style={{ background:'#f8fafc',borderRadius:10,padding:12,textAlign:'center',color:'#94a3b8',fontSize:'0.85rem',marginBottom:10 }}>Indisponible actuellement</div>
               )}
-              {user && user.type_compte === 'client' && (
+              {user && user.type_compte === 'client' && eligibleReservationId && (
                 <button onClick={() => setShowEvalForm(true)} className="btn-secondary-custom" style={{ width:'100%',justifyContent:'center',padding:'10px' }}>
                   <i className="bi bi-star me-2"></i>Évaluer ce service
                 </button>

@@ -42,7 +42,7 @@ export default function MesServices() {
           <Link to="/ajouter-service" className="btn-primary-custom">
             <i className="bi bi-plus-circle"></i> Ajouter un service
           </Link>
-          <Link to="/dashboard" className="btn-outline-primary-custom">
+          <Link to="/prestataire-dashboard" className="btn-outline-primary-custom">
             <i className="bi bi-speedometer2"></i> Dashboard
           </Link>
         </div>
