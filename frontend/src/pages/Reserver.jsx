@@ -65,7 +65,8 @@ export default function Reserver() {
 
   const prix  = parseFloat(service.prix) || 0;
   const frais = Math.round(prix * 0.03);
-  const total = prix + frais;
+  const total = prix; // Le client paie le prix exact, les 3% sont déduits côté prestataire
+  const montantPrestataire = prix - frais;
 
   const creneauxBloques = selectedDate
     ? reservationsExistantes
@@ -210,7 +211,7 @@ export default function Reserver() {
                     {service.nom}
                   </h5>
                   <span className="text-muted" style={{ fontSize: '0.85rem' }}>
-                    <i className="bi bi-person me-1"></i>{service.prestataire?.user?.username}
+                    <i className="bi bi-person me-1"></i>{(`${service.prestataire?.user?.first_name || ''} ${service.prestataire?.user?.last_name || ''}`.trim() || service.prestataire?.user?.username)}
                     {service.categorie && <span className="badge-category ms-2">{service.categorie.nom}</span>}
                   </span>
                 </div>
@@ -227,7 +228,7 @@ export default function Reserver() {
                   <div style={{ background: 'white', border: '1px solid var(--border-color)', borderRadius: 10, padding: 14, marginTop: -8, marginBottom: 16 }}>
                     {[
                       ['Service', service.nom],
-                      ['Prestataire', service.prestataire?.user?.username],
+                      ['Prestataire', (`${service.prestataire?.user?.first_name || ''} ${service.prestataire?.user?.last_name || ''}`.trim() || service.prestataire?.user?.username)],
                       selectedDate && ['Date', formatDateFr(selectedDate)],
                       selectedHeure && ['Heure', selectedHeure],
                       lieu && ['Lieu', lieu],
@@ -242,10 +243,10 @@ export default function Reserver() {
                       <span className="text-muted">Prix</span><span>{prix} F</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span className="text-muted">Frais (3%)</span><span>{frais} F</span>
+                      <span className="text-muted">Frais plateforme (déduits)</span><span>{frais} F</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, marginTop: 4 }}>
-                      <span>Total</span><span style={{ color: 'var(--primary-color)' }}>{total} F</span>
+                      <span>Total à payer</span><span style={{ color: 'var(--primary-color)' }}>{total} F</span>
                     </div>
                   </div>
                 )}
@@ -408,7 +409,7 @@ export default function Reserver() {
                   <div style={{ background: '#f8fafc', borderRadius: 10, padding: 18, marginBottom: 20 }}>
                     {[
                       ['Service', service.nom],
-                      ['Prestataire', service.prestataire?.user?.username],
+                      ['Prestataire', (`${service.prestataire?.user?.first_name || ''} ${service.prestataire?.user?.last_name || ''}`.trim() || service.prestataire?.user?.username)],
                       ['Date', formatDateFr(selectedDate)],
                       ['Heure', selectedHeure],
                       ['Lieu', lieu],
@@ -425,7 +426,7 @@ export default function Reserver() {
                       <span style={{ fontWeight: 700, color: 'var(--primary-color)' }}>{prix} Fcfa</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.9rem' }}>
-                      <span className="text-muted">Frais (3%)</span><span>{frais} Fcfa</span>
+                      <span className="text-muted">Frais plateforme (déduits)</span><span>{frais} Fcfa</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
                       <span>Total estimé</span>
@@ -474,7 +475,7 @@ export default function Reserver() {
               </h5>
               {[
                 ['Service', service.nom],
-                ['Prestataire', service.prestataire?.user?.username],
+                ['Prestataire', (`${service.prestataire?.user?.first_name || ''} ${service.prestataire?.user?.last_name || ''}`.trim() || service.prestataire?.user?.username)],
                 ...(selectedDate ? [['Date', formatDateFr(selectedDate)]] : []),
                 ...(selectedHeure ? [['Heure', selectedHeure]] : []),
                 ...(lieu ? [['Lieu', lieu]] : []),
@@ -490,7 +491,7 @@ export default function Reserver() {
                 <span style={{ fontWeight: 700, color: 'var(--primary-color)' }}>{prix} Fcfa</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.88rem' }}>
-                <span className="text-muted">Frais (3%)</span><span>{frais} Fcfa</span>
+                <span className="text-muted">Frais plateforme (déduits)</span><span>{frais} Fcfa</span>
               </div>
               <hr />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>

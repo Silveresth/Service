@@ -196,7 +196,7 @@ export default function MonCompte() {
 
               <hr />
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                {user.type_compte === 'prestataire' && <Link to="/dashboard" className="btn-primary-custom" style={{ justifyContent:'center', padding:'12px' }}><i className="bi bi-speedometer2"></i> Mon Dashboard</Link>}
+                {user.type_compte === 'prestataire' && <Link to="/prestataire-dashboard" className="btn-primary-custom" style={{ justifyContent:'center', padding:'12px' }}><i className="bi bi-speedometer2"></i> Analytics Dashboard</Link>}
                 {user.type_compte === 'client' && <Link to="/mes-reservations" className="btn-primary-custom" style={{ justifyContent:'center', padding:'12px' }}><i className="bi bi-calendar-check"></i> Mes Réservations</Link>}
                 {(user.is_staff || user.type_compte === 'admin') && <Link to="/admin-dashboard" className="btn-primary-custom" style={{ justifyContent:'center', padding:'12px' }}><i className="bi bi-speedometer2"></i> Admin Dashboard</Link>}
                 <button onClick={handleLogout} className="btn-outline-danger-custom" style={{ justifyContent:'center', padding:'12px' }}>

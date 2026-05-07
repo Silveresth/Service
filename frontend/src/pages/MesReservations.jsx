@@ -59,6 +59,8 @@ export default function MesReservations() {
   const [payMethode, setPayMethode]     = useState('moov');
   const [paySubmitting, setPaySubmitting] = useState(false);
   const [payError, setPayError]         = useState('');
+  const [successModal, setSuccessModal] = useState(null); // { message, type }
+  const [errorPopup, setErrorPopup]     = useState('');
 
   useEffect(() => {
     api.get('/reservations/')
@@ -72,7 +74,7 @@ export default function MesReservations() {
       await api.delete(`/reservations/${id}/`);
       setReservations(prev => prev.filter(r => r.id !== id));
       setDeleteModal(null);
-    } catch { alert("Erreur lors de l'annulation"); }
+    } catch { setErrorPopup("Erreur lors de l'annulation de la réservation."); }
   };
 
   const handleUpdateStatus = async (id, statut) => {
@@ -80,7 +82,7 @@ export default function MesReservations() {
       await api.patch(`/reservations/${id}/`, { statut });
       setReservations(prev => prev.map(r => r.id === id ? { ...r, statut } : r));
     } catch (err) {
-      alert(err.response?.data?.error || 'Erreur lors de la mise à jour');
+      setErrorPopup(err.response?.data?.error || 'Erreur lors de la mise à jour du statut.');
     }
   };
 
@@ -100,10 +102,18 @@ export default function MesReservations() {
           r.id === reservation.id ? { ...r, statut: 'confirmee', paiement: { statut: 'confirme' } } : r
         ));
         setPayModal(null);
-        alert('Paiement confirmé ! Le chat est maintenant ouvert.');
+        setSuccessModal({
+          type: 'success',
+          message: '✅ Paiement confirmé !',
+          detail: 'Votre réservation est maintenant confirmée. Le chat avec le prestataire est ouvert.',
+        });
       } else {
-        alert('Notification envoyée. Validez le paiement sur votre téléphone.');
         setPayModal(null);
+        setSuccessModal({
+          type: 'info',
+          message: '📲 Notification envoyée',
+          detail: 'Validez le paiement sur votre téléphone pour confirmer la réservation.',
+        });
       }
     } catch (err) {
       setPayError(err.response?.data?.error || 'Erreur lors du paiement.');
@@ -360,7 +370,7 @@ export default function MesReservations() {
                         {r.paiement?.ussd_prestataire && (
                           <button
                             onClick={() => navigator.clipboard.writeText(r.paiement.ussd_prestataire)
-                              .then(() => alert('USSD copié !'))}
+                              .then(() => setSuccessModal({ type:'success', message:'✅ USSD copié !', detail:'Le code USSD a été copié dans le presse-papiers.' }))}
                             className="btn-primary-custom btn-sm-custom"
                             style={{ background: 'linear-gradient(135deg,#28a745,#1e7e34)' }}>
                             <i className="bi bi-copy"></i> Copier USSD
@@ -459,6 +469,46 @@ export default function MesReservations() {
                   : <><i className="bi bi-shield-check me-2"></i>Payer</>}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Popup succès / info ── */}
+      {successModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{ background:'white', borderRadius:20, width:'min(400px,92vw)', padding:32, boxShadow:'0 24px 60px rgba(0,0,0,0.3)', textAlign:'center', animation:'fadeIn 0.2s ease' }}>
+            <div style={{ fontSize:'3rem', marginBottom:12 }}>
+              {successModal.type === 'success' ? '✅' : '📲'}
+            </div>
+            <h4 style={{ fontWeight:800, color: successModal.type === 'success' ? '#166534' : '#1e40af', marginBottom:8 }}>
+              {successModal.message}
+            </h4>
+            <p style={{ color:'#6b7280', fontSize:'0.9rem', marginBottom:24 }}>{successModal.detail}</p>
+            <button
+              onClick={() => setSuccessModal(null)}
+              style={{ background: successModal.type === 'success' ? '#22c55e' : '#3b82f6',
+                color:'white', border:'none', borderRadius:12, padding:'12px 32px',
+                fontWeight:700, fontSize:'1rem', cursor:'pointer', width:'100%' }}>
+              OK, compris
+            </button>
+          </div>
+          <style>{`@keyframes fadeIn{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}`}</style>
+        </div>
+      )}
+
+      {/* ── Popup erreur ── */}
+      {errorPopup && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{ background:'white', borderRadius:20, width:'min(400px,92vw)', padding:32, boxShadow:'0 24px 60px rgba(0,0,0,0.3)', textAlign:'center' }}>
+            <div style={{ fontSize:'3rem', marginBottom:12 }}>❌</div>
+            <h4 style={{ fontWeight:800, color:'#991b1b', marginBottom:8 }}>Une erreur est survenue</h4>
+            <p style={{ color:'#6b7280', fontSize:'0.9rem', marginBottom:24 }}>{errorPopup}</p>
+            <button
+              onClick={() => setErrorPopup('')}
+              style={{ background:'#ef4444', color:'white', border:'none', borderRadius:12,
+                padding:'12px 32px', fontWeight:700, fontSize:'1rem', cursor:'pointer', width:'100%' }}>
+              Fermer
+            </button>
           </div>
         </div>
       )}

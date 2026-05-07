@@ -132,8 +132,8 @@ const handleDelete = async () => {
                     {reservations.map(r => (
                       <tr key={r.id}>
                         <td><strong>{r.service?.nom || '-'}</strong></td>
-                        <td>{r.service?.prestataire?.user?.username || '-'}</td>
-                        <td>{r.client?.user?.username || '-'}</td>
+                        <td>{(`${r.service?.prestataire?.user?.first_name || ''} ${r.service?.prestataire?.user?.last_name || ''}`.trim() || r.service?.prestataire?.user?.username) || '-'}</td>
+                        <td>{(`${r.client?.user?.first_name || ''} ${r.client?.user?.last_name || ''}`.trim() || r.client?.user?.username) || '-'}</td>
                         <td>{r.date_res ? new Date(r.date_res).toLocaleDateString('fr-FR') : '-'}</td>
                         <td><strong>{r.montant} F</strong></td>
                         <td>

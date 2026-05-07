@@ -38,7 +38,9 @@ function ChatFlottant({ user, onClose }) {
     if (wsRef.current) wsRef.current.close();
     const token = localStorage.getItem('token');
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const backendWs = process.env.REACT_APP_BACKEND_WS || `${proto}://${window.location.hostname}:8000`;
+    const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://192.168.100.19:8000/api/';
+    const backendHost = apiBaseUrl.replace('/api/', '').replace(/\/$/, '');
+    const backendWs = backendHost.replace(/^http/, proto);
     const ws = new WebSocket(`${backendWs}/ws/chat/${reservation.id}/?token=${token}`);
     ws.onopen = () => {
       console.log('[WS Chat] Connexion ouverte pour réservation', reservation.id);
@@ -211,7 +213,9 @@ export default function Navbar() {
     if (!user) return;
     const token = localStorage.getItem('token');
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const backendWs = process.env.REACT_APP_BACKEND_WS || `${proto}://${window.location.hostname}:8000`;
+    const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://192.168.100.19:8000/api/';
+    const backendHost = apiBaseUrl.replace('/api/', '').replace(/\/$/, '');
+    const backendWs = backendHost.replace(/^http/, proto);
     const ws = new WebSocket(`${backendWs}/ws/notifications/?token=${token}`);
 
     ws.onmessage = (e) => {
@@ -366,9 +370,12 @@ export default function Navbar() {
                     )}
 {user.type_compte === 'prestataire' && (
                       <>
-                        <li><Link className="dropdown-item" to="/dashboard" onClick={() => setDropdownOpen(false)}>
-                          <i className="bi bi-speedometer2"></i> Dashboard
+                        <li><Link className="dropdown-item" to="/prestataire-dashboard" onClick={() => setDropdownOpen(false)}>
+                          <i className="bi bi-speedometer2"></i> Analytics Dashboard
                         </Link></li>
+
+
+
                         <li><Link className="dropdown-item" to="/mes-reservations" onClick={() => setDropdownOpen(false)}>
                           <i className="bi bi-calendar-check"></i> Mes réservations
                         </Link></li>
@@ -379,14 +386,15 @@ export default function Navbar() {
                       <li><Link className="dropdown-item" to="/admin-dashboard" onClick={() => setDropdownOpen(false)}>
                         <i className="bi bi-shield-check"></i> Dashboard Admin
                       </Link></li>
-                      <li><Link className="dropdown-item" to="/admin/all-services" onClick={() => setDropdownOpen(false)}>
-                        <i className="bi bi-briefcase"></i> Tous Services
-                      </Link></li>
+
                       <li><Link className="dropdown-item" to="/admin/all-reservations" onClick={() => setDropdownOpen(false)}>
                         <i className="bi bi-calendar-check"></i> Toutes Réservations
                       </Link></li>
                       <li><Link className="dropdown-item" to="/admin/evaluations" onClick={() => setDropdownOpen(false)}>
                         <i className="bi bi-star"></i> Toutes Évaluations
+                      </Link></li>
+                      <li><Link className="dropdown-item" to="/admin/all-paiements" onClick={() => setDropdownOpen(false)}>
+                        <i className="bi bi-credit-card"></i> Tous les Paiements
                       </Link></li>
                       <li><Link className="dropdown-item" to="/admin/all-ateliers" onClick={() => setDropdownOpen(false)}>
                         <i className="bi bi-geo-alt"></i> Tous Ateliers

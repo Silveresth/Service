@@ -39,7 +39,7 @@ export function AjouterService() {
       await api.post('/services/', payload, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      navigate('/dashboard');
+      navigate('/prestataire-dashboard');
     }
     catch (err) { setErrors(err.response?.data || {}); }
     finally { setLoading(false); }
@@ -102,13 +102,14 @@ export function AjouterService() {
                     </div>
                   )}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <button type="submit" className="btn-primary-custom" disabled={loading}
                     style={{ justifyContent: 'center', padding: '14px', fontSize: '1rem' }}>
                     {loading ? 'Création...' : <><i className="bi bi-check-circle"></i> Créer le service</>}
                   </button>
-                  <Link to="/dashboard" className="btn-secondary-custom" style={{ justifyContent: 'center', padding: '12px' }}>Annuler</Link>
+                  <Link to="/prestataire-dashboard" className="btn-secondary-custom" style={{ justifyContent: 'center', padding: '12px' }}>Annuler</Link>
                 </div>
+
               </form>
             </div>
           </div>

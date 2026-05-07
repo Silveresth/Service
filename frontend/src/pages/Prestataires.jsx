@@ -27,146 +27,163 @@ export default function Prestataires() {
     return matchSearch && matchSpec;
   });
 
+  const getBadge = (p) => {
+    const count = p.services_count || 0;
+    if (count >= 10) return { label: 'Platine', color: '#6366f1', bg: '#ede9fe', icon: 'bi-gem' };
+    if (count >= 5)  return { label: 'Or',      color: '#d97706', bg: '#fef3c7', icon: 'bi-trophy-fill' };
+    return                  { label: 'Bronze',  color: '#92400e', bg: '#fde8d8', icon: 'bi-award-fill' };
+  };
+
   if (loading) return (
-    <div style={{ textAlign:'center', padding:80 }}>
-      <i className="bi bi-hourglass-split" style={{ fontSize:'3rem', color:'var(--primary-color)' }}></i>
-      <p className="mt-3 text-muted">Chargement...</p>
+    <div style={{ minHeight: '70vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+      <div style={{ width:44, height:44, borderRadius:'50%', border:'4px solid #e0f2fe', borderTopColor:'#0284c7', animation:'spin .8s linear infinite' }}></div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <p style={{ color:'#64748b', fontWeight:500 }}>Chargement des prestataires…</p>
     </div>
   );
 
   return (
-    <div className="py-5" style={{ background:'#f8fafb', minHeight:'70vh' }}>
-      <div className="container">
+    <>
+      <style>{`
+        .prest-hero{background:linear-gradient(135deg,#0c2340 0%,#0e3a6e 60%,#0284c7 100%);padding:48px 20px 56px;text-align:center;color:#fff;position:relative;overflow:hidden}
+        .prest-hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/svg%3E");pointer-events:none}
+        .prest-hero h1{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:800;margin-bottom:8px}
+        .prest-hero p{font-size:.95rem;opacity:.85;margin:0}
+        .prest-badge-count{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);border-radius:50px;padding:6px 16px;font-size:.85rem;font-weight:700;margin-top:12px}
+        .prest-search-wrap{max-width:520px;margin:-28px auto 0;position:relative;z-index:10;padding:0 16px}
+        .prest-search-inner{display:flex;align-items:center;background:#fff;border-radius:14px;box-shadow:0 8px 30px rgba(2,132,199,.18);border:1.5px solid #bae6fd;overflow:hidden}
+        .prest-search-inner input{flex:1;border:none;outline:none;padding:14px 16px;font-size:.95rem;background:transparent;color:#0c2340}
+        .prest-search-inner .ico{padding:0 14px;color:#0284c7;font-size:1.1rem}
+        .prest-search-inner button{background:none;border:none;cursor:pointer;padding:0 14px;color:#94a3b8;font-size:1rem}
+        .prest-chips{display:flex;gap:8px;overflow-x:auto;padding:24px 16px 0;max-width:960px;margin:0 auto;scrollbar-width:none}
+        .prest-chips::-webkit-scrollbar{display:none}
+        .prest-chip{flex-shrink:0;padding:7px 18px;border-radius:50px;border:1.5px solid #bae6fd;background:#fff;color:#0369a1;font-weight:600;font-size:.82rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+        .prest-chip.active,.prest-chip:hover{background:#0284c7;color:#fff;border-color:#0284c7}
+        .prest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:20px;max-width:1200px;margin:28px auto 0;padding:0 16px 56px}
+        @media(max-width:480px){.prest-grid{grid-template-columns:1fr}}
+        .prest-card{background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(2,132,199,.07);border:1.5px solid #e0f2fe;overflow:hidden;display:flex;flex-direction:column;transition:transform .22s,box-shadow .22s}
+        .prest-card:hover{transform:translateY(-5px);box-shadow:0 12px 35px rgba(2,132,199,.18);border-color:#7dd3fc}
+        .prest-card-top{background:linear-gradient(135deg,#e0f2fe,#f0f9ff);padding:28px 20px 20px;display:flex;flex-direction:column;align-items:center;position:relative}
+        .prest-avatar{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,#0284c7,#0369a1);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;border:4px solid #fff;box-shadow:0 6px 20px rgba(2,132,199,.25);overflow:hidden;position:relative}
+        .prest-avatar img{width:100%;height:100%;object-fit:cover}
+        .prest-online{position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#22c55e;border:3px solid #fff}
+        .prest-fidel-badge{position:absolute;top:12px;right:12px;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:50px;font-size:.72rem;font-weight:700}
+        .prest-name{font-size:1.05rem;font-weight:800;color:#0c2340;margin:12px 0 2px;text-align:center}
+        .prest-username{color:#64748b;font-size:.8rem;margin-bottom:8px}
+        .prest-verified{display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#166534;border-radius:50px;padding:3px 12px;font-size:.75rem;font-weight:600}
+        .prest-card-body{padding:16px 18px;flex:1;display:flex;flex-direction:column;gap:10px}
+        .prest-spec{display:inline-flex;align-items:center;gap:6px;background:#e0f2fe;color:#0369a1;border-radius:50px;padding:4px 14px;font-size:.8rem;font-weight:600;width:fit-content}
+        .prest-bio{color:#64748b;font-size:.83rem;line-height:1.6;flex:1}
+        .prest-stats{display:flex;gap:12px;padding:10px 0;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9}
+        .prest-stat{display:flex;flex-direction:column;align-items:center;flex:1}
+        .prest-stat-val{font-weight:800;font-size:.95rem;color:#0c2340}
+        .prest-stat-lbl{font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em}
+        .prest-card-footer{padding:14px 18px}
+        .btn-prest-wa{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#25D366;color:#fff;border-radius:12px;border:none;font-weight:700;font-size:.88rem;text-decoration:none;transition:all .2s;cursor:pointer}
+        .btn-prest-wa:hover{background:#1da350;color:#fff;transform:translateY(-1px)}
+        .prest-empty{text-align:center;padding:60px 20px;color:#94a3b8;grid-column:1/-1}
+        .prest-empty i{font-size:3.5rem;display:block;margin-bottom:12px;color:#cbd5e1}
+      `}</style>
 
-        {/* ── Header ── */}
-        <div className="page-header" style={{ marginBottom:28 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:8, flexWrap:'wrap' }}>
-            <div style={{
-              width:48, height:48, borderRadius:14,
-              background:'linear-gradient(135deg, var(--primary-color), #0369a1)',
-              display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0
-            }}>
-              <i className="bi bi-people-fill" style={{ fontSize:'1.4rem', color:'white' }}></i>
-            </div>
-            <div>
-              <h2 style={{ fontWeight:800, fontSize:'1.5rem', marginBottom:2 }}>Nos Prestataires</h2>
-              <p className="text-muted" style={{ fontSize:'0.88rem', margin:0 }}>
-                Découvrez <strong style={{ color:'var(--primary-color)' }}>{prestataires.length}</strong> professionnels qualifiés
-              </p>
-            </div>
-          </div>
+      <div className="prest-hero">
+        <h1><i className="bi bi-people-fill me-2"></i>Nos Prestataires</h1>
+        <p>Des professionnels qualifiés, vérifiés et disponibles</p>
+        <div className="prest-badge-count">
+          <i className="bi bi-patch-check-fill" style={{color:'#7dd3fc'}}></i>
+          {prestataires.length} prestataires vérifiés
         </div>
+      </div>
 
-        {/* ── Search + Filters ── */}
-        <div style={{ marginBottom:24 }}>
-          <div className="search-bar-modern mb-3">
-            <i className="bi bi-search search-icon"></i>
-            <input
-              type="text"
-              placeholder="Rechercher par nom, spécialité..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="search-clear-btn">
-                <i className="bi bi-x-lg"></i>
+      <div className="prest-search-wrap">
+        <div className="prest-search-inner">
+          <span className="ico"><i className="bi bi-search"></i></span>
+          <input
+            type="text"
+            placeholder="Rechercher par nom, spécialité…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && <button onClick={() => setSearch('')}><i className="bi bi-x-lg"></i></button>}
+        </div>
+      </div>
+
+      <div className="prest-chips">
+        {specialites.map(s => (
+          <button
+            key={s}
+            className={`prest-chip ${specialiteFiltre === s ? 'active' : ''}`}
+            onClick={() => setSpecialiteFiltre(s)}
+          >
+            {s === 'all' ? '✦ Tous' : s}
+          </button>
+        ))}
+      </div>
+
+      <div className="prest-grid">
+        {filtres.length === 0 ? (
+          <div className="prest-empty">
+            <i className="bi bi-people"></i>
+            <h5>Aucun prestataire trouvé</h5>
+            <p style={{fontSize:'.88rem'}}>Essayez d'autres termes ou réinitialisez les filtres.</p>
+            {(search || specialiteFiltre !== 'all') && (
+              <button onClick={() => { setSearch(''); setSpecialiteFiltre('all'); }}
+                style={{marginTop:12,padding:'9px 22px',background:'#0284c7',color:'#fff',border:'none',borderRadius:10,fontWeight:700,cursor:'pointer'}}>
+                Réinitialiser
               </button>
             )}
           </div>
-
-          {/* Filtres spécialités */}
-          <div style={{ display:'flex', gap:8, overflowX:'auto', paddingBottom:8, msOverflowStyle:'none', scrollbarWidth:'none' }}>
-            {specialites.map(s => (
-              <button key={s} onClick={() => setSpecialiteFiltre(s)} style={{
-                padding:'6px 14px', borderRadius:20, border:'1.5px solid', cursor:'pointer', fontSize:'0.82rem',
-                borderColor: specialiteFiltre===s ? 'var(--primary-color)' : '#e2e8f0',
-                background: specialiteFiltre===s ? 'var(--primary-color)' : 'white',
-                color: specialiteFiltre===s ? 'white' : '#64748b',
-                fontWeight: specialiteFiltre===s ? 700 : 500,
-                whiteSpace:'nowrap', flexShrink:0, transition:'all 0.15s',
-              }}>
-                {s === 'all' ? 'Toutes' : s}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Grid ── */}
-        {filtres.length > 0 ? (
-          <div className="prestataires-grid" style={{ display:'flex', flexWrap:'wrap', margin:'0 -12px' }}>
-            {filtres.map(p => (
-              <div key={p.user?.id} style={{ padding:'0 12px 24px', display:'flex' }}>
-                <div className="card-custom" style={{
-                  textAlign:'center', padding:'32px 24px', flex:1,
-                  display:'flex', flexDirection:'column', alignItems:'center'
-                }}>
-                  {/* Avatar avec photo-like */}
-                  <div style={{
-                    width:90, height:90, borderRadius:'50%',
-                    background:'linear-gradient(135deg, #e0f2fe, #bae6fd)',
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                    marginBottom:16, border:'3px solid white',
-                    boxShadow:'0 4px 15px rgba(2,132,199,0.2)', position:'relative'
-                  }}>
-                    <span style={{ fontWeight:800, fontSize:'2rem', color:'var(--primary-color)' }}>
-                      {p.user?.username?.[0]?.toUpperCase()}
-                    </span>
-                    <div style={{
-                      position:'absolute', bottom:2, right:2,
-                      width:22, height:22, borderRadius:'50%', background:'#22c55e',
-                      border:'3px solid white'
-                    }}></div>
+        ) : filtres.map(p => {
+          const badge = getBadge(p);
+          const nom = `${p.user?.first_name||''} ${p.user?.last_name||''}`.trim() || p.user?.username;
+          return (
+            <div key={p.user?.id} className="prest-card">
+              <div className="prest-card-top">
+                <div className="prest-fidel-badge" style={{background:badge.bg,color:badge.color}}>
+                  <i className={`bi ${badge.icon}`}></i> {badge.label}
+                </div>
+                <div className="prest-avatar">
+                  {p.photo
+                    ? <img src={p.photo} alt={nom}/>
+                    : <span>{(p.user?.username?.[0]||'?').toUpperCase()}</span>
+                  }
+                  <div className="prest-online"></div>
+                </div>
+                <div className="prest-name">{nom}</div>
+                <div className="prest-username">@{p.user?.username}</div>
+                <span className="prest-verified">
+                  <i className="bi bi-patch-check-fill" style={{color:'#22c55e'}}></i>
+                  Prestataire vérifié
+                </span>
+              </div>
+              <div className="prest-card-body">
+                {p.specialite && (
+                  <div><span className="prest-spec"><i className="bi bi-tools"></i>{p.specialite}</span></div>
+                )}
+                <p className="prest-bio">
+                  {p.bio || `Professionnel en ${p.specialite||'services'} avec expérience confirmée.`}
+                </p>
+                <div className="prest-stats">
+                  <div className="prest-stat">
+                    <span className="prest-stat-val">{p.services_count||0}</span>
+                    <span className="prest-stat-lbl">Services</span>
                   </div>
-
-                  <h5 style={{ fontWeight:800, marginBottom:4, fontSize:'1.05rem' }}>
-                    {p.user?.first_name} {p.user?.last_name}
-                  </h5>
-                  <p className="text-muted" style={{ fontSize:'0.85rem', marginBottom:10 }}>
-                    @{p.user?.username}
-                  </p>
-
-                  <span style={{
-                    background:'#f0fdf4', color:'#166534',
-                    padding:'4px 12px', borderRadius:20, fontSize:'0.78rem', fontWeight:600, marginBottom:12,
-                    display:'inline-flex', alignItems:'center', gap:5
-                  }}>
-                    <i className="bi bi-patch-check-fill" style={{ color:'#22c55e' }}></i>
-                    Prestataire vérifié
-                  </span>
-
-                  {p.specialite && (
-                    <span style={{
-                      background:'#e0f2fe', color:'#0369a1',
-                      padding:'4px 14px', borderRadius:20, fontSize:'0.8rem', fontWeight:600, marginBottom:12
-                    }}>
-                      {p.specialite}
-                    </span>
-                  )}
-
-                  <p style={{ color:'#64748b', fontSize:'0.82rem', marginBottom:16, lineHeight:1.6, flex:1 }}>
-                    {p.bio || `Professionnel en ${p.specialite || 'services'} avec expérience confirmée.`}
-                  </p>
-
-                  <a href={`https://wa.me/228${p.user?.telephone || '90000000'}?text=Bonjour, je suis intéressé(e) par vos services.`}
-                    target="_blank" rel="noreferrer"
-                    className="btn-whatsapp btn-sm-custom mt-auto"
-                    style={{ display:'inline-flex', width:'100%', justifyContent:'center' }}>
-                    <i className="bi bi-whatsapp"></i> Contacter
-                  </a>
+                  <div className="prest-stat">
+                    <span className="prest-stat-val">{p.avg_note ? `${Number(p.avg_note).toFixed(1)}★`:'—'}</span>
+                    <span className="prest-stat-lbl">Note</span>
+                  </div>
+                  <div className="prest-stat">
+                    <span className="prest-stat-val">{p.reservations_count||0}</span>
+                    <span className="prest-stat-lbl">Missions</span>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state">
-            <i className="bi bi-people"></i>
-            <h4>Aucun prestataire</h4>
-            <p>Aucun résultat pour cette recherche.</p>
-            {search && <button onClick={() => { setSearch(''); setSpecialiteFiltre('all'); }} className="btn-primary-custom">Réinitialiser</button>}
-          </div>
-        )}
+              <div className="prest-card-footer">
+
+              </div>
+            </div>
+          );
+        })}
       </div>
-    </div>
+    </>
   );
 }
-
