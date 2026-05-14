@@ -160,7 +160,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 _react_static = BASE_DIR / 'build' / 'static'
-STATICFILES_DIRS = [_react_static] if _react_static.exists() else []
+STATICFILES_DIRS = [
+    BASE_DIR / 'frontend' / 'build' / 'static', 
+]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
