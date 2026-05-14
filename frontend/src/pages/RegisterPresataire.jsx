@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
@@ -208,12 +208,31 @@ export default function RegisterPrestataire() {
     specialite: '', password: '', password_confirm: ''
   });
   const [errors, setErrors]           = useState({});
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [globalError, setGlobalError] = useState('');
   const [loading, setLoading]         = useState(false);
   const [terms, setTerms]             = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm,  setShowConfirm]  = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await api.get('/categories/');
+        if (!mounted) return;
+        const list = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+        setCategories(list);
+      } catch (e) {
+        // En cas d'échec, on garde la liste vide
+      } finally {
+        if (mounted) setCategoriesLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const updateField = (field) => (e) => {
     const value = e.target.value;
@@ -302,7 +321,35 @@ export default function RegisterPrestataire() {
               </div>
 
               <div className="regp-section-title">Profil Professionnel</div>
-              <InputField label="Spécialité" name="specialite" placeholder="Ex: Plomberie, Électricité, Coiffure..." icon="tools" value={form.specialite} onChange={updateField('specialite')} error={errors.specialite} />
+
+              <div className="regp-field-group">
+                <label className="regp-label" htmlFor="regp-specialite">
+                  <i className="bi bi-tools"></i> Spécialité
+                </label>
+                <div className={`regp-input-wrap${errors.specialite ? ' has-error' : ''}`}>
+                  <select
+                    id="regp-specialite"
+                    className="regp-input"
+                    value={form.specialite}
+                    onChange={updateField('specialite')}
+                    disabled={categoriesLoading}
+                  >
+                    <option value="" disabled>
+                      {categoriesLoading ? 'Chargement...' : 'Choisir une catégorie'}
+                    </option>
+                    {categories.map((c) => (
+                      <option key={c.id ?? c.nom} value={c.nom}>
+                        {c.nom}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {errors.specialite && (
+                  <span className="regp-error-msg">
+                    <i className="bi bi-exclamation-circle"></i> {errors.specialite}
+                  </span>
+                )}
+              </div>
 
               <div className="regp-section-title">Coordonnées de Paiement Mobile</div>
               <div className="regp-payment-note">

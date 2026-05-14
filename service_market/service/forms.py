@@ -35,6 +35,14 @@ class InscriptionClientForm(forms.ModelForm):
         })
     )
 
+    def clean_specialite(self):
+        # Enregistre dans Prestataire.specialite (CharField) le nom de la catégorie
+        specialite = self.cleaned_data.get('specialite')
+        if hasattr(specialite, 'nom'):
+            return specialite.nom
+        return specialite
+
+
     class Meta:
         model = Compte
         fields = ['username', 'email', 'telephone', 'adresse']
@@ -103,13 +111,12 @@ class InscriptionPrestataireForm(forms.ModelForm):
         })
     )
     
-    specialite = forms.CharField(
+    specialite = forms.ModelChoiceField(
         label="Spécialité",
+        queryset=Categorie.objects.all(),
         required=True,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Ex: Plomberie, Électricité...'
-        })
+        empty_label=None,
+        widget=forms.Select(attrs={'class': 'form-select'}),
     )
     
     password = forms.CharField(
