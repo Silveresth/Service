@@ -15,23 +15,11 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-fallback-do-not-use-i
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = [
-    'localhost',
+    'backend-sm.onrender.com', 
+    'localhost', 
     '127.0.0.1',
-    config('NGROK_URL', default=''),
-    config('SERVER_IP', default=''),
-    config('RAILWAY_PUBLIC_DOMAIN', default=''),   
-    '.railway.app',                                # wildcard Railway
-    '.ngrok-free.app',
-    '.ngrok-free.dev',
-    '.ngrok.io',
-    '192.168.100.19',
-    'cloud-ensure-impure.ngrok-free.dev',
-    'https://backend-sm.onrender.com'
-
+    '192.168.100.19', # Utile si tu testes encore en local sur ton réseau
 ]
-# Supprimer les valeurs vides
-ALLOWED_HOSTS = ['https://backend-sm.onrender.com', 'localhost', '127.0.0.1']
-
 AUTH_USER_MODEL = 'service.Compte'
 
 INSTALLED_APPS = [
