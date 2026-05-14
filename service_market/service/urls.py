@@ -29,4 +29,5 @@ urlpatterns = router.urls + [
     path('fidelite/ajouter-points/', ajouter_points,      name='fidelite-ajouter-points'),
     path('admin/rapport-pdf/',      rapport_pdf_admin,    name='admin-rapport-pdf'),
     path('', TemplateView.as_view(template_name='index.html')),
+    
 ]
