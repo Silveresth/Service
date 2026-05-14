@@ -16,12 +16,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      // ✅ FIX: Récupérer le vrai utilisateur depuis l'API au lieu d'un mock
+      // Récupérer le vrai utilisateur depuis l'API
       api.get('/auth/me/')
         .then(res => setUser(res.data))
         .catch(() => {
-          // Token invalide ou expiré : on nettoie
+          // Token invalide/expiré : on nettoie (axios fera le refresh si possible)
           localStorage.removeItem('token');
+          localStorage.removeItem('refresh_token');
         })
         .finally(() => setLoading(false));
     } else {
@@ -29,13 +30,16 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // ✅ FIX: login reçoit { access, refresh, user } depuis le backend
+  // login reçoit { access, refresh, user } depuis le backend
   const login = (data) => {
     if (data.access) {
       localStorage.setItem('token', data.access);
+      // backend: refresh renvoyé comme string RefreshToken
+      if (data.refresh) {
+        localStorage.setItem('refresh_token', data.refresh);
+      }
       setUser(data.user);
     } else {
-      // Compatibilité si on passe directement l'objet user
       setUser(data);
     }
   };

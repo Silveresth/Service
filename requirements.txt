@@ -1,0 +1,43 @@
+# ============================================================
+# Service Market — Backend Requirements
+# Python 3.11+
+# Généré depuis l'analyse du code source — Mai 2026
+# ============================================================
+
+# Django core
+Django>=5.0,<6.0
+
+# Django REST Framework
+djangorestframework>=3.15
+
+# JWT Authentication
+djangorestframework-simplejwt>=5.3
+
+# CORS Headers
+django-cors-headers>=4.3
+
+# Environment variables
+python-decouple>=3.8
+
+# PostgreSQL adapter
+psycopg2-binary>=2.9
+
+# Image handling (ImageField)
+Pillow>=10.0
+
+# WebSockets / ASGI
+channels>=4.1
+daphne>=4.1
+
+# Redis channel layer (production WebSockets)
+channels-redis>=4.2
+
+# HTTP requests (PayGate API)
+requests>=2.31
+
+# Machine Learning (Smart Match)
+scikit-learn>=1.4
+numpy>=1.26
+
+# PDF report generation
+reportlab>=4.2

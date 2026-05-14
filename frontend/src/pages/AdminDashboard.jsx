@@ -113,12 +113,12 @@ export default function AdminDashboard() {
         {/* Quick Links - TOUTES LES OPTIONS ICI */}
         <div className="admin-quick-links">
           <QuickLink to="/admin/all-comptes" icon="people" title="Gestion Comptes" description="Activer, bloquer ou supprimer" />
-
           <QuickLink to="/admin/all-ateliers" icon="geo-alt" title="Gérer Ateliers" description="Localisations prestataires" />
           <QuickLink to="/admin/all-reservations" icon="clock-history" title="Flux Réservations" description="Historique complet" />
           <QuickLink to="/admin/all-paiements" icon="credit-card" title="Paiements" description="Toutes les transactions" />
           <QuickLink to="/admin/evaluations" icon="star" title="Évaluations" description="Avis et notes clients" />
           <QuickLink to="/admin/all-categories" icon="tags" title="Catégories" description="Gérer types de services" />
+          <QuickLink to="/admin/all-services" icon="briefcase" title="Services" description="Gerer tous les services" />
         </div>
 
         {/* Recent Sections */}

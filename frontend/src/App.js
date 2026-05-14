@@ -49,6 +49,7 @@ import AdminAllCategories from './pages/AdminAllCategories';
 import './App.css';
 import './styles/global.css';
 import './styles/admin.css';
+import AdminAllServices from './pages/AdminAllServices';
 
 function App() {
   return (
@@ -103,8 +104,9 @@ function App() {
             <Route path="/admin/all-comptes" element={<AdminAllComptes />} />
             <Route path="/admin/all-evaluations" element={<AdminEvaluations />} />
             <Route path="/admin/evaluations" element={<AdminEvaluations />} />
-            <Route path="/admin/all-paiements" element={<AdminAllPaiements />} />
             <Route path="/admin/all-categories" element={<AdminAllCategories />} />
+            <Route path="/admin/all-services" element={<AdminAllServices/>}/>
+            <Route path="/admin/all-paiements" element={<AdminAllPaiements />} />
 
             {/* Aliases pour les anciens liens */}
             <Route path="/inscription-client" element={<Register />} />
