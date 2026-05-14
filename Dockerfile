@@ -2,8 +2,8 @@
 FROM node:20-slim AS frontend-build
 WORKDIR /frontend
 
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci --prefer-offline
+COPY frontend/package.json ./
+RUN npm install
 
 COPY frontend/ ./
 ENV CI=false
