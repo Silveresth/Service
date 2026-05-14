@@ -1,29 +1,30 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
-from django.views.generic import TemplateView
 from django.views.static import serve
-
-from django.http import FileResponse
+from django.http import JsonResponse
 import os
 
-def serve_static_file(filename, content_type):
-    def view(request):
-        path = os.path.join(settings.BASE_DIR, 'build', filename)
-        return FileResponse(open(path, 'rb'), content_type=content_type)
-    return view
+# Ta fonction de vue pour la racine
+def api_root(request):
+    return JsonResponse({
+        "status": "online",
+        "message": "Backend de Service Market opérationnel",
+        "api_docs": "/api/" 
+    })
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('service.urls')),
+    
+    # Route pour les fichiers médias (photos de profil, etc.)
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
     
-    # Fichiers PWA — avant le catch-all
-    path('manifest.json', serve_static_file('manifest.json', 'application/json')),
-    path('sw.js', serve_static_file('sw.js', 'application/javascript')),
-    path('leaflet.css', serve_static_file('leaflet.css', 'text/css')),
-    path('leaflet.js', serve_static_file('leaflet.js', 'application/javascript')),
-    
-    # Catch-all React — EN DERNIER
-    re_path(r'^.*$', TemplateView.as_view(template_name='index.html')),
+    # Racine du site : On affiche le JSON au lieu de chercher un index.html inexistant
+    path('', api_root),
 ]
+
+# Optionnel : Servir les fichiers statiques en développement
+if settings.DEBUG:
+    from django.conf.urls.static import static
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
