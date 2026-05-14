@@ -125,7 +125,10 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates', BASE_DIR / 'build'],   # build = React output
+        'DIRS': [
+            BASE_DIR / 'templates', 
+            BASE_DIR / 'frontend' / 'build'  # <--- Correction ici
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
