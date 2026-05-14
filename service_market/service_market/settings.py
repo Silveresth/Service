@@ -19,16 +19,18 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     config('NGROK_URL', default=''),
     config('SERVER_IP', default=''),
-    config('RAILWAY_PUBLIC_DOMAIN', default=''),   # ← Railway auto-inject
+    config('RAILWAY_PUBLIC_DOMAIN', default=''),   
     '.railway.app',                                # wildcard Railway
     '.ngrok-free.app',
     '.ngrok-free.dev',
     '.ngrok.io',
     '192.168.100.19',
     'cloud-ensure-impure.ngrok-free.dev',
+    'https://backend-sm.onrender.com'
+
 ]
 # Supprimer les valeurs vides
-ALLOWED_HOSTS = ['backendsm.onrender.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['https://backend-sm.onrender.com', 'localhost', '127.0.0.1']
 
 AUTH_USER_MODEL = 'service.Compte'
 
@@ -81,7 +83,7 @@ CORS_ALLOWED_ORIGINS = [
 
 #  render + tout domaine configuré en .env
 CORS_ALLOWED_ORIGINS = [
-    "https://frontsm.onrender.com", # Remplace par ton URL Render
+    "https://frontsm-7ydc.onrender.com", # Remplace par ton URL Render
 ]
 
 # En développement uniquement : autoriser toutes les origines
@@ -233,7 +235,7 @@ LOGGING = {
 CSRF_TRUSTED_ORIGINS = [
     'http://192.168.100.19:8000',
     'https://cloud-ensure-impure.ngrok-free.dev',
-    'https://*.railway.app',   # ← Railway
+    'https://*.onrender.com',  
 ]
 REDIS_URL = config('REDIS_URL', default=None)
 
