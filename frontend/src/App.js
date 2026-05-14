@@ -78,7 +78,7 @@ function App() {
             <Route path="/evaluer/:id" element={<Evaluer />} />
             <Route path="/chat/:id" element={<ChatPage />} />
             <Route path="/ajouter-atelier" element={<AjouterAtelier />} />
-            <Route path="/register-prestataire" element={<RegisterPrestataire />} />
+            <Route path="/inscription-prestataire" element={<RegisterPrestataire />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
