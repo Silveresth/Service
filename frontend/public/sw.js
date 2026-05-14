@@ -20,6 +20,7 @@ const API_CACHE_ROUTES = [
 
 // Installation
 self.addEventListener('install', (event) => {
+  if (event.request.method !== 'GET') return;
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
   );

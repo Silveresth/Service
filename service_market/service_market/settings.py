@@ -125,9 +125,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-            BASE_DIR / 'build',  # ← index.html React (pas frontend/build !)
-        ],
+        'DIRS': [BASE_DIR / 'frontend' / 'build'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -158,8 +156,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-_react_static = BASE_DIR / 'build' / 'static'
-STATICFILES_DIRS = [_react_static] if _react_static.exists() else []
+_react_static = BASE_DIR / 'frontend' / 'build' / 'static'
+_react_root = BASE_DIR / 'frontend' / 'build'
+STATICFILES_DIRS = [
+    _react_static,
+    _react_root, # Pour le logo, manifest.json, etc.
+]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
@@ -168,6 +170,12 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Security for production
+if not DEBUG:
+    # Indique à Django qu'il est derrière un proxy qui gère le HTTPS
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
@@ -227,12 +235,21 @@ CSRF_TRUSTED_ORIGINS = [
     'https://cloud-ensure-impure.ngrok-free.dev',
     'https://*.railway.app',   # ← Railway
 ]
+
+# wss
 REDIS_URL = config('REDIS_URL', default='')
+
 if not DEBUG and REDIS_URL:
+    # Railway injecte souvent redis://, on force rediss:// pour SSL si nécessaire
+    if REDIS_URL.startswith('redis://') and 'railway' in REDIS_URL:
+        REDIS_URL = REDIS_URL.replace('redis://', 'rediss://', 1)
+        
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {"hosts": [REDIS_URL]},
+            'CONFIG': {
+                "hosts": [(REDIS_URL, 6379)], # Ou juste [REDIS_URL] selon ta version
+            },
         },
     }
 else:
