@@ -1114,7 +1114,8 @@ def initier_paiement(request):
     reservation_id  = request.data.get('reservation_id')
     phone_number    = request.data.get('phone_number')
     network         = request.data.get('network')
-    montant         = request.data.get('montant')
+    montant_raw     = request.data.get('montant')
+    montant = int(float(montant_raw))
     identifier      = f"SM{uuid.uuid4().hex[:12].upper()}"
 
     if not reservation_id:
