@@ -18,24 +18,17 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     config('NGROK_URL', default=''),
-    config('SERVER_IP', default=''),   # IP locale du serveur (ex: 192.168.x.x)
-    'cloud-ensure-impure.ngrok-free.dev',  # ← ajoute cette ligne
+    config('SERVER_IP', default=''),
+    config('RAILWAY_PUBLIC_DOMAIN', default=''),   # ← Railway auto-inject
+    '.railway.app',                                # wildcard Railway
     '.ngrok-free.app',
     '.ngrok-free.dev',
-    '.ngrok.io',                        # wildcard ngrok
-    '.ngrok-free.app',
-    '192.168.10.102',
-    '10.150.20.134',                 # nouveau domaine ngrok gratuit
+    '.ngrok.io',
+    '192.168.100.19',
+    'cloud-ensure-impure.ngrok-free.dev',
 ]
-
-# En prod (Railway, etc.) on peut compléter via .env
-_extra_allowed_hosts = config('ALLOWED_HOSTS', default='')
-if _extra_allowed_hosts:
-    ALLOWED_HOSTS += [h.strip() for h in _extra_allowed_hosts.split(',') if h.strip()]
-
 # Supprimer les valeurs vides
 ALLOWED_HOSTS = [h for h in ALLOWED_HOSTS if h]
-
 
 AUTH_USER_MODEL = 'service.Compte'
 
@@ -58,8 +51,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',   # ← EN PREMIER obligatoire
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',   # ← sert les fichiers statiques
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -80,29 +74,23 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
-    'http://192.168.10.102:3000',
-    'http://10.150.20.134:3000',
+    'http://192.168.100.19:3000',
     'https://cloud-ensure-impure.ngrok-free.dev',
 ]
 
-# Autoriser les origines supplémentaires via .env (ngrok, IP réseau, domaine prod)
+# Railway + tout domaine configuré en .env
 _extra_origins = config('CORS_EXTRA_ORIGINS', default='')
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL', default=False, cast=bool)
+
 if _extra_origins:
     CORS_ALLOWED_ORIGINS += [o.strip() for o in _extra_origins.split(',') if o.strip()]
 
-# Autoriser le frontend déployé sur Vercel
-CORS_ALLOWED_ORIGINS += ['https://servicemarket.vercel.app']
-
-# En développement : garder une config stricte (pas de *)
+# En développement uniquement : autoriser toutes les origines
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = False  # Security: even dev, explicit origins
     CORS_ALLOWED_ORIGINS += ['http://localhost:3000', 'http://127.0.0.1:3000']
 
-# Dedoublonnage + suppression des valeurs vides
-CORS_ALLOWED_ORIGINS = list({o for o in CORS_ALLOWED_ORIGINS if o})
-
 ROOT_URLCONF = 'service_market.urls'
-
 
 # ─── PayGate Global ───────────────────────────────────────────────────────────
 PAYGATE_TOKEN = config('PAYGATE_TOKEN', default='')
@@ -118,11 +106,12 @@ if DEBUG:
         },
     }
 else:
+    REDIS_URL = config('REDIS_URL', default='redis://127.0.0.1:6379')
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
-                "hosts": [('127.0.0.1', 6379)],
+                "hosts": [REDIS_URL],
             },
         },
     }
@@ -136,8 +125,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'DIRS': [BASE_DIR / 'frontend' / 'build'],
+        'DIRS': [BASE_DIR / 'templates', BASE_DIR / 'build'],   # build = React output
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -171,7 +159,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'frontend' / 'build' / 'static']
+_react_static = BASE_DIR / 'build' / 'static'
+STATICFILES_DIRS = [_react_static] if _react_static.exists() else []
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -206,15 +196,14 @@ FEE_PERCENT = 0.03  # 3% frais
 PHONE_PREFIX = '228'  # Togo
 
 # Logging
+import os as _os
+_log_dir = BASE_DIR / 'logs'
+_log_dir.mkdir(exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/django.log',
-        },
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
@@ -222,20 +211,20 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['file', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': True,
         },
         'service': {
-            'handlers': ['file', 'console'],
-            'level': 'DEBUG',
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
     },
-
 }
 
 CSRF_TRUSTED_ORIGINS = [
     'http://192.168.100.19:8000',
     'https://cloud-ensure-impure.ngrok-free.dev',
+    'https://*.railway.app',   # ← Railway
 ]

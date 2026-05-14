@@ -1,12 +1,17 @@
 [phases.setup]
-nixPkgs = ["python311", "nodejs_20", "nodePackages.npm"]
+nixPkgs = ["python312", "nodejs_20", "nodePackages.npm"]
 
-[phases.build]
+[phases.install]
 cmds = [
-  "npm install --prefix frontend",
-  "npm run build --prefix frontend",
+  "npm install",
   "pip install -r requirements.txt"
 ]
 
+[phases.build]
+cmds = [
+  "npm run build",
+  "python manage.py collectstatic --noinput"
+]
+
 [start]
-cmd = "python manage.py migrate && gunicorn monprojet.wsgi:application"
+cmd = "python manage.py migrate --noinput && daphne -b 0.0.0.0 -p $PORT service_market.asgi:application"
