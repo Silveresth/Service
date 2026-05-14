@@ -158,10 +158,15 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
+REACT_BUILD_DIR = BASE_DIR / 'frontend' / 'build'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-_react_static = BASE_DIR / 'build' / 'static'
-STATICFILES_DIRS = [_react_static] if _react_static.exists() else []
+STATICFILES_DIRS = [
+    REACT_BUILD_DIR / 'static', 
+    REACT_BUILD_DIR,          
+]
+
+# 3. On utilise WhiteNoise (le plus simple et stable)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
