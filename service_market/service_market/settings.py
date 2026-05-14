@@ -126,8 +126,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            BASE_DIR / 'templates', 
-            BASE_DIR / 'frontend' / 'build'  # <--- Correction ici
+            BASE_DIR / 'build',  # ← index.html React (pas frontend/build !)
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -159,7 +158,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-_react_static = BASE_DIR / 'frontend' / 'build' / 'static'
+_react_static = BASE_DIR / 'build' / 'static'
 STATICFILES_DIRS = [_react_static] if _react_static.exists() else []
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
