@@ -1,10 +1,10 @@
 """
 Django settings for service_market project.
 """
-
 from pathlib import Path
 from decouple import config
 import os
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -138,6 +138,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'service_market.wsgi.application'
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=600
+    )
+}
 
 DATABASES = {
     'default': {
