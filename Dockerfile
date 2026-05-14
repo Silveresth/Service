@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY service_market/ .
 COPY --from=frontend-build /frontend/build ./build
-
+RUN mkdir -p ./staticfiles && cp ./build/leaflet.css ./build/leaflet.js ./staticfiles/ 2>/dev/null || true
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000

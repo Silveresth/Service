@@ -216,7 +216,8 @@ export default function Navbar() {
     const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://192.168.100.19:8000/api/';
     const backendHost = apiBaseUrl.replace('/api/', '').replace(/\/$/, '');
     const backendWs = backendHost.replace(/^http/, proto);
-    const ws = new WebSocket(`${backendWs}/ws/notifications/?token=${token}`);
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws/notifications/`);
 
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data);
