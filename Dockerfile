@@ -27,3 +27,4 @@ RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 CMD ["sh", "-c", "python manage.py migrate --noinput && daphne -b 0.0.0.0 -p ${PORT:-8000} service_market.asgi:application"]
+
