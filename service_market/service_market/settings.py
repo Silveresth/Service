@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'cloudinary',
     # Ton app
     'service',
 ]
@@ -247,3 +248,13 @@ else:
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
     }
+
+# Configuration Cloudinary
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': config('silvere', default=''),
+    'API_KEY': config('876929974924939', default=''),
+    'API_SECRET': config('Avg3TFuf6rIAiL2tVZgl3iA_bIQ', default=''),
+}
+
+# Indique à Django d'utiliser Cloudinary pour les médias
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
