@@ -26,5 +26,5 @@ COPY --from=frontend-build /frontend/build ./build
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
-CMD ["sh", "-c", "python manage.py migrate --noinput && daphne -b 0.0.0.0 -p ${PORT:-8000} service_market.asgi:application"]
 
+CMD ["sh", "-c", "python manage.py migrate --noinput && python create_super.py && daphne -b 0.0.0.0 -p ${PORT:-8000} service_market.asgi:application"]
