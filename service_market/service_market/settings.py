@@ -28,7 +28,7 @@ ALLOWED_HOSTS = [
     'cloud-ensure-impure.ngrok-free.dev',
 ]
 # Supprimer les valeurs vides
-ALLOWED_HOSTS = [h for h in ALLOWED_HOSTS if h]
+ALLOWED_HOSTS = ['backendsm.onrender.com', 'localhost', '127.0.0.1']
 
 AUTH_USER_MODEL = 'service.Compte'
 
@@ -79,12 +79,10 @@ CORS_ALLOWED_ORIGINS = [
     'https://cloud-ensure-impure.ngrok-free.dev',
 ]
 
-# Railway + tout domaine configuré en .env
-_extra_origins = config('CORS_EXTRA_ORIGINS', default='')
-CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL', default=False, cast=bool)
-
-if _extra_origins:
-    CORS_ALLOWED_ORIGINS += [o.strip() for o in _extra_origins.split(',') if o.strip()]
+#  render + tout domaine configuré en .env
+CORS_ALLOWED_ORIGINS = [
+    "https://frontsm.onrender.com", # Remplace par ton URL Render
+]
 
 # En développement uniquement : autoriser toutes les origines
 if DEBUG:
@@ -121,6 +119,7 @@ from corsheaders.defaults import default_headers
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'ngrok-skip-browser-warning',
+    
 ]
 
 TEMPLATES = [
@@ -143,11 +142,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'service_market.wsgi.application'
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
-        conn_max_age=600,
-        ssl_require=not DEBUG # Recommandé pour la prod
-    )
+    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
 }
 
 

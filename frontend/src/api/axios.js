@@ -1,11 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NODE_ENV === 'development'
-    ? '/api/' // CRA proxy en dev
-    : (process.env.REACT_APP_API_URL
-      ? `${process.env.REACT_APP_API_URL.replace(/\/$/, '')}/api/`
-      : 'http://192.168.100.19:8000/api/'),
+  baseURL: process.env.NODE_ENV === 'production'
+    ? `${process.env.REACT_APP_API_URL?.replace(/\/$/, '')}/api/`
+    : '/api/', 
 });
 
 let isRefreshing = false;

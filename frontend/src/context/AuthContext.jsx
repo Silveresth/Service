@@ -32,13 +32,22 @@ export function AuthProvider({ children }) {
 
   // login reçoit { access, refresh, user } depuis le backend
   const login = (data) => {
-    if (data.access) {
+    // backend: { access, refresh, user }
+    if (data?.access) {
       localStorage.setItem('token', data.access);
-      // backend: refresh renvoyé comme string RefreshToken
-      if (data.refresh) {
+
+      if (data?.refresh) {
         localStorage.setItem('refresh_token', data.refresh);
       }
-      setUser(data.user);
+
+      // setUser(data.user) peut être null si backend renvoie user non présent
+      if (data.user) setUser(data.user);
+      else {
+        // fallback: recharger le user via /auth/me/
+        api.get('/auth/me/')
+          .then(res => setUser(res.data))
+          .catch(() => setUser(null));
+      }
     } else {
       setUser(data);
     }
