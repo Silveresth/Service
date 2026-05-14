@@ -1,24 +1,20 @@
-# Projet monorepo : React (racine) + Django (racine)
-# package.json et manage.py sont tous les deux à la racine
-
 [phases.setup]
-nixPkgs = ["python311", "nodejs_20", "nodePackages.npm"]
+nixPkgs = ["python311", "nodejs_20"]
 
 [phases.install]
 cmds = [
-  "ls -la",
   "npm install",
-  "pip install -r requirements.txt"
+  "pip3.11 install -r requirements.txt"
 ]
 
 [phases.build]
 cmds = [
   "CI=false npm run build",
-  "python manage.py collectstatic --noinput"
+  "python3.11 manage.py collectstatic --noinput"
 ]
 
 [start]
-cmd = "python manage.py migrate --noinput && daphne -b 0.0.0.0 -p $PORT service_market.asgi:application"
+cmd = "python3.11 manage.py migrate --noinput && daphne -b 0.0.0.0 -p $PORT service_market.asgi:application"
 
 [variables]
 PYTHONUNBUFFERED = "1"
