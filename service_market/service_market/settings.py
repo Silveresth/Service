@@ -145,7 +145,8 @@ WSGI_APPLICATION = 'service_market.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DATABASE_URL'),
-        conn_max_age=600
+        conn_max_age=600,
+        ssl_require=not DEBUG # Recommandé pour la prod
     )
 }
 
@@ -234,12 +235,19 @@ CSRF_TRUSTED_ORIGINS = [
     'https://cloud-ensure-impure.ngrok-free.dev',
     'https://*.railway.app',   # ← Railway
 ]
-REDIS_URL = config('REDIS_URL', default='')
-if not DEBUG and REDIS_URL:
+REDIS_URL = config('REDIS_URL', default=None)
+
+if REDIS_URL:
+    # On force rediss:// pour le SSL sur Railway
+    if REDIS_URL.startswith('redis://'):
+        REDIS_URL = REDIS_URL.replace('redis://', 'rediss://', 1)
+
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {"hosts": [REDIS_URL]},
+            'CONFIG': {
+                "hosts": [REDIS_URL],
+            },
         },
     }
 else:
@@ -248,13 +256,6 @@ else:
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
     }
-
-# Configuration Cloudinary
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': config('silvere', default=''),
-    'API_KEY': config('876929974924939', default=''),
-    'API_SECRET': config('Avg3TFuf6rIAiL2tVZgl3iA_bIQ', default=''),
-}
 
 # Indique à Django d'utiliser Cloudinary pour les médias
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
