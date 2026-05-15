@@ -19,12 +19,9 @@ urlpatterns = [
     
     # Route pour les fichiers médias (photos de profil, etc.)
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
-    
-    # Racine du site : On affiche le JSON au lieu de chercher un index.html inexistant
     path('', api_root),
 ]
 
-# Optionnel : Servir les fichiers statiques en développement
 if settings.DEBUG:
     from django.conf.urls.static import static
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
