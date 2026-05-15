@@ -100,15 +100,31 @@ def api_root(request):
     """.strip()
     return HttpResponse(html)
 
+# Serve React SPA for any non-API route (prevents "Not Found" after errors/refresh)
+# Note: /api/* is handled above, so this catch-all should only serve index.html
+def spa_index(request, *args, **kwargs):
+    try:
+        index_path = os.path.join(settings.REACT_BUILD_DIR, 'index.html')
+        with open(index_path, 'r', encoding='utf-8') as f:
+            return HttpResponse(f.read())
+    except Exception:
+        return api_root(request)
+
 urlpatterns = [
 
     path('admin/', admin.site.urls),
     path('api/', include('service.urls')),
-    
+
     # Route pour les fichiers médias (photos de profil, etc.)
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+
+    # React: root
     path('', api_root),
+
+    # React: SPA catch-all (client-side routing)
+    re_path(r'^(?!api/).*$' , spa_index),
 ]
+
 
 if settings.DEBUG:
     from django.conf.urls.static import static

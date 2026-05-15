@@ -53,10 +53,10 @@ export default function PrestataireAjouterService() {
       });
       navigate('/mes-services');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Erreur lors de la création');
-    } finally {
-      setLoading(false);
-    }
+  // Remplace la ligne d'erreur par celle-ci :
+  console.log('Erreur détail:', err.response?.data);
+  setError(JSON.stringify(err.response?.data) || 'Erreur lors de la création');
+}
   };
 
   return (

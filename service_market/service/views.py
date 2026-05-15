@@ -316,8 +316,7 @@ class PrestataireViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(serializer.data)
         except Exception as e:
             logger.error(f"Stats serializer error: {e}")
-            return Response(data, status=200)  # Return raw data if serializer fails
-
+            return Response(data, status=200)
 
 # ── Reservation ──────────────────────────────────────────────────
 class ReservationViewSet(viewsets.ModelViewSet):
