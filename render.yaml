@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: service-market
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    rootDir: frontend
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
