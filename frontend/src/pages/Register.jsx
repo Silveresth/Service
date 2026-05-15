@@ -255,7 +255,7 @@ export default function Register() {
             <span className="reg-tab active">
               <i className="bi bi-person-fill"></i> Compte Client
             </span>
-            <Link to="/register-prestataire" className="reg-tab">
+<Link to="/inscription-prestataire" className="reg-tab">
               <i className="bi bi-briefcase-fill"></i> Compte Prestataire
             </Link>
           </div>

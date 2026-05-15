@@ -195,7 +195,7 @@ export default function Home() {
             Rejoignez notre plateforme et trouvez de nouveaux clients facilement.
           </p>
           {/* ✅ FIX: Lien corrigé vers /register-prestataire */}
-          <Link to="/register-prestataire" style={{
+<Link to="/inscription-prestataire" style={{
             background: 'white', color: 'var(--primary-dark)', padding: '14px 32px',
             borderRadius: 10, fontWeight: 800, textDecoration: 'none',
             display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: '1rem'
