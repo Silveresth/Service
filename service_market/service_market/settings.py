@@ -130,6 +130,15 @@ DATABASES = {
     'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
 }
 
+from datetime import timedelta
+ 
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME':  timedelta(hours=12),   # était probablement 5min
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),    # 30 jours
+    'ROTATE_REFRESH_TOKENS':  True,                  # nouveau refresh à chaque refresh
+    'BLACKLIST_AFTER_ROTATION': False,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
 
 # Internationalization
 LANGUAGE_CODE = 'fr-fr'
@@ -252,23 +261,26 @@ DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 import cloudinary
 import cloudinary.uploader
 
-CLOUDINARY_CLOUD_NAME = config('silvere', default='')
-CLOUDINARY_API_KEY    = config('876929974924939', default='')
-CLOUDINARY_API_SECRET = config('Avg3TFuf6rIAiL2tVZgl3iA_bIQ', default='')
+#CLOUDINARY_CLOUD_NAME = config('silvere', default='')
+#CLOUDINARY_API_KEY    = config('876929974924939', default='')
+#CLOUDINARY_API_SECRET = config('Avg3TFuf6rIAiL2tVZgl3iA_bIQ', default='')
 
-# Config directe — la plus fiable
+CLOUDINARY_CLOUD_NAME = config('CLOUDINARY_CLOUD_NAME', default='')
+CLOUDINARY_API_KEY    = config('CLOUDINARY_API_KEY',    default='')
+CLOUDINARY_API_SECRET = config('CLOUDINARY_API_SECRET', default='')
+ 
+import cloudinary
 cloudinary.config(
     cloud_name = CLOUDINARY_CLOUD_NAME,
     api_key    = CLOUDINARY_API_KEY,
     api_secret = CLOUDINARY_API_SECRET,
     secure     = True
 )
-
+ 
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
     'API_KEY':    CLOUDINARY_API_KEY,
     'API_SECRET': CLOUDINARY_API_SECRET,
 }
-
-# Force Cloudinary storage (sinon Django retombe sur FileSystemStorage et génère /media/... URLs)
+ 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
