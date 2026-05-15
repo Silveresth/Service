@@ -138,7 +138,9 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-REACT_BUILD_DIR = BASE_DIR / 'frontend' / 'build'
+# Le build React est stocké dans le dossier racine du repo: ./frontend/build
+# (BASE_DIR == ./service_market)
+REACT_BUILD_DIR = BASE_DIR.parent / 'frontend' / 'build'
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [

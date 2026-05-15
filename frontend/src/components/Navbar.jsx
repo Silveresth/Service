@@ -274,7 +274,7 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link to="/" className="navbar-brand">
-            <img src={`${process.env.PUBLIC_URL}/SM.jpg`} alt="Services Market" style={{ height: 38, width: 38, borderRadius: 8, objectFit: 'cover' }} />
+            <img src={`${process.env.PUBLIC_URL}/static/SM.jpg`} alt="Services Market" style={{ height: 38, width: 38, borderRadius: 8, objectFit: 'cover' }} />
             <span>Services Market</span>
           </Link>
 
