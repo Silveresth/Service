@@ -138,14 +138,17 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-# Le build React est stocké dans le dossier racine du repo: ./frontend/build
-# (BASE_DIR == ./service_market)
+# React build directory.
+# In this repo (and in the Docker image we build), the React output ends up at:
+#   /app/frontend/build
+# Django BASE_DIR is /app/service_market/service_market, so we must go one level up.
 REACT_BUILD_DIR = BASE_DIR.parent / 'frontend' / 'build'
+
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
-    REACT_BUILD_DIR / 'static', 
-    REACT_BUILD_DIR,          
+    REACT_BUILD_DIR / 'static',
+    REACT_BUILD_DIR,
 ]
 
 # 3. On utilise WhiteNoise (le plus simple et stable)
