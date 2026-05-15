@@ -20,12 +20,14 @@ const API_CACHE_ROUTES = [
 
 // Installation
 self.addEventListener('install', (event) => {
-  if (event.request.method !== 'GET') return;
+  // In install, event.request is not reliably available across browsers.
+  // Only pre-cache static assets.
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
+
 
 // Activation
 self.addEventListener('activate', (event) => {
