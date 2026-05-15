@@ -30,14 +30,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Real-time
     'channels',
-    # Packages
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'cloudinary_storage',  # ← AJOUTE ça avant cloudinary
     'cloudinary',
-    # Ton app
     'service',
 ]
 
@@ -67,12 +65,9 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://192.168.100.19:3000',
     'https://cloud-ensure-impure.ngrok-free.dev',
+    "https://frontsm-7ydc.onrender.com",
 ]
 
-#  render + tout domaine configuré en .env
-CORS_ALLOWED_ORIGINS = [
-    "https://frontsm-7ydc.onrender.com", # Remplace par ton URL Render
-]
 
 # En développement uniquement : autoriser toutes les origines
 if DEBUG:
@@ -248,4 +243,21 @@ else:
     }
 
 # Indique à Django d'utiliser Cloudinary pour les médias
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+import cloudinary
+
+cloudinary.config(
+    cloud_name=config('silvere', default=''),
+    api_key=config('876929974924939', default=''),
+    api_secret=config('Avg3TFuf6rIAiL2tVZgl3iA_bIQ', default=''),
+    secure=True
+)
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': config('silvere', default=''),
+    'API_KEY':    config('876929974924939', default=''),
+    'API_SECRET': config('Avg3TFuf6rIAiL2tVZgl3iA_bIQ', default=''),
+}
+
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'

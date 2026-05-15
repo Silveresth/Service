@@ -155,11 +155,17 @@ class ServiceViewSet(viewsets.ModelViewSet):
         return qs
 
 
-
     def perform_create(self, serializer):
-        prestataire, created = Prestataire.objects.get_or_create(user=self.request.user)
-        if created:
-            logger.info(f"Created missing Prestataire profile for user {self.request.user.username}")
+        if self.request.user.type_compte != 'prestataire':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Seuls les prestataires peuvent créer des services.")
+        
+        try:
+            prestataire = Prestataire.objects.get(user=self.request.user)
+        except Prestataire.DoesNotExist:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Profil prestataire introuvable. Contactez le support.")
+        
         serializer.save(prestataire=prestataire)
 
     def update(self, request, *args, **kwargs):
