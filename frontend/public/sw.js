@@ -48,30 +48,37 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Requêtes API → Network first, cache, custom offline Response
+  // Requêtes API → Network first (NE CACHE QUE si response.ok)
+  // Important: on évite toute transformation qui pourrait casser la réponse.
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request)
-        .then(response => {
-          if (response.ok) {
+        .then((response) => {
+          if (response && response.ok) {
+            // Ne jamais mettre en cache les erreurs (évite la corruption des réponses)
             const clone = response.clone();
-            caches.open(API_CACHE_NAME).then(cache => cache.put(event.request, clone));
+            caches.open(API_CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
           return response;
         })
         .catch(() => {
-          if (event.request.headers.get('Accept')?.includes('application/json')) {
-            return new Response(JSON.stringify({error: 'Service temporairement indisponible (hors ligne)'}), {
-              status: 503,
-              statusText: 'Service Unavailable',
-              headers: {'Content-Type': 'application/json'}
-            });
+          const accept = event.request.headers.get('Accept') || '';
+          if (accept.includes('application/json')) {
+            return new Response(
+              JSON.stringify({ error: 'Service temporairement indisponible (hors ligne)' }),
+              {
+                status: 503,
+                statusText: 'Service Unavailable',
+                headers: { 'Content-Type': 'application/json' },
+              }
+            );
           }
           return caches.match(OFFLINE_URL);
         })
     );
     return;
   }
+
 
   // Assets statiques → Cache first
   if (event.request.method === 'GET') {
