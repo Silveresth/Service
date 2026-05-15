@@ -242,22 +242,31 @@ else:
         },
     }
 
-# Indique à Django d'utiliser Cloudinary pour les médias
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-
+# ─── Cloudinary ───────────────────────────────────────────────
 import cloudinary
+import cloudinary.uploader
 
+CLOUDINARY_CLOUD_NAME = config('silvere', default='')
+CLOUDINARY_API_KEY    = config('876929974924939', default='')
+CLOUDINARY_API_SECRET = config('Avg3TFuf6rIAiL2tVZgl3iA_bIQ', default='')
+
+# Config directe — la plus fiable
 cloudinary.config(
-    cloud_name=config('silvere', default=''),
-    api_key=config('876929974924939', default=''),
-    api_secret=config('Avg3TFuf6rIAiL2tVZgl3iA_bIQ', default=''),
-    secure=True
+    cloud_name = CLOUDINARY_CLOUD_NAME,
+    api_key    = CLOUDINARY_API_KEY,
+    api_secret = CLOUDINARY_API_SECRET,
+    secure     = True
 )
 
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': config('silvere', default=''),
-    'API_KEY':    config('876929974924939', default=''),
-    'API_SECRET': config('Avg3TFuf6rIAiL2tVZgl3iA_bIQ', default=''),
+    'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
+    'API_KEY':    CLOUDINARY_API_KEY,
+    'API_SECRET': CLOUDINARY_API_SECRET,
 }
 
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+if CLOUDINARY_API_KEY:
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+else:
+    # Fallback local si variables manquantes
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'

@@ -9,8 +9,8 @@ const normalizeApiBase = (raw) => {
 
   // If someone already provided a full backend base including /api, keep it.
   if (trimmed.endsWith('/api')) return `${trimmed}/`;
-
   return `${trimmed}/api/`;
+  
 };
 
 
