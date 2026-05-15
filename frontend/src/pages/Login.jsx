@@ -21,9 +21,11 @@ export default function Login() {
       if (isAdmin) navigate('/admin-dashboard');
       else if (type === 'prestataire') navigate('/prestataire-dashboard');
       else navigate('/services');
-    } catch {
-      setError("Nom d'utilisateur ou mot de passe incorrect.");
+    } catch (err) {
+      console.error('LOGIN_ERROR:', err?.response?.data);
+      setError(err?.response?.data?.error || "Nom d'utilisateur ou mot de passe incorrect.");
     } finally { setLoading(false); }
+
   };
 
 
