@@ -9,10 +9,11 @@ export default function PrestataireAjouterService() {
     description: '',
     prix: '',
     disponibilite: true,
-    categorie: '',
+    categorie_id: '',
     image: null,
     model_3d: null
   });
+
 
   const [categories, setCategories] = useState([]);
   const [previews, setPreviews] = useState({ image: null, modelName: '' });
@@ -41,9 +42,10 @@ export default function PrestataireAjouterService() {
     e.preventDefault();
     setLoading(true);
     const data = new FormData();
-    Object.keys(formData).forEach(key => {
-      if (formData[key] !== null) data.append(key, formData[key]);
+    Object.keys(formData).forEach((key) => {
+      if (formData[key] !== null && formData[key] !== '') data.append(key, formData[key]);
     });
+
 
     try {
       await api.post('/services/', data, {
@@ -129,13 +131,14 @@ export default function PrestataireAjouterService() {
                   <select 
                     className="form-select" 
                     style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ced4da', backgroundColor: '#fcfcfc' }}
-                    value={formData.categorie} 
-                    onChange={e => setFormData({...formData, categorie: e.target.value})} 
+                    value={formData.categorie_id} 
+                    onChange={e => setFormData({...formData, categorie_id: e.target.value})} 
                     required
                   >
                     <option value="">Sélectionner...</option>
                     {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.nom}</option>)}
                   </select>
+
                 </div>
 
                 {/* Description */}

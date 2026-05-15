@@ -121,6 +121,17 @@ export default function AdminDashboard() {
           <QuickLink to="/admin/all-services" icon="briefcase" title="Services" description="Gerer tous les services" />
         </div>
 
+        {/* Rapport PDF mensuel */}
+        <div className="admin-card" style={{ marginTop: 18 }}>
+          <div className="admin-card-header">
+            <h2 className="admin-card-title"><i className="bi bi-file-earmark-pdf-fill"></i> Exportation PDF (Admin)</h2>
+          </div>
+          <div className="admin-card-body">
+            <AdminRapportPDF />
+          </div>
+        </div>
+
+
         {/* Recent Sections */}
         <div className="admin-recent-section">
           
