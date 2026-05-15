@@ -120,6 +120,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     prestataire_id = serializers.IntegerField(source='prestataire.id', read_only=True)
     prestataire_nom = serializers.SerializerMethodField()
     categorie   = CategorieSerializer(read_only=True)
+    description = serializers.CharField(required=False, allow_blank=True, default='')
 
     categorie_id = serializers.PrimaryKeyRelatedField(
         queryset=Categorie.objects.all(), source='categorie',
