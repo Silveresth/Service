@@ -267,8 +267,5 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': CLOUDINARY_API_SECRET,
 }
 
-if CLOUDINARY_API_KEY:
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-else:
-    # Fallback local si variables manquantes
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+# Force Cloudinary storage (sinon Django retombe sur FileSystemStorage et génère /media/... URLs)
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
