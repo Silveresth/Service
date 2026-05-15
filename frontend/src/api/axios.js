@@ -1,10 +1,27 @@
 import axios from 'axios';
 
+const normalizeApiBase = (raw) => {
+  // Backend is mounted at /api/ in Django (see service_market/service_market/urls.py)
+  // So: production baseURL should become `${backendOrigin}/api/`.
+  if (!raw) return '/api/';
+
+  const trimmed = String(raw).replace(/\/$/, '');
+
+  // If someone already provided a full backend base including /api, keep it.
+  if (trimmed.endsWith('/api')) return `${trimmed}/`;
+
+  return `${trimmed}/api/`;
+};
+
+
 const api = axios.create({
+  // In production, REACT_APP_API_URL must be the backend origin only (no /api)
+  // Example: https://backend-sm.onrender.com
   baseURL: process.env.NODE_ENV === 'production'
-    ? `${process.env.REACT_APP_API_URL?.replace(/\/$/, '')}/api/`
-    : '/api/', 
+    ? normalizeApiBase(process.env.REACT_APP_API_URL)
+    : '/api/',
 });
+
 
 let isRefreshing = false;
 let refreshQueue = [];
