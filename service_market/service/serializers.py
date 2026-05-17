@@ -7,8 +7,8 @@ class CompteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Compte
         fields = ['id', 'username', 'email', 'first_name', 'last_name',
-                  'telephone', 'adresse', 'type_compte', 'is_staff', 'date_joined']
-        read_only_fields = ['id', 'date_joined', 'is_staff']
+                  'telephone', 'adresse', 'type_compte', 'is_staff', 'is_active', 'date_joined']
+        read_only_fields = ['id', 'date_joined', 'is_staff', 'is_active']
 
 
 class CompteUpdateSerializer(serializers.ModelSerializer):

@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <style>
+    :root {
+      --sm-primary: #00a859;
+      --sm-primary-2: #0ea5e9;
+    }
+
+    body {
+      background: #f6f8fb;
+    }
+
+    #header {
+      background: linear-gradient(135deg, var(--sm-primary) 0%, var(--sm-primary-2) 100%);
+      color: white;
+    }
+    #header a,
+    #header span { color: white !important; }
+  </style>
+{% endblock %}
+

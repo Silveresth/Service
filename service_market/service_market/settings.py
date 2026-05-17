@@ -80,8 +80,8 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
-    'http://192.168.10.102:3000',
-    'http://10.150.20.134:3000',
+    #'http://192.168.10.102:3000',
+    #'http://10.150.20.134:3000',
     'https://cloud-ensure-impure.ngrok-free.dev',
 ]
 
@@ -234,6 +234,16 @@ LOGGING = {
 }
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://192.168.100.19:8000',
+    #'http://192.168.100.19:8000',
     'https://cloud-ensure-impure.ngrok-free.dev',
 ]
+
+from datetime import timedelta
+ 
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME':  timedelta(hours=12),   # était probablement 5min
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),    # 30 jours
+    'ROTATE_REFRESH_TOKENS':  True,                  # nouveau refresh à chaque refresh
+    'BLACKLIST_AFTER_ROTATION': False,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}

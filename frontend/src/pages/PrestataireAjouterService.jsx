@@ -2,242 +2,403 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
+const PAS_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap');
+
+  .pas-page {
+    background: #f0f8ff; min-height: 100vh; padding-bottom: 60px;
+  }
+
+  /* Hero */
+  .pas-hero {
+    background: linear-gradient(135deg, #0c2340 0%, #0a3d6b 50%, #0284c7 100%);
+    padding: 28px 0 52px; color: white; position: relative; overflow: hidden;
+  }
+  .pas-hero::after {
+    content: ''; position: absolute; bottom: -2px; left: 0; right: 0;
+    height: 36px; background: #f0f8ff;
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+  .pas-hero-inner {
+    max-width: 800px; margin: 0 auto; padding: 0 24px;
+    position: relative; z-index: 1;
+  }
+  .pas-hero-deco {
+    position: absolute; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.06); pointer-events: none;
+  }
+  .pas-hero-top { display: flex; align-items: center; gap: 16px; }
+  .pas-hero-icon {
+    width: 58px; height: 58px; border-radius: 16px; flex-shrink: 0;
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center; font-size: 1.6rem;
+    backdrop-filter: blur(6px);
+  }
+  .pas-hero-title {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: clamp(1.1rem,3vw,1.5rem); margin: 0 0 4px;
+  }
+  .pas-hero-sub { font-size: 0.84rem; opacity: 0.75; margin: 0; }
+
+  /* Content */
+  .pas-content {
+    max-width: 800px; margin: -24px auto 0;
+    padding: 0 24px; position: relative; z-index: 2;
+  }
+
+  /* Section card */
+  .pas-card {
+    background: white; border-radius: 20px;
+    border: 1.5px solid #e0f2fe;
+    box-shadow: 0 4px 20px rgba(2,132,199,0.08);
+    overflow: hidden; margin-bottom: 16px;
+    animation: pas-in .35s ease;
+  }
+  @keyframes pas-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  .pas-section-head {
+    padding: 16px 22px; border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .pas-section-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg,#0284c7,#0369a1);
+    color: white; font-weight: 800; font-size: 0.82rem;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .pas-section-title { font-family: 'Syne',sans-serif; font-weight: 800; font-size: 0.93rem; color: #0c2340; }
+  .pas-section-sub { font-size: 0.75rem; color: #94a3b8; margin-left: auto; }
+  .pas-card-body { padding: 22px; }
+
+  /* Fields */
+  .pas-field { margin-bottom: 18px; }
+  .pas-label { display: block; font-size: 0.8rem; font-weight: 700; color: #374151; margin-bottom: 7px; letter-spacing: .02em; }
+  .pas-optional { color: #94a3b8; font-weight: 500; }
+  .pas-required { color: #ef4444; }
+
+  .pas-input-wrap {
+    display: flex; align-items: center;
+    border: 1.5px solid #e2e8f0; border-radius: 12px; background: #fafbfc;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+  .pas-input-wrap:focus-within {
+    border-color: #0284c7; background: white;
+    box-shadow: 0 0 0 4px rgba(2,132,199,0.10);
+  }
+  .pas-icon { padding: 0 0 0 14px; color: #94a3b8; font-size: 0.95rem; flex-shrink: 0; transition: color .2s; }
+  .pas-input-wrap:focus-within .pas-icon { color: #0284c7; }
+  .pas-input {
+    flex: 1; border: none; background: transparent;
+    padding: 12px 14px; font-size: 0.9rem; color: #0c2340;
+    outline: none; font-family: inherit;
+  }
+  .pas-input::placeholder { color: #9ca3af; }
+  .pas-suffix { padding: 0 14px; color: #64748b; font-weight: 700; font-size: 0.88rem; flex-shrink: 0; }
+
+  .pas-textarea {
+    width: 100%; border: 1.5px solid #e2e8f0; border-radius: 12px;
+    padding: 12px 14px; font-size: 0.9rem; color: #0c2340;
+    background: #fafbfc; outline: none; resize: vertical; font-family: inherit;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .pas-textarea:focus { border-color: #0284c7; box-shadow: 0 0 0 4px rgba(2,132,199,0.10); background: white; }
+
+  .pas-select {
+    width: 100%; border: 1.5px solid #e2e8f0; border-radius: 12px;
+    padding: 12px 14px; font-size: 0.9rem; color: #0c2340;
+    background: #fafbfc; outline: none; font-family: inherit; cursor: pointer;
+    transition: border-color .2s, box-shadow .2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%2394a3b8' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+  }
+  .pas-select:focus { border-color: #0284c7; box-shadow: 0 0 0 4px rgba(2,132,199,0.10); }
+
+  .pas-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:500px) { .pas-grid2 { grid-template-columns: 1fr; } }
+
+  /* Upload zones */
+  .pas-upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media(max-width:500px) { .pas-upload-grid { grid-template-columns: 1fr; } }
+
+  .pas-upload-zone {
+    border: 2px dashed #bae6fd; border-radius: 14px;
+    padding: 24px 16px; text-align: center; cursor: pointer;
+    background: #f8fbff; transition: all .2s;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .pas-upload-zone:hover, .pas-upload-zone.active {
+    border-color: #0284c7; background: #e0f2fe;
+  }
+  .pas-upload-icon { font-size: 2rem; }
+  .pas-upload-label { font-weight: 700; font-size: 0.84rem; color: #374151; }
+  .pas-upload-hint { font-size: 0.72rem; color: #94a3b8; }
+  .pas-upload-preview { max-height: 80px; border-radius: 8px; object-fit: cover; }
+
+  /* Toggle switch */
+  .pas-toggle-wrap {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #f8fbff; border: 1.5px solid #e0f2fe; border-radius: 12px; padding: 14px 18px;
+  }
+  .pas-toggle-label { font-weight: 700; font-size: 0.9rem; color: #0c2340; display: flex; align-items: center; gap: 9px; }
+  .pas-toggle-label i { color: #0284c7; }
+  .pas-toggle-desc { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+  .pas-switch { position: relative; width: 46px; height: 26px; flex-shrink: 0; }
+  .pas-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .pas-slider {
+    position: absolute; inset: 0; background: #e2e8f0; border-radius: 50px;
+    cursor: pointer; transition: background .25s;
+  }
+  .pas-slider::before {
+    content: ''; position: absolute;
+    height: 20px; width: 20px; left: 3px; bottom: 3px;
+    background: white; border-radius: 50%;
+    transition: transform .25s; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  .pas-switch input:checked + .pas-slider { background: #0284c7; }
+  .pas-switch input:checked + .pas-slider::before { transform: translateX(20px); }
+
+  /* Error */
+  .pas-error {
+    background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px;
+    padding: 12px 16px; color: #dc2626; font-size: 0.86rem;
+    display: flex; gap: 8px; align-items: center; margin-bottom: 16px;
+  }
+
+  /* Submit */
+  .pas-submit-wrap { display: flex; flex-direction: column; gap: 10px; }
+  .pas-btn-submit {
+    width: 100%; padding: 14px; border-radius: 14px; border: none;
+    background: linear-gradient(135deg,#0284c7,#0369a1);
+    color: white; font-size: 0.95rem; font-weight: 800; font-family: inherit;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px;
+    box-shadow: 0 5px 18px rgba(2,132,199,0.32); transition: all .2s;
+  }
+  .pas-btn-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(2,132,199,0.42); }
+  .pas-btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .pas-btn-cancel {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px; border-radius: 12px; border: 1.5px solid #e2e8f0;
+    background: white; color: #64748b; font-weight: 700; font-size: 0.9rem;
+    text-decoration: none; transition: all .2s;
+  }
+  .pas-btn-cancel:hover { border-color: #94a3b8; color: #374151; background: #f8fafc; }
+
+  /* Spinner */
+  .pas-spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: pas-spin .7s linear infinite; display: inline-block; }
+  @keyframes pas-spin { to { transform: rotate(360deg); } }
+
+  @media(max-width:560px) {
+    .pas-card-body { padding: 16px; }
+    .pas-hero { padding: 24px 0 44px; }
+  }
+`;
+
 export default function PrestataireAjouterService() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    nom: '',
-    description: '',
-    prix: '',
-    disponibilite: true,
-    categorie: '',
-    image: null,
-    model_3d: null
-  });
-
   const [categories, setCategories] = useState([]);
-  const [previews, setPreviews] = useState({ image: null, modelName: '' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [form, setForm] = useState({
+    nom: '', description: '', prix: '', categorie: '', disponibilite: true,
+  });
+  const [imageFile, setImageFile]   = useState(null);
+  const [modelFile, setModelFile]   = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState('');
 
   useEffect(() => {
-    api.get('/categories/')
-      .then(res => setCategories(res.data))
-      .catch(() => setError('Erreur de chargement des catégories'));
+    api.get('/categories/').then(r => setCategories(r.data)).catch(() => setError('Erreur chargement catégories.'));
   }, []);
 
-  const handleFileChange = (e, field) => {
+  const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }));
+
+  const handleImage = e => {
     const file = e.target.files[0];
-    if (file) {
-      setFormData({ ...formData, [field]: file });
-      if (field === 'image') {
-        setPreviews({ ...previews, image: URL.createObjectURL(file) });
-      } else {
-        setPreviews({ ...previews, modelName: file.name });
-      }
-    }
+    if (file) { setImageFile(file); setImagePreview(URL.createObjectURL(file)); }
   };
+  const handleModel = e => { const file = e.target.files[0]; if (file) setModelFile(file); };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    setLoading(true);
+    if (!form.nom.trim() || !form.prix || !form.categorie) { setError('Nom, prix et catégorie sont obligatoires.'); return; }
+    setLoading(true); setError('');
     const data = new FormData();
-    Object.keys(formData).forEach(key => {
-      if (formData[key] !== null) data.append(key, formData[key]);
-    });
-
+    Object.entries(form).forEach(([k, v]) => data.append(k, v));
+    if (imageFile) data.append('image', imageFile);
+    if (modelFile) data.append('model_3d', modelFile);
     try {
-      await api.post('/services/', data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      navigate('/mes-services');
+      await api.post('/services/', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+      navigate('/prestataire-mes-services');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Erreur lors de la création');
-    } finally {
-      setLoading(false);
-    }
+      setError(err.response?.data?.detail || JSON.stringify(err.response?.data) || 'Erreur lors de la publication.');
+    } finally { setLoading(false); }
   };
 
   return (
-    <div style={{ backgroundColor: '#f4f7f6', minHeight: '100vh', padding: '40px 10px' }}>
-      <div className="container" style={{ maxWidth: '850px' }}>
-        
-        <div style={{ 
-          backgroundColor: '#fff', 
-          borderRadius: '20px', 
-          boxShadow: '0 10px 40px rgba(0,0,0,0.1)', 
-          overflow: 'hidden',
-          border: 'none'
-        }}>
-          
-          {/* --- ENTÊTE FIXÉ --- */}
-          <div style={{ 
-            background: 'linear-gradient(135deg, #0d6efd 0%, #003d99 100%)', 
-            padding: '35px', 
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '20px'
-          }}>
-            <div style={{ 
-              backgroundColor: 'rgba(255, 255, 255, 0.25)', 
-              width: '55px', 
-              height: '55px', 
-              borderRadius: '15px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              fontSize: '22px',
-              color: '#fff',
-              backdropFilter: 'blur(4px)'
-            }}>
-              <i className="bi bi-plus-lg"></i>
-            </div>
-            <div style={{ zIndex: 2 }}>
-              <h2 style={{ color: '#fff', margin: 0, fontWeight: '700', fontSize: '22px' }}>Créer un nouveau service</h2>
-              <p style={{ color: 'rgba(255,255,255,0.9)', margin: '4px 0 0 0', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <i className="bi bi-lightning-charge-fill"></i> Mode Prestataire
-              </p>
-            </div>
-            {/* Décoration subtile */}
-            <i className="bi bi-rocket-takeoff" style={{ 
-              position: 'absolute', right: '15px', top: '10px', fontSize: '90px', 
-              color: 'rgba(255,255,255,0.06)', transform: 'rotate(-10deg)' 
-            }}></i>
-          </div>
+    <>
+      <style>{PAS_STYLES}</style>
+      <div className="pas-page">
 
-          <div style={{ padding: '40px' }}>
-            {error && <div className="alert alert-danger mb-4">{error}</div>}
-
-            <form onSubmit={handleSubmit}>
-              <div className="row g-4">
-                {/* Ligne 1 : Nom et Catégorie */}
-                <div className="col-md-7">
-                  <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: '#444', fontSize: '14px' }}>NOM DU SERVICE</label>
-                  <input 
-                    type="text" 
-                    className="form-control" 
-                    placeholder="Ex: Réparation Climatisation"
-                    style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ced4da', backgroundColor: '#fcfcfc' }}
-                    value={formData.nom} 
-                    onChange={e => setFormData({...formData, nom: e.target.value})} 
-                    required 
-                  />
-                </div>
-
-                <div className="col-md-5">
-                  <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: '#444', fontSize: '14px' }}>CATÉGORIE</label>
-                  <select 
-                    className="form-select" 
-                    style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ced4da', backgroundColor: '#fcfcfc' }}
-                    value={formData.categorie} 
-                    onChange={e => setFormData({...formData, categorie: e.target.value})} 
-                    required
-                  >
-                    <option value="">Sélectionner...</option>
-                    {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.nom}</option>)}
-                  </select>
-                </div>
-
-                {/* Description */}
-                <div className="col-12">
-                  <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: '#444', fontSize: '14px' }}>DESCRIPTION DÉTAILLÉE</label>
-                  <textarea 
-                    className="form-control" 
-                    rows="3" 
-                    placeholder="Détaillez votre prestation..." 
-                    style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ced4da', backgroundColor: '#fcfcfc' }}
-                    value={formData.description} 
-                    onChange={e => setFormData({...formData, description: e.target.value})}
-                  ></textarea>
-                </div>
-
-                {/* Prix et Switch */}
-                <div className="col-md-6">
-                  <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: '#444', fontSize: '14px' }}>TARIF DE BASE (FCFA)</label>
-                  <div className="input-group">
-                    <span className="input-group-text bg-white" style={{ border: '1px solid #ced4da', color: '#0d6efd', fontWeight: 'bold' }}>F</span>
-                    <input 
-                      type="number" 
-                      className="form-control" 
-                      style={{ padding: '12px', border: '1px solid #ced4da', backgroundColor: '#fcfcfc' }}
-                      value={formData.prix} 
-                      onChange={e => setFormData({...formData, prix: e.target.value})} 
-                      required 
-                    />
-                  </div>
-                </div>
-
-                <div className="col-md-6 d-flex align-items-end">
-                  <div style={{ 
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                    width: '100%', padding: '12px 20px', backgroundColor: '#f8f9fa', 
-                    borderRadius: '8px', border: '1px solid #e9ecef' 
-                  }}>
-                    <span style={{ fontWeight: '600', fontSize: '15px' }}><i className="bi bi-eye text-primary me-2"></i> Visible en ligne</span>
-                    <input 
-                      type="checkbox" 
-                      style={{ width: '40px', height: '20px', cursor: 'pointer' }}
-                      checked={formData.disponibilite} 
-                      onChange={e => setFormData({...formData, disponibilite: e.target.checked})} 
-                    />
-                  </div>
-                </div>
-
-                {/* Uploads */}
-                <div className="col-md-6">
-                  <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: '#444', fontSize: '14px' }}>PHOTO DU SERVICE</label>
-                  <div 
-                    onClick={() => document.getElementById('imageInput').click()}
-                    style={{ border: '2px dashed #ddd', borderRadius: '12px', padding: '25px', textAlign: 'center', cursor: 'pointer', backgroundColor: '#fcfcfc' }}
-                  >
-                    <input type="file" id="imageInput" hidden accept="image/*" onChange={(e) => handleFileChange(e, 'image')} />
-                    {previews.image ? <img src={previews.image} alt="Preview" style={{ maxHeight: '100px', borderRadius: '5px' }} /> : <><i className="bi bi-cloud-arrow-up fs-2 text-primary"></i><p className="small text-muted mb-0">Ajouter une image</p></>}
-                  </div>
-                </div>
-
-                <div className="col-md-6">
-                  <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', color: '#444', fontSize: '14px' }}>MODÈLE 3D (GLB)</label>
-                  <div 
-                    onClick={() => document.getElementById('modelInput').click()}
-                    style={{ border: '2px dashed #ddd', borderRadius: '12px', padding: '25px', textAlign: 'center', cursor: 'pointer', backgroundColor: '#fcfcfc' }}
-                  >
-                    <input type="file" id="modelInput" hidden accept=".glb,.gltf" onChange={(e) => handleFileChange(e, 'model_3d')} />
-                    <i className={`bi bi-box-seam fs-2 ${previews.modelName ? 'text-success' : 'text-muted'}`}></i>
-                    <p className="small text-muted mb-0">{previews.modelName || 'Format .GLB uniquement'}</p>
-                  </div>
-                </div>
+        {/* Hero */}
+        <div className="pas-hero">
+          <div className="pas-hero-deco" style={{ width: 280, height: 280, top: -80, right: -70 }}></div>
+          <div className="pas-hero-inner">
+            <div className="pas-hero-top">
+              <div className="pas-hero-icon"><i className="bi bi-plus-circle-fill"></i></div>
+              <div>
+                <h1 className="pas-hero-title">Créer un nouveau service</h1>
+                <p className="pas-hero-sub"><i className="bi bi-lightning-charge-fill me-1"></i>Mode Prestataire · Remplissez les informations ci-dessous</p>
               </div>
-
-              {/* --- BOUTONS CORRIGÉS --- */}
-              <div style={{ marginTop: '45px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  style={{
-                    width: '100%', padding: '15px', backgroundColor: '#0d6efd', color: '#fff', 
-                    border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '600', 
-                    cursor: 'pointer', boxShadow: '0 4px 15px rgba(13, 110, 253, 0.3)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
-                  }}
-                >
-                  {loading ? 'Publication...' : <><i className="bi bi-check-circle-fill"></i> Confirmer et Publier</>}
-                </button>
-
-                <Link 
-                  to="/mes-services" 
-                  style={{
-                    width: '100%', padding: '15px', backgroundColor: '#6c757d', color: '#fff', 
-                    borderRadius: '10px', fontSize: '16px', fontWeight: '600', 
-                    textDecoration: 'none', textAlign: 'center', display: 'block'
-                  }}
-                >
-                  Annuler
-                </Link>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
+
+        {/* Content */}
+        <div className="pas-content">
+          <form onSubmit={handleSubmit}>
+
+            {error && (
+              <div className="pas-error">
+                <i className="bi bi-exclamation-triangle-fill"></i> {error}
+              </div>
+            )}
+
+            {/* Section 1 : Infos de base */}
+            <div className="pas-card">
+              <div className="pas-section-head">
+                <div className="pas-section-num">1</div>
+                <span className="pas-section-title">Informations du service</span>
+              </div>
+              <div className="pas-card-body">
+                <div className="pas-grid2">
+                  <div className="pas-field" style={{ gridColumn: '1 / -1' }}>
+                    <label className="pas-label">Nom du service <span className="pas-required">*</span></label>
+                    <div className="pas-input-wrap">
+                      <i className="bi bi-briefcase-fill pas-icon"></i>
+                      <input type="text" className="pas-input" placeholder="Ex: Réparation climatisation, Coiffure à domicile…"
+                        value={form.nom} onChange={set('nom')} required />
+                    </div>
+                  </div>
+
+                  <div className="pas-field">
+                    <label className="pas-label">Catégorie <span className="pas-required">*</span></label>
+                    <select className="pas-select" value={form.categorie} onChange={set('categorie')} required>
+                      <option value="">Sélectionner une catégorie…</option>
+                      {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="pas-field">
+                    <label className="pas-label">Prix de base <span className="pas-required">*</span></label>
+                    <div className="pas-input-wrap">
+                      <i className="bi bi-currency-exchange pas-icon"></i>
+                      <input type="number" className="pas-input" placeholder="15000" min="0"
+                        value={form.prix} onChange={set('prix')} required />
+                      <span className="pas-suffix">FCFA</span>
+                    </div>
+                  </div>
+
+                  <div className="pas-field" style={{ gridColumn: '1 / -1' }}>
+                    <label className="pas-label">Description détaillée <span className="pas-optional">(recommandé)</span></label>
+                    <textarea className="pas-textarea" rows={4}
+                      placeholder="Décrivez votre service en détail : ce qui est inclus, votre expérience, conditions spéciales…"
+                      value={form.description} onChange={set('description')} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2 : Médias */}
+            <div className="pas-card">
+              <div className="pas-section-head">
+                <div className="pas-section-num">2</div>
+                <span className="pas-section-title">Photos & Médias</span>
+                <span className="pas-section-sub">Optionnel</span>
+              </div>
+              <div className="pas-card-body">
+                <div className="pas-upload-grid">
+                  {/* Image */}
+                  <div>
+                    <label className="pas-label">Photo du service</label>
+                    <div className="pas-upload-zone" onClick={() => document.getElementById('pas-img').click()}>
+                      <input type="file" id="pas-img" hidden accept="image/*" onChange={handleImage} />
+                      {imagePreview
+                        ? <img src={imagePreview} alt="Aperçu" className="pas-upload-preview" />
+                        : <>
+                          <i className="bi bi-cloud-arrow-up-fill pas-upload-icon" style={{ color: '#7dd3fc' }}></i>
+                          <span className="pas-upload-label">Ajouter une image</span>
+                          <span className="pas-upload-hint">JPG, PNG, WEBP</span>
+                        </>
+                      }
+                    </div>
+                    {imagePreview && (
+                      <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); }}
+                        style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <i className="bi bi-x-circle"></i> Supprimer
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Modèle 3D */}
+                  <div>
+                    <label className="pas-label">Modèle 3D <span className="pas-optional">(GLB)</span></label>
+                    <div className="pas-upload-zone" onClick={() => document.getElementById('pas-model').click()}>
+                      <input type="file" id="pas-model" hidden accept=".glb,.gltf" onChange={handleModel} />
+                      <i className={`bi bi-box-seam pas-upload-icon`} style={{ color: modelFile ? '#22c55e' : '#94a3b8' }}></i>
+                      <span className="pas-upload-label">{modelFile ? modelFile.name : 'Modèle 3D'}</span>
+                      <span className="pas-upload-hint">.GLB ou .GLTF uniquement</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', fontSize: '0.8rem', color: '#166534', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <i className="bi bi-info-circle-fill" style={{ flexShrink: 0, marginTop: 1 }}></i>
+                  <span>Les services avec une photo reçoivent <strong>+60% de clics</strong>. Choisissez une image claire et représentative.</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3 : Visibilité */}
+            <div className="pas-card">
+              <div className="pas-section-head">
+                <div className="pas-section-num">3</div>
+                <span className="pas-section-title">Visibilité</span>
+              </div>
+              <div className="pas-card-body">
+                <div className="pas-toggle-wrap">
+                  <div>
+                    <div className="pas-toggle-label">
+                      <i className="bi bi-eye-fill"></i> Visible en ligne
+                    </div>
+                    <div className="pas-toggle-desc">
+                      {form.disponibilite ? 'Votre service est visible et réservable par les clients.' : 'Votre service est masqué pour le moment.'}
+                    </div>
+                  </div>
+                  <label className="pas-switch">
+                    <input type="checkbox" checked={form.disponibilite}
+                      onChange={e => setForm(p => ({ ...p, disponibilite: e.target.checked }))} />
+                    <span className="pas-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Submit */}
+            <div className="pas-submit-wrap">
+              <button type="submit" className="pas-btn-submit" disabled={loading}>
+                {loading
+                  ? <><span className="pas-spinner"></span> Publication en cours…</>
+                  : <><i className="bi bi-check-circle-fill"></i> Confirmer et Publier</>
+                }
+              </button>
+              <Link to="/prestataire-mes-services" className="pas-btn-cancel">
+                <i className="bi bi-arrow-left"></i> Annuler et revenir
+              </Link>
+            </div>
+
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

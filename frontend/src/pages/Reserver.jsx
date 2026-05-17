@@ -3,8 +3,8 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
-const JOURS   = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
-const MOIS    = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
+const JOURS    = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const MOIS     = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
 const CRENEAUX = ['08:00','09:00','10:00','11:00','14:00','15:00','16:00','17:00','18:00'];
 
 function buildCalendar(year, month) {
@@ -15,508 +15,402 @@ function buildCalendar(year, month) {
   for (let i = 0; i < 42; i++) { days.push(new Date(start)); start.setDate(start.getDate() + 1); }
   return days;
 }
-const formatDate   = (d) => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : '';
-const formatDateFr = (d) => d ? `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}` : '-';
+const fmtDate   = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : '';
+const fmtDateFr = d => d ? `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}` : '-';
 
 const ETAPES = [
-  { key: 'calendrier', label: 'Date & Heure', icon: 'bi-calendar3' },
-  { key: 'details',    label: 'Détails',      icon: 'bi-geo-alt' },
-  { key: 'recap',      label: 'Récap.',       icon: 'bi-receipt' },
+  { key:'calendrier', label:'Date & Heure', icon:'calendar3'   },
+  { key:'details',    label:'Détails',      icon:'geo-alt'     },
+  { key:'recap',      label:'Récapitulatif',icon:'receipt'     },
 ];
 
+const CSS = `
+@keyframes fadeUp  { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes success { 0%{transform:scale(.8);opacity:0} 60%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
+.rv-day    { transition:all .15s; }
+.rv-day:hover:not(:disabled) { background:#e0f2fe !important; color:#0284c7 !important; transform:scale(1.05); }
+.rv-slot   { transition:all .15s; }
+.rv-slot:hover:not(:disabled) { transform:translateY(-1px); }
+.rv-input-wrap:focus-within { border-color:#0284c7 !important; box-shadow:0 0 0 3px rgba(2,132,199,.15) !important; }
+`;
+
 export default function Reserver() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { id }    = useParams();
+  const navigate  = useNavigate();
   const { user }  = useAuth();
 
-  const [service, setService]                         = useState(null);
-  const [reservationsExistantes, setReservationsExistantes] = useState([]);
-  const [loading, setLoading]                         = useState(true);
-  const [etape, setEtape]                             = useState('calendrier');
-  const [showRecapMobile, setShowRecapMobile]         = useState(false);
+  const [service,     setService]   = useState(null);
+  const [existantes,  setExistantes]= useState([]);
+  const [loading,     setLoading]   = useState(true);
+  const [etape,       setEtape]     = useState('calendrier');
 
   const today = new Date();
-  const [calYear, setCalYear]     = useState(today.getFullYear());
-  const [calMonth, setCalMonth]   = useState(today.getMonth());
-  const [selectedDate, setSelectedDate]   = useState(null);
-  const [selectedHeure, setSelectedHeure] = useState('');
-  const [lieu, setLieu]           = useState('');
-  const [notes, setNotes]         = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg]   = useState('');
+  const [calYear,  setCalYear]   = useState(today.getFullYear());
+  const [calMonth, setCalMonth]  = useState(today.getMonth());
+  const [selDate,  setSelDate]   = useState(null);
+  const [selHeure, setSelHeure]  = useState('');
+  const [lieu,     setLieu]      = useState('');
+  const [notes,    setNotes]     = useState('');
+  const [submitting,setSubmitting]=useState(false);
+  const [errorMsg, setErrorMsg]  = useState('');
 
   useEffect(() => {
     Promise.all([
       api.get(`/services/${id}/`),
-      api.get(`/reservations/?service=${id}`).catch(() => ({ data: [] })),
-    ]).then(([sRes, rRes]) => {
-      setService(sRes.data);
-      setReservationsExistantes(rRes.data || []);
-    }).catch(console.error).finally(() => setLoading(false));
+      api.get(`/reservations/?service=${id}`).catch(()=>({data:[]})),
+    ]).then(([s,r]) => { setService(s.data); setExistantes(r.data||[]); })
+    .catch(console.error).finally(()=>setLoading(false));
   }, [id]);
 
   if (loading) return (
-    <div style={{ textAlign: 'center', padding: 80 }}>
-      <i className="bi bi-hourglass-split" style={{ fontSize: '3rem', color: 'var(--primary-color)' }}></i>
-      <p className="mt-3 text-muted">Chargement...</p>
+    <div style={{ minHeight:'60vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, background:'#f0f8ff' }}>
+      <div style={{ width:48, height:48, borderRadius:'50%', border:'4px solid #e0f2fe', borderTopColor:'#0284c7', animation:'spin .8s linear infinite' }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <p style={{ color:'#64748b' }}>Chargement…</p>
     </div>
   );
   if (!service) return <div className="container py-5"><div className="alert alert-danger">Service introuvable.</div></div>;
 
   const prix  = parseFloat(service.prix) || 0;
   const frais = Math.round(prix * 0.03);
-  const total = prix; // Le client paie le prix exact, les 3% sont déduits côté prestataire
-  const montantPrestataire = prix - frais;
+  const total = prix;
 
-  const creneauxBloques = selectedDate
-    ? reservationsExistantes
-        .filter(r => r.date_debut?.startsWith(formatDate(selectedDate)) && ['en_attente','en_attente_paiement','confirmee'].includes(r.statut))
-        .map(r => r.date_debut?.split('T')[1]?.slice(0,5))
+  const bloques = selDate
+    ? existantes.filter(r=>r.date_debut?.startsWith(fmtDate(selDate))&&['en_attente','en_attente_paiement','confirmee'].includes(r.statut)).map(r=>r.date_debut?.split('T')[1]?.slice(0,5))
     : [];
 
-  const isDayPast = (d) => { const t = new Date(); t.setHours(0,0,0,0); return d < t; };
+  const isPast = d => { const t=new Date(); t.setHours(0,0,0,0); return d<t; };
 
-  const envoyerDemande = async () => {
+  const envoyer = async () => {
     if (!lieu.trim()) { setErrorMsg('Veuillez préciser le lieu.'); return; }
     setErrorMsg(''); setSubmitting(true);
     try {
-      await api.post('/reservations/reserver/', {
-        service_id: service.id,
-        date_debut: selectedDate && selectedHeure ? `${formatDate(selectedDate)}T${selectedHeure}:00` : null,
-        lieu: lieu.trim(),
-        notes: notes.trim(),
-      });
-      setEtape('demande_envoyee');
-    } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Erreur. Réessayez.');
-    } finally { setSubmitting(false); }
+      await api.post('/reservations/reserver/', { service_id:service.id, date_debut:selDate&&selHeure?`${fmtDate(selDate)}T${selHeure}:00`:null, lieu:lieu.trim(), notes:notes.trim() });
+      setEtape('succes');
+    } catch(err) { setErrorMsg(err.response?.data?.error||'Erreur. Réessayez.'); }
+    finally { setSubmitting(false); }
   };
 
-  const etapeIdx = ETAPES.findIndex(e => e.key === etape);
+  const etapeIdx = ETAPES.findIndex(e=>e.key===etape);
+  const days     = buildCalendar(calYear, calMonth);
 
-  /* ── Barre de progression étapes ── */
-  const ProgressBar = () => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, gap: 0 }}>
-      {ETAPES.map((e, i) => (
-        <div key={e.key} style={{ display: 'flex', alignItems: 'center' }}>
-          <div
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-              cursor: i < etapeIdx ? 'pointer' : 'default' }}
-            onClick={() => i < etapeIdx && setEtape(e.key)}
-          >
-            <div style={{
-              width: 36, height: 36, borderRadius: '50%',
-              background: i < etapeIdx ? '#22c55e' : i === etapeIdx ? 'var(--primary-color)' : '#e2e8f0',
-              color: i <= etapeIdx ? 'white' : '#94a3b8',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.95rem',
-              boxShadow: i === etapeIdx ? '0 0 0 4px rgba(2,132,199,0.2)' : 'none',
-            }}>
-              {i < etapeIdx ? <i className="bi bi-check-lg"></i> : <i className={e.icon}></i>}
-            </div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 600,
-              color: i <= etapeIdx ? 'var(--primary-color)' : '#94a3b8' }}>
-              {e.label}
-            </span>
+  /* ── SUCCÈS ─────────────────────────────────── */
+  if (etape === 'succes') return (
+    <>
+      <style>{CSS}</style>
+      <div style={{ minHeight:'70vh', display:'flex', alignItems:'center', justifyContent:'center', padding:24, background:'#f0f8ff' }}>
+        <div style={{ background:'#fff', borderRadius:24, padding:'48px 40px', maxWidth:520, width:'100%', textAlign:'center', boxShadow:'0 16px 60px rgba(2,132,199,.12)', animation:'fadeUp .4s ease' }}>
+          <div style={{ width:80, height:80, borderRadius:'50%', background:'#d1fae5', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', animation:'success .5s ease' }}>
+            <i className="bi bi-check-circle-fill" style={{ fontSize:'2.5rem', color:'#059669' }} />
           </div>
-          {i < ETAPES.length - 1 && (
-            <div style={{ width: 60, height: 2, margin: '0 4px', marginBottom: 18,
-              background: i < etapeIdx ? '#22c55e' : '#e2e8f0' }}></div>
-          )}
+          <h3 style={{ fontWeight:900, color:'#0c2340', marginBottom:8 }}>Demande envoyée !</h3>
+          <p style={{ color:'#64748b', marginBottom:28, lineHeight:1.7 }}>
+            Votre demande a été transmise au prestataire.<br />
+            <strong style={{ color:'#0c2340' }}>Il dispose de 24h pour confirmer.</strong>
+          </p>
+          <div style={{ background:'#f0f9ff', border:'1px solid #bae6fd', borderRadius:14, padding:'16px 18px', textAlign:'left', marginBottom:28 }}>
+            {[['Service',service.nom],['Date',fmtDateFr(selDate)],['Heure',selHeure||'Non précisée'],['Lieu',lieu||'-']].map(([k,v])=>(
+              <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:8, fontSize:'0.9rem' }}>
+                <span style={{ color:'#64748b' }}>{k}</span>
+                <span style={{ fontWeight:700, color:'#0c2340', maxWidth:200, textAlign:'right', wordBreak:'break-word' }}>{v}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={()=>navigate('/mes-reservations')} style={{ width:'100%', padding:'14px', borderRadius:12, border:'none', background:'linear-gradient(135deg,#0c2340,#0284c7)', color:'#fff', fontWeight:800, fontSize:'1rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, boxShadow:'0 4px 16px rgba(2,132,199,.35)' }}>
+            <i className="bi bi-calendar-check" />Voir mes réservations
+          </button>
         </div>
-      ))}
-    </div>
-  );
-
-  /* ── Mini récap flottant mobile ── */
-  const MiniRecap = () => (
-    <div style={{
-      background: '#f0f8ff', border: '1px solid var(--border-color)',
-      borderRadius: 10, padding: '10px 14px', marginBottom: 20,
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      cursor: 'pointer',
-    }} onClick={() => setShowRecapMobile(!showRecapMobile)}>
-      <div style={{ fontSize: '0.85rem' }}>
-        <strong>{service.nom}</strong>
-        {selectedDate && <span className="ms-2 text-muted">{formatDateFr(selectedDate)} {selectedHeure}</span>}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontWeight: 800, color: 'var(--primary-color)' }}>{total} F</span>
-        <i className={`bi bi-chevron-${showRecapMobile ? 'up' : 'down'}`} style={{ color: '#94a3b8' }}></i>
-      </div>
-    </div>
-  );
-
-  /* ── Succès ── */
-  if (etape === 'demande_envoyee') return (
-    <div className="container py-5" style={{ maxWidth: 600, textAlign: 'center' }}>
-      <div className="dashboard-card" style={{ padding: 40 }}>
-        <div style={{ fontSize: '3.5rem', marginBottom: 16, color: '#22c55e' }}>
-          <i className="bi bi-check-circle-fill"></i>
-        </div>
-        <h4 style={{ fontWeight: 800, color: '#166534', marginBottom: 8 }}>Demande envoyée !</h4>
-        <p className="text-muted" style={{ marginBottom: 24 }}>
-          Votre demande a été transmise au prestataire.<br />
-          <strong>Il dispose de 24h pour confirmer.</strong>
-        </p>
-        <div style={{ background: '#f8fafc', borderRadius: 10, padding: 16, textAlign: 'left', marginBottom: 24 }}>
-          {[['Service', service.nom], ['Date', formatDateFr(selectedDate)], ['Heure', selectedHeure], ['Lieu', lieu || '-'], ['Notes', notes || '-']].map(([k, v]) => (
-            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem' }}>
-              <span className="text-muted">{k}</span>
-              <span style={{ fontWeight: 600 }}>{v}</span>
-            </div>
-          ))}
-        </div>
-        <button className="btn-primary-custom w-100" style={{ justifyContent: 'center' }}
-          onClick={() => navigate('/mes-reservations')}>
-          <i className="bi bi-calendar-check me-2"></i>Voir mes réservations
-        </button>
-      </div>
-    </div>
+    </>
   );
 
   return (
-    <div style={{ background: '#f8fafb', minHeight: '70vh' }} className="py-5">
-      <div className="container">
+    <>
+      <style>{CSS}</style>
+      <div style={{ background:'#f0f8ff', minHeight:'70vh', paddingBottom:60 }}>
+        <div className="container" style={{ paddingTop:32 }}>
 
-        {/* Breadcrumb */}
-        <ol className="breadcrumb" style={{ marginBottom: 20 }}>
-          <li><Link to="/">Accueil</Link></li>
-          <span className="breadcrumb-separator">›</span>
-          <li><Link to="/services">Services</Link></li>
-          <span className="breadcrumb-separator">›</span>
-          <li className="breadcrumb-active">{service.nom}</li>
-        </ol>
+          {/* Breadcrumb */}
+          <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:24, fontSize:'0.85rem', color:'#64748b' }}>
+            <Link to="/" style={{ color:'#0284c7', textDecoration:'none' }}>Accueil</Link>
+            <i className="bi bi-chevron-right" style={{ fontSize:'0.7rem' }} />
+            <Link to="/services" style={{ color:'#0284c7', textDecoration:'none' }}>Services</Link>
+            <i className="bi bi-chevron-right" style={{ fontSize:'0.7rem' }} />
+            <span style={{ color:'#0c2340', fontWeight:600 }}>{service.nom}</span>
+          </div>
 
-        {/* Layout desktop: 2 colonnes | mobile: 1 colonne */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start' }}>
+          <div style={{ display:'flex', gap:24, alignItems:'flex-start', flexWrap:'wrap' }}>
 
-          {/* ── Colonne principale ── */}
-          <div style={{ flex: '1 1 0', minWidth: 0 }}>
-            <div className="form-custom">
+            {/* ── FORMULAIRE PRINCIPAL ── */}
+            <div style={{ flex:'1 1 0', minWidth:280 }}>
+              <div style={{ background:'#fff', borderRadius:20, boxShadow:'0 4px 24px rgba(2,132,199,.08)', overflow:'hidden', animation:'fadeUp .4s ease' }}>
 
-              {/* Header service */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24,
-                padding: 14, background: '#f0f8ff', borderRadius: 12,
-                border: '1px solid var(--border-color)', flexWrap: 'wrap',
-              }}>
-                <div style={{
-                  width: 48, height: 48, borderRadius: 10, background: 'var(--primary-light)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>
-                  <i className="bi bi-briefcase" style={{ fontSize: '1.4rem', color: 'var(--primary-color)' }}></i>
+                {/* Header service */}
+                <div style={{ background:'linear-gradient(135deg,#0c2340,#0284c7)', padding:'20px 24px', display:'flex', alignItems:'center', gap:14 }}>
+                  <div style={{ width:52, height:52, borderRadius:14, background:'rgba(255,255,255,.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
+                    {service.image_url
+                      ? <img src={service.image_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                      : <i className="bi bi-briefcase" style={{ fontSize:'1.5rem', color:'#fff' }} />
+                    }
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <h5 style={{ margin:0, color:'#fff', fontWeight:800, fontSize:'1rem', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{service.nom}</h5>
+                    <p style={{ margin:'3px 0 0', color:'rgba(255,255,255,.7)', fontSize:'0.82rem' }}>par {service.prestataire?.user?.username}</p>
+                  </div>
+                  <div style={{ textAlign:'right', flexShrink:0 }}>
+                    <div style={{ color:'#fff', fontWeight:900, fontSize:'1.1rem' }}>{prix.toLocaleString()} F</div>
+                    <div style={{ color:'rgba(255,255,255,.6)', fontSize:'0.72rem' }}>Fcfa</div>
+                  </div>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <h5 style={{ fontWeight: 700, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {service.nom}
-                  </h5>
-                  <span className="text-muted" style={{ fontSize: '0.85rem' }}>
-                    <i className="bi bi-person me-1"></i>{(`${service.prestataire?.user?.first_name || ''} ${service.prestataire?.user?.last_name || ''}`.trim() || service.prestataire?.user?.username)}
-                    {service.categorie && <span className="badge-category ms-2">{service.categorie.nom}</span>}
-                  </span>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--primary-color)' }}>{prix} F</div>
-                  <small className="text-muted">par intervention</small>
-                </div>
-              </div>
 
-              {/* Mini récap mobile (au-dessus de la progress bar) */}
-              <div className="d-md-none" style={{ display: 'block' }}>
-                <MiniRecap />
-                {showRecapMobile && (
-                  <div style={{ background: 'white', border: '1px solid var(--border-color)', borderRadius: 10, padding: 14, marginTop: -8, marginBottom: 16 }}>
-                    {[
-                      ['Service', service.nom],
-                      ['Prestataire', (`${service.prestataire?.user?.first_name || ''} ${service.prestataire?.user?.last_name || ''}`.trim() || service.prestataire?.user?.username)],
-                      selectedDate && ['Date', formatDateFr(selectedDate)],
-                      selectedHeure && ['Heure', selectedHeure],
-                      lieu && ['Lieu', lieu],
-                    ].filter(Boolean).map(([k, v]) => (
-                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.85rem' }}>
-                        <span className="text-muted">{k}</span>
-                        <span style={{ fontWeight: 600 }}>{v}</span>
+                {/* Stepper */}
+                <div style={{ padding:'20px 24px 0', borderBottom:'1px solid #f1f5f9' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:0, marginBottom:20 }}>
+                    {ETAPES.map((e,i) => (
+                      <div key={e.key} style={{ display:'flex', alignItems:'center' }}>
+                        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, cursor:i<etapeIdx?'pointer':'default' }} onClick={()=>i<etapeIdx&&setEtape(e.key)}>
+                          <div style={{ width:38, height:38, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.9rem', transition:'all .3s',
+                            background: i<etapeIdx ? '#10b981' : i===etapeIdx ? '#0284c7' : '#f1f5f9',
+                            color: i<=etapeIdx ? '#fff' : '#94a3b8',
+                            boxShadow: i===etapeIdx ? '0 0 0 4px rgba(2,132,199,.2)' : 'none',
+                          }}>
+                            {i<etapeIdx ? <i className="bi bi-check-lg" /> : <i className={`bi bi-${e.icon}`} />}
+                          </div>
+                          <span style={{ fontSize:'0.68rem', fontWeight:600, color:i<=etapeIdx?'#0284c7':'#94a3b8', whiteSpace:'nowrap' }}>{e.label}</span>
+                        </div>
+                        {i<ETAPES.length-1 && <div style={{ width:50, height:2, margin:'0 4px', marginBottom:18, background:i<etapeIdx?'#10b981':'#e2e8f0', transition:'background .3s' }} />}
                       </div>
                     ))}
-                    <hr />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span className="text-muted">Prix</span><span>{prix} F</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span className="text-muted">Frais plateforme (déduits)</span><span>{frais} F</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, marginTop: 4 }}>
-                      <span>Total à payer</span><span style={{ color: 'var(--primary-color)' }}>{total} F</span>
-                    </div>
                   </div>
-                )}
-              </div>
+                </div>
 
-              <ProgressBar />
+                <div style={{ padding:'24px' }}>
 
-              {/* ══ ÉTAPE 1 : CALENDRIER ══ */}
-              {etape === 'calendrier' && (
-                <div>
-                  <h4 style={{ fontWeight: 700, marginBottom: 20 }}>
-                    <i className="bi bi-calendar3 me-2 text-primary"></i>Date & Créneau
-                  </h4>
+                  {/* ── ÉTAPE 1 : CALENDRIER ── */}
+                  {etape === 'calendrier' && (
+                    <div style={{ animation:'fadeUp .3s ease' }}>
+                      {/* Navigation mois */}
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+                        <button onClick={()=>{ if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1); }} style={{ width:34, height:34, borderRadius:10, border:'1.5px solid #e2e8f0', background:'#f8fafc', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b' }}>
+                          <i className="bi bi-chevron-left" />
+                        </button>
+                        <span style={{ fontWeight:800, color:'#0c2340', fontSize:'0.95rem' }}>{MOIS[calMonth]} {calYear}</span>
+                        <button onClick={()=>{ if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1); }} style={{ width:34, height:34, borderRadius:10, border:'1.5px solid #e2e8f0', background:'#f8fafc', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b' }}>
+                          <i className="bi bi-chevron-right" />
+                        </button>
+                      </div>
 
-                  {/* Navigation mois */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <button className="btn-outline-primary-custom btn-sm-custom"
-                      onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y-1); } else setCalMonth(m => m-1); }}>
-                      <i className="bi bi-chevron-left"></i>
-                    </button>
-                    <h5 style={{ fontWeight: 700, color: 'var(--primary-color)', margin: 0 }}>
-                      {MOIS[calMonth]} {calYear}
-                    </h5>
-                    <button className="btn-outline-primary-custom btn-sm-custom"
-                      onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y+1); } else setCalMonth(m => m+1); }}>
-                      <i className="bi bi-chevron-right"></i>
-                    </button>
-                  </div>
-
-                  {/* Calendrier */}
-                  <div style={{ border: '1px solid var(--border-color)', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', background: 'var(--primary-color)' }}>
-                      {['Di','Lu','Ma','Me','Je','Ve','Sa'].map(j => (
-                        <div key={j} style={{ textAlign: 'center', padding: '8px 0', color: 'white', fontWeight: 600, fontSize: '0.75rem' }}>{j}</div>
-                      ))}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
-                      {buildCalendar(calYear, calMonth).map((d, i) => {
-                        const isCurrentMonth = d.getMonth() === calMonth;
-                        const isPast = isDayPast(d);
-                        const isSelected = selectedDate && formatDate(d) === formatDate(selectedDate);
-                        const isToday = formatDate(d) === formatDate(today);
-                        return (
-                          <div key={i}
-                            onClick={() => { if (!isPast && isCurrentMonth) { setSelectedDate(d); setSelectedHeure(''); }}}
-                            style={{
-                              textAlign: 'center', padding: '8px 0', fontSize: '0.85rem',
-                              cursor: isPast || !isCurrentMonth ? 'default' : 'pointer',
-                              background: isSelected ? 'var(--primary-color)' : isToday ? '#e0f2fe' : 'white',
-                              color: isSelected ? 'white' : !isCurrentMonth || isPast ? '#cbd5e1' : 'var(--text-dark)',
-                              fontWeight: isSelected || isToday ? 700 : 400,
-                              borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9',
-                            }}>
-                            {d.getDate()}
-                            {isToday && !isSelected && (
-                              <div style={{ width: 4, height: 4, background: 'var(--primary-color)', borderRadius: '50%', margin: '2px auto 0' }}></div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Créneaux */}
-                  {selectedDate && (
-                    <div>
-                      <h5 style={{ fontWeight: 700, marginBottom: 12 }}>
-                        <i className="bi bi-clock me-2 text-primary"></i>
-                        Créneaux — {formatDateFr(selectedDate)}
-                      </h5>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 20 }}>
-                        {CRENEAUX.map(h => {
-                          const blocked = creneauxBloques.includes(h);
-                          const sel = selectedHeure === h;
+                      {/* Grille calendrier */}
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:4, marginBottom:20 }}>
+                        {JOURS.map(j => (
+                          <div key={j} style={{ textAlign:'center', fontSize:'0.72rem', fontWeight:700, color:'#94a3b8', padding:'6px 0' }}>{j}</div>
+                        ))}
+                        {days.map((d,i) => {
+                          const isToday   = d.toDateString()===today.toDateString();
+                          const isSel     = selDate && d.toDateString()===selDate.toDateString();
+                          const isOther   = d.getMonth()!==calMonth;
+                          const disabled  = isPast(d);
                           return (
-                            <button key={h} disabled={blocked} onClick={() => setSelectedHeure(h)} style={{
-                              padding: '10px 6px', borderRadius: 10, textAlign: 'center',
-                              border: sel ? '2px solid var(--primary-color)' : '1.5px solid #e2e8f0',
-                              background: blocked ? '#f1f5f9' : sel ? 'var(--primary-light)' : 'white',
-                              color: blocked ? '#94a3b8' : sel ? 'var(--primary-color)' : '#0c2340',
-                              fontWeight: sel ? 700 : 500, fontSize: '0.88rem',
-                              cursor: blocked ? 'not-allowed' : 'pointer',
-                              textDecoration: blocked ? 'line-through' : 'none',
-                            }}>
-                              <i className={`bi ${blocked ? 'bi-lock' : 'bi-clock'} me-1`}></i>{h}
-                              {blocked && <div style={{ fontSize: '0.62rem', color: '#ef4444' }}>Réservé</div>}
+                            <button key={i} disabled={disabled} onClick={()=>{setSelDate(d);setSelHeure('');}}
+                              className="rv-day"
+                              style={{ padding:'8px 4px', borderRadius:10, border:`1.5px solid ${isSel?'#0284c7':isToday?'#bae6fd':'transparent'}`, textAlign:'center', fontSize:'0.85rem', cursor:disabled?'not-allowed':'pointer', fontWeight:isSel||isToday?700:400,
+                                background: isSel?'#0284c7':isToday?'#e0f2fe':'transparent',
+                                color: disabled?'#cbd5e1':isSel?'#fff':isOther?'#c4c9d4':'#0c2340',
+                                opacity:isOther?0.4:1,
+                              }}>
+                              {d.getDate()}
                             </button>
                           );
                         })}
                       </div>
-                    </div>
-                  )}
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-                    <button className="btn-primary-custom" style={{ padding: '12px 28px' }}
-                      disabled={!selectedDate || !selectedHeure}
-                      onClick={() => setEtape('details')}>
-                      Continuer <i className="bi bi-arrow-right ms-2"></i>
-                    </button>
-                  </div>
-                </div>
-              )}
+                      {/* Créneaux */}
+                      {selDate && (
+                        <div>
+                          <p style={{ fontWeight:700, fontSize:'0.82rem', color:'#0284c7', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:10 }}>
+                            <i className="bi bi-clock me-1" />Créneaux disponibles — {fmtDateFr(selDate)}
+                          </p>
+                          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))', gap:8 }}>
+                            {CRENEAUX.map(h => {
+                              const blocked = bloques.includes(h);
+                              const sel     = selHeure===h;
+                              return (
+                                <button key={h} disabled={blocked} onClick={()=>setSelHeure(h)} className="rv-slot"
+                                  style={{ padding:'10px 6px', borderRadius:10, textAlign:'center', border:`1.5px solid ${sel?'#0284c7':blocked?'#f1f5f9':'#e2e8f0'}`, background:blocked?'#f8fafc':sel?'#0284c7':'#fff', color:blocked?'#cbd5e1':sel?'#fff':'#0c2340', fontWeight:sel?700:400, fontSize:'0.85rem', cursor:blocked?'not-allowed':'pointer' }}>
+                                  {h}
+                                  {blocked && <div style={{ fontSize:'0.6rem', color:'#ef4444', marginTop:2 }}>Réservé</div>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
 
-              {/* ══ ÉTAPE 2 : DÉTAILS ══ */}
-              {etape === 'details' && (
-                <div>
-                  <h4 style={{ fontWeight: 700, marginBottom: 20 }}>
-                    <i className="bi bi-geo-alt me-2 text-primary"></i>Détails
-                  </h4>
-
-                  <div style={{ padding: 14, background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', marginBottom: 20 }}>
-                    <i className="bi bi-calendar-check text-success me-2"></i>
-                    <strong>{formatDateFr(selectedDate)}</strong>
-                    <span className="ms-3"><i className="bi bi-clock text-success me-2"></i><strong>{selectedHeure}</strong></span>
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="form-label">
-                      <i className="bi bi-geo-alt me-2"></i>Lieu d'intervention <span style={{ color: '#dc3545' }}>*</span>
-                    </label>
-                    <input type="text" className="form-control"
-                      placeholder="Ex : Quartier Tokoin, Rue 12, Lomé"
-                      value={lieu} onChange={e => setLieu(e.target.value)} />
-                    <small className="text-muted">Précisez l'adresse exacte pour le prestataire.</small>
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="form-label">
-                      <i className="bi bi-chat-text me-2"></i>Notes (optionnel)
-                    </label>
-                    <textarea className="form-control" rows={4}
-                      placeholder="Décrivez votre besoin, problèmes spécifiques..."
-                      value={notes} onChange={e => setNotes(e.target.value)} />
-                  </div>
-
-                  <div style={{ padding: 14, background: '#fffbeb', borderRadius: 10, border: '1px solid #fde68a', marginBottom: 20, fontSize: '0.88rem' }}>
-                    <i className="bi bi-info-circle text-warning me-2"></i>
-                    Le prestataire a <strong>24h</strong> pour confirmer. Vous recevrez une notification.
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                    <button onClick={() => setEtape('calendrier')} className="btn-secondary-custom">
-                      <i className="bi bi-arrow-left me-2"></i>Retour
-                    </button>
-                    <button className="btn-primary-custom" style={{ padding: '12px 28px' }}
-                      disabled={!lieu.trim()} onClick={() => setEtape('recap')}>
-                      Continuer <i className="bi bi-arrow-right ms-2"></i>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* ══ ÉTAPE 3 : RÉCAPITULATIF ══ */}
-              {etape === 'recap' && (
-                <div>
-                  <h4 style={{ fontWeight: 700, marginBottom: 20 }}>
-                    <i className="bi bi-receipt me-2 text-primary"></i>Récapitulatif
-                  </h4>
-
-                  <div style={{ background: '#f8fafc', borderRadius: 10, padding: 18, marginBottom: 20 }}>
-                    {[
-                      ['Service', service.nom],
-                      ['Prestataire', (`${service.prestataire?.user?.first_name || ''} ${service.prestataire?.user?.last_name || ''}`.trim() || service.prestataire?.user?.username)],
-                      ['Date', formatDateFr(selectedDate)],
-                      ['Heure', selectedHeure],
-                      ['Lieu', lieu],
-                      ['Notes', notes || '-'],
-                    ].map(([k, v]) => (
-                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem' }}>
-                        <span className="text-muted">{k}</span>
-                        <span style={{ fontWeight: 600, maxWidth: 220, textAlign: 'right', wordBreak: 'break-word' }}>{v}</span>
+                      <div style={{ display:'flex', justifyContent:'flex-end', marginTop:20 }}>
+                        <button disabled={!selDate||!selHeure} onClick={()=>setEtape('details')} style={{ padding:'12px 28px', borderRadius:12, border:'none', background: !selDate||!selHeure?'#e2e8f0':'linear-gradient(135deg,#0c2340,#0284c7)', color: !selDate||!selHeure?'#94a3b8':'#fff', fontWeight:800, fontSize:'0.9rem', cursor:!selDate||!selHeure?'not-allowed':'pointer', display:'flex', alignItems:'center', gap:8 }}>
+                          Continuer <i className="bi bi-arrow-right" />
+                        </button>
                       </div>
-                    ))}
-                    <hr />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.9rem' }}>
-                      <span className="text-muted">Prix</span>
-                      <span style={{ fontWeight: 700, color: 'var(--primary-color)' }}>{prix} Fcfa</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.9rem' }}>
-                      <span className="text-muted">Frais plateforme (déduits)</span><span>{frais} Fcfa</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
-                      <span>Total estimé</span>
-                      <span style={{ color: 'var(--primary-color)', fontSize: '1.1rem' }}>{total} Fcfa</span>
-                    </div>
-                  </div>
-
-                  <div className="alert alert-info" style={{ borderRadius: 10, fontSize: '0.88rem' }}>
-                    <i className="bi bi-info-circle me-2"></i><strong>Prochaines étapes :</strong>
-                    <ol style={{ margin: '8px 0 0', paddingLeft: 20 }}>
-                      <li>Le prestataire reçoit votre demande</li>
-                      <li>Il confirme sous 24h</li>
-                      <li>Vous procédez au paiement</li>
-                      <li>Un chat s'ouvre pour coordonner</li>
-                    </ol>
-                  </div>
-
-                  {errorMsg && (
-                    <div className="alert alert-danger" style={{ borderRadius: 8, marginTop: 16 }}>
-                      <i className="bi bi-exclamation-triangle me-2"></i>{errorMsg}
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20, gap: 12 }}>
-                    <button onClick={() => setEtape('details')} className="btn-secondary-custom">
-                      <i className="bi bi-arrow-left me-2"></i>Retour
-                    </button>
-                    <button className="btn-primary-custom" disabled={submitting}
-                      style={{ flex: 1, justifyContent: 'center', padding: '14px', fontSize: '1rem' }}
-                      onClick={envoyerDemande}>
-                      {submitting
-                        ? <><span className="spinner-border spinner-border-sm me-2"></span>Envoi…</>
-                        : <><i className="bi bi-send-check me-2"></i>Envoyer la demande</>}
-                    </button>
+                  {/* ── ÉTAPE 2 : DÉTAILS ── */}
+                  {etape === 'details' && (
+                    <div style={{ animation:'fadeUp .3s ease' }}>
+                      {/* Résumé date sélectionnée */}
+                      <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:12, padding:'12px 16px', marginBottom:20, display:'flex', alignItems:'center', gap:12 }}>
+                        <i className="bi bi-calendar-check" style={{ color:'#10b981', fontSize:'1.2rem', flexShrink:0 }} />
+                        <div>
+                          <div style={{ fontWeight:700, color:'#065f46', fontSize:'0.9rem' }}>{fmtDateFr(selDate)}</div>
+                          <div style={{ color:'#16a34a', fontSize:'0.82rem' }}><i className="bi bi-clock me-1" />{selHeure}</div>
+                        </div>
+                      </div>
+
+                      <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                        <div>
+                          <label style={{ display:'block', fontWeight:700, fontSize:'0.78rem', color:'#374151', marginBottom:7, textTransform:'uppercase', letterSpacing:'.04em' }}>
+                            <i className="bi bi-geo-alt me-1 text-primary" />Lieu d'intervention *
+                          </label>
+                          <div className="rv-input-wrap" style={{ border:'1.5px solid #e2e8f0', borderRadius:12, overflow:'hidden', background:'#f8fafc', transition:'border-color .2s,box-shadow .2s' }}>
+                            <input type="text" value={lieu} onChange={e=>setLieu(e.target.value)} placeholder="Ex : Quartier Tokoin, Rue 12, Lomé"
+                              style={{ width:'100%', padding:'13px 16px', border:'none', outline:'none', fontSize:'0.92rem', color:'#0c2340', background:'transparent', boxSizing:'border-box' }} />
+                          </div>
+                          <p style={{ margin:'5px 0 0', fontSize:'0.78rem', color:'#94a3b8' }}>Précisez l'adresse exacte pour le prestataire.</p>
+                        </div>
+
+                        <div>
+                          <label style={{ display:'block', fontWeight:700, fontSize:'0.78rem', color:'#374151', marginBottom:7, textTransform:'uppercase', letterSpacing:'.04em' }}>
+                            <i className="bi bi-chat-text me-1" />Notes (optionnel)
+                          </label>
+                          <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={4} placeholder="Décrivez votre besoin, problèmes spécifiques..."
+                            style={{ width:'100%', border:'1.5px solid #e2e8f0', borderRadius:12, padding:'12px 16px', fontSize:'0.9rem', outline:'none', resize:'vertical', fontFamily:'inherit', color:'#0c2340', background:'#f8fafc', boxSizing:'border-box', transition:'border-color .2s' }}
+                            onFocus={e=>e.target.style.borderColor='#0284c7'} onBlur={e=>e.target.style.borderColor='#e2e8f0'} />
+                        </div>
+
+                        <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:12, padding:'12px 14px', fontSize:'0.85rem', color:'#92400e', display:'flex', alignItems:'flex-start', gap:8 }}>
+                          <i className="bi bi-info-circle" style={{ flexShrink:0, marginTop:1 }} />
+                          Le prestataire a <strong>24h</strong> pour confirmer. Vous recevrez une notification.
+                        </div>
+                      </div>
+
+                      <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginTop:20 }}>
+                        <button onClick={()=>setEtape('calendrier')} style={{ padding:'12px 20px', borderRadius:12, border:'1.5px solid #e2e8f0', background:'#f8fafc', color:'#64748b', fontWeight:700, fontSize:'0.88rem', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                          <i className="bi bi-arrow-left" />Retour
+                        </button>
+                        <button disabled={!lieu.trim()} onClick={()=>setEtape('recap')} style={{ padding:'12px 28px', borderRadius:12, border:'none', background:!lieu.trim()?'#e2e8f0':'linear-gradient(135deg,#0c2340,#0284c7)', color:!lieu.trim()?'#94a3b8':'#fff', fontWeight:800, fontSize:'0.9rem', cursor:!lieu.trim()?'not-allowed':'pointer', display:'flex', alignItems:'center', gap:8 }}>
+                          Continuer <i className="bi bi-arrow-right" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── ÉTAPE 3 : RECAP ── */}
+                  {etape === 'recap' && (
+                    <div style={{ animation:'fadeUp .3s ease' }}>
+                      <div style={{ background:'#f8fafc', borderRadius:14, padding:'18px 20px', marginBottom:20 }}>
+                        {[
+                          ['Service',    service.nom],
+                          ['Prestataire',service.prestataire?.user?.username],
+                          ['Date',       fmtDateFr(selDate)],
+                          ['Heure',      selHeure],
+                          ['Lieu',       lieu],
+                          ['Notes',      notes || '-'],
+                        ].map(([k,v]) => (
+                          <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:'0.9rem' }}>
+                            <span style={{ color:'#64748b' }}>{k}</span>
+                            <span style={{ fontWeight:600, color:'#0c2340', maxWidth:220, textAlign:'right', wordBreak:'break-word' }}>{v}</span>
+                          </div>
+                        ))}
+                        <div style={{ height:1, background:'#e2e8f0', margin:'12px 0' }} />
+                        <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.9rem', marginBottom:6 }}>
+                          <span style={{ color:'#64748b' }}>Prix</span>
+                          <span style={{ fontWeight:700, color:'#0284c7' }}>{prix.toLocaleString()} Fcfa</span>
+                        </div>
+                        <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.85rem' }}>
+                          <span style={{ color:'#94a3b8' }}>Frais plateforme (déduits)</span>
+                          <span style={{ color:'#94a3b8' }}>{frais} Fcfa</span>
+                        </div>
+                        <div style={{ height:1, background:'#e2e8f0', margin:'12px 0' }} />
+                        <div style={{ display:'flex', justifyContent:'space-between', fontWeight:900 }}>
+                          <span style={{ color:'#0c2340' }}>Total à payer</span>
+                          <span style={{ color:'#0284c7', fontSize:'1.1rem' }}>{total.toLocaleString()} Fcfa</span>
+                        </div>
+                      </div>
+
+                      <div style={{ background:'#f0f9ff', border:'1px solid #bae6fd', borderRadius:12, padding:'14px 16px', marginBottom:20, fontSize:'0.85rem', color:'#0369a1' }}>
+                        <p style={{ margin:'0 0 8px', fontWeight:700 }}><i className="bi bi-info-circle me-1" />Prochaines étapes :</p>
+                        {['Le prestataire reçoit votre demande','Il confirme sous 24h','Vous procédez au paiement','Un chat s\'ouvre pour coordonner'].map((s,i)=>(
+                          <div key={i} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:i<3?6:0, fontSize:'0.83rem' }}>
+                            <span style={{ width:20, height:20, borderRadius:'50%', background:'#0284c7', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:'0.7rem', flexShrink:0 }}>{i+1}</span>
+                            {s}
+                          </div>
+                        ))}
+                      </div>
+
+                      {errorMsg && (
+                        <div style={{ background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10, padding:'12px 14px', marginBottom:16, display:'flex', alignItems:'center', gap:8 }}>
+                          <i className="bi bi-exclamation-triangle" style={{ color:'#ef4444', flexShrink:0 }} />
+                          <span style={{ color:'#b91c1c', fontSize:'0.85rem', fontWeight:600 }}>{errorMsg}</span>
+                        </div>
+                      )}
+
+                      <div style={{ display:'flex', gap:12 }}>
+                        <button onClick={()=>setEtape('details')} style={{ padding:'12px 20px', borderRadius:12, border:'1.5px solid #e2e8f0', background:'#f8fafc', color:'#64748b', fontWeight:700, fontSize:'0.88rem', cursor:'pointer', display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
+                          <i className="bi bi-arrow-left" />Retour
+                        </button>
+                        <button disabled={submitting} onClick={envoyer} style={{ flex:1, padding:'14px', borderRadius:12, border:'none', background:'linear-gradient(135deg,#0c2340,#0284c7)', color:'#fff', fontWeight:800, fontSize:'0.95rem', cursor:submitting?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, boxShadow:'0 4px 16px rgba(2,132,199,.35)', opacity:submitting?0.75:1 }}>
+                          {submitting
+                            ? <><span style={{ width:18, height:18, border:'2.5px solid rgba(255,255,255,.4)', borderTop:'2.5px solid #fff', borderRadius:'50%', animation:'spin .7s linear infinite', display:'inline-block' }} />Envoi…</>
+                            : <><i className="bi bi-send-check" />Envoyer la demande</>
+                          }
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── SIDEBAR DESKTOP ── */}
+            <div style={{ width:260, flexShrink:0 }}>
+              <div style={{ background:'#fff', borderRadius:18, padding:'20px', boxShadow:'0 4px 20px rgba(2,132,199,.08)', marginBottom:16 }}>
+                <h5 style={{ fontWeight:800, color:'#0c2340', marginBottom:14, display:'flex', alignItems:'center', gap:8, fontSize:'0.95rem' }}>
+                  <i className="bi bi-receipt" style={{ color:'#0284c7' }} />Récapitulatif
+                </h5>
+                {[
+                  ['Service',service.nom],
+                  ...(selDate?[['Date',fmtDateFr(selDate)]]:[] ),
+                  ...(selHeure?[['Heure',selHeure]]:[]),
+                  ...(lieu?[['Lieu',lieu]]:[]),
+                ].map(([k,v])=>(
+                  <div key={k} style={{ display:'flex', justifyContent:'space-between', marginBottom:8, fontSize:'0.85rem' }}>
+                    <span style={{ color:'#64748b' }}>{k}</span>
+                    <span style={{ fontWeight:600, color:'#0c2340', maxWidth:130, textAlign:'right', wordBreak:'break-word', fontSize:'0.82rem' }}>{v}</span>
                   </div>
+                ))}
+                <div style={{ height:1, background:'#f1f5f9', margin:'12px 0' }} />
+                <div style={{ display:'flex', justifyContent:'space-between', fontWeight:900 }}>
+                  <span style={{ fontSize:'0.85rem', color:'#0c2340' }}>Total</span>
+                  <span style={{ color:'#0284c7', fontSize:'1rem' }}>{total.toLocaleString()} F</span>
                 </div>
-              )}
+              </div>
+
+              <div style={{ background:'#fff', borderRadius:18, padding:'18px', boxShadow:'0 4px 20px rgba(2,132,199,.08)' }}>
+                <h6 style={{ fontWeight:700, marginBottom:10, color:'#0c2340', fontSize:'0.88rem' }}>
+                  <i className="bi bi-shield-check me-2 text-success" />Nos garanties
+                </h6>
+                {[['shield-check','Paiement sécurisé','#10b981'],['clock','Réponse sous 24h','#0284c7'],['patch-check','Prestataire vérifié','#8b5cf6']].map(([ic,lbl,col])=>(
+                  <div key={lbl} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, fontSize:'0.82rem', color:'#64748b' }}>
+                    <i className={`bi bi-${ic}`} style={{ color:col, flexShrink:0 }} />{lbl}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-
-          {/* ── Sidebar récap (desktop uniquement) ── */}
-          <div style={{ flex: '0 0 280px', width: 280, display: 'none' }} className="reserver-sidebar">
-            <div className="dashboard-card mb-3">
-              <h5 style={{ fontWeight: 700, marginBottom: 14 }}>
-                <i className="bi bi-receipt me-2"></i>Récapitulatif
-              </h5>
-              {[
-                ['Service', service.nom],
-                ['Prestataire', (`${service.prestataire?.user?.first_name || ''} ${service.prestataire?.user?.last_name || ''}`.trim() || service.prestataire?.user?.username)],
-                ...(selectedDate ? [['Date', formatDateFr(selectedDate)]] : []),
-                ...(selectedHeure ? [['Heure', selectedHeure]] : []),
-                ...(lieu ? [['Lieu', lieu]] : []),
-              ].map(([label, val]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.88rem' }}>
-                  <span className="text-muted">{label}</span>
-                  <span style={{ fontWeight: 600, maxWidth: 150, textAlign: 'right', wordBreak: 'break-word' }}>{val}</span>
-                </div>
-              ))}
-              <hr />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.88rem' }}>
-                <span className="text-muted">Prix</span>
-                <span style={{ fontWeight: 700, color: 'var(--primary-color)' }}>{prix} Fcfa</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.88rem' }}>
-                <span className="text-muted">Frais plateforme (déduits)</span><span>{frais} Fcfa</span>
-              </div>
-              <hr />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
-                <span>Total</span>
-                <span style={{ color: 'var(--primary-color)', fontSize: '1.1rem' }}>{total} Fcfa</span>
-              </div>
-            </div>
-
-            <div className="dashboard-card">
-              <h5 style={{ fontWeight: 700, marginBottom: 8 }}>
-                <i className="bi bi-question-circle text-primary me-2"></i>Besoin d'aide ?
-              </h5>
-              <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 14 }}>
-                Contactez notre support WhatsApp.
-              </p>
-              <a href={`https://wa.me/22897430290?text=${encodeURIComponent(`Question sur la réservation de ${service.nom}`)}`}
-                target="_blank" rel="noreferrer" className="btn-whatsapp"
-                style={{ justifyContent: 'center', width: '100%', display: 'flex' }}>
-                <i className="bi bi-whatsapp"></i> Support WhatsApp
-              </a>
-            </div>
-          </div>
-
         </div>
       </div>
-    </div>
+    </>
   );
 }

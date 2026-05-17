@@ -52,8 +52,8 @@ export default function Dashboard() {
           <Stat label="Mes Ateliers" value={ateliers.length} icon="geo-alt" type="primary" />
         </div>
         <div style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:24 }}>
-          <Link to="/ajouter-service" className="btn-primary-custom"><i className="bi bi-plus-circle"></i> Ajouter un service</Link>
-          <Link to="/mes-services" className="btn-outline-primary-custom"><i className="bi bi-briefcase"></i> Mes services</Link>
+<Link to="/prestataire-ajouter-service" className="btn-primary-custom"><i className="bi bi-plus-circle"></i> Ajouter un service</Link>
+          <Link to="/prestataire-mes-services" className="btn-outline-primary-custom"><i className="bi bi-briefcase"></i> Mes services</Link>
           <Link to="/services" className="btn-outline-primary-custom"><i className="bi bi-eye"></i> Voir tous les services</Link>
           <Link to="/mes-ateliers" className="btn-outline-primary-custom" style={{ borderColor:'#28a745', color:'#28a745' }}><i className="bi bi-geo-alt"></i> Gérer mes ateliers</Link>
           <Link to="/ateliers" className="btn-outline-primary-custom" style={{ borderColor:'#17a2b8', color:'#17a2b8' }}><i className="bi bi-map"></i> Carte</Link>
@@ -81,7 +81,7 @@ export default function Dashboard() {
             ) : (
               <div className="empty-state">
                 <i className="bi bi-inbox"></i><h4>Aucun service</h4>
-                <Link to="/ajouter-service" className="btn-primary-custom"><i className="bi bi-plus-circle"></i> Créer mon premier service</Link>
+                <Link to="/prestataire-ajouter-service" className="btn-primary-custom"><i className="bi bi-plus-circle"></i> Créer mon premier service</Link>
               </div>
             )}
           </div>

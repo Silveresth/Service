@@ -27,7 +27,7 @@ export default function ModifierService() {
     ]).catch(err => {
       console.error(err);
       alert('Erreur lors du chargement du service');
-      navigate('/mes-services');
+      navigate('/prestataire-mes-services');
     }).finally(() => setFetchLoading(false));
   }, [id, navigate]);
 
@@ -39,7 +39,7 @@ export default function ModifierService() {
       const payload = { ...form };
       if (!payload.categorie_id) delete payload.categorie_id;
       await api.patch(`/services/${id}/`, payload);
-      navigate('/mes-services');
+      navigate('/prestataire-mes-services');
     } catch (err) {
       setErrors(err.response?.data || {});
     } finally {
@@ -104,7 +104,7 @@ export default function ModifierService() {
                     style={{ justifyContent:'center', padding:'14px', fontSize:'1rem' }}>
                     {loading ? 'Enregistrement...' : <><i className="bi bi-check-circle"></i> Enregistrer les modifications</>}
                   </button>
-                  <Link to="/mes-services" className="btn-secondary-custom" style={{ justifyContent:'center', padding:'12px' }}>Annuler</Link>
+                  <Link to="/prestataire-mes-services" className="btn-secondary-custom" style={{ justifyContent:'center', padding:'12px' }}>Annuler</Link>
                 </div>
               </form>
             </div>

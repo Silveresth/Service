@@ -15,7 +15,7 @@ import AdminDashboard from './pages/AdminDashboard';
 
 import MesReservations from './pages/MesReservations';
 import MesAteliers from './pages/MesAteliers';
-import MesServices from './pages/MesServices';
+// import MesServices from './pages/MesServices';
 import ModifierService from './pages/ModifierService';
 import ModifierAtelier from './pages/ModifierAtelier';
 import Reserver from './pages/Reserver';
@@ -45,6 +45,7 @@ import AdminAllComptes from './pages/AdminAllComptes';
 import AdminEvaluations from './pages/AdminEvaluations';
 import AdminAllPaiements from './pages/AdminAllPaiements';
 import AdminAllCategories from './pages/AdminAllCategories';
+import AdminAllServices from './pages/AdminAllServices';
 
 import './App.css';
 import './styles/global.css';
@@ -65,12 +66,12 @@ function App() {
             <Route path="/prestataires" element={<Prestataires />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/mon-compte" element={<MonCompte />} />
-            <Route path="/ajouter-service" element={<AjouterService />} />
+            {/* <Route path="/ajouter-service" element={<AjouterService />} /> */}
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/mes-reservations" element={<MesReservations />} />
             <Route path="/mes-ateliers" element={<MesAteliers />} />
-            <Route path="/mes-services" element={<MesServices />} />
+            {/* <Route path="/mes-services" element={<MesServices />} /> */}
             <Route path="/modifier-service/:id" element={<ModifierService />} />
             <Route path="/modifier-atelier/:id" element={<ModifierAtelier />} />
             <Route path="/reserver/:id" element={<Reserver />} />
@@ -105,6 +106,7 @@ function App() {
             <Route path="/admin/evaluations" element={<AdminEvaluations />} />
             <Route path="/admin/all-paiements" element={<AdminAllPaiements />} />
             <Route path="/admin/all-categories" element={<AdminAllCategories />} />
+            <Route path="/admin/All-services" element={<AdminAllServices />} />
 
             {/* Aliases pour les anciens liens */}
             <Route path="/inscription-client" element={<Register />} />

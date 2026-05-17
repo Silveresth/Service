@@ -39,10 +39,10 @@ export default function MesServices() {
           <p className="text-muted">Gérez vos services proposés</p>
         </div>
         <div style={{ display:'flex', gap:12, marginBottom:24 }}>
-          <Link to="/ajouter-service" className="btn-primary-custom">
+          <Link to="/prestataire-ajouter-service" className="btn-primary-custom">
             <i className="bi bi-plus-circle"></i> Ajouter un service
           </Link>
-          <Link to="/prestataire-dashboard" className="btn-outline-primary-custom">
+          <Link to="/prestataire-dashboard" className="btn-outline-primary-custom" style={{ display: 'none' }}>
             <i className="bi bi-speedometer2"></i> Dashboard
           </Link>
         </div>
@@ -85,7 +85,7 @@ export default function MesServices() {
             ) : (
               <div className="empty-state">
                 <i className="bi bi-inbox"></i><h4>Aucun service</h4>
-                <Link to="/ajouter-service" className="btn-primary-custom">
+                <Link to="/prestataire-ajouter-service" className="btn-primary-custom">
                   <i className="bi bi-plus-circle"></i> Créer mon premier service
                 </Link>
               </div>

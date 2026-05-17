@@ -1,517 +1,334 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
-const STATUT_LABEL = {
-  'en_attente': 'En attente',
-  'en_attente_paiement': 'À payer',
-  'confirmee': 'Confirmée',
-  'annulee': 'Annulée',
-  'terminee': 'Terminée',
-};
-const STATUT_CLASS = {
-  'confirmee': 'badge-success',
-  'terminee': 'badge-success',
-  'en_attente': 'badge-warning',
-  'en_attente_paiement': 'badge-info',
-  'annulee': 'badge-danger',
-};
-const STATUT_ICON = {
-  'confirmee': 'bi-check-circle-fill',
-  'terminee': 'bi-flag-fill',
-  'en_attente': 'bi-clock-fill',
-  'en_attente_paiement': 'bi-credit-card-fill',
-  'annulee': 'bi-x-circle-fill',
-};
-const STATUT_COLOR = {
-  'confirmee': '#059669', 'terminee': '#059669',
-  'en_attente': '#d97706', 'en_attente_paiement': '#2563eb', 'annulee': '#dc2626',
-};
-const STATUT_BG = {
-  'confirmee': '#d1fae5', 'terminee': '#d1fae5',
-  'en_attente': '#fef9c3', 'en_attente_paiement': '#dbeafe', 'annulee': '#fee2e2',
+const STATUT = {
+  en_attente:          { label:'En attente',  color:'#d97706', bg:'#fef3c7', border:'#fde68a', icon:'clock-fill' },
+  en_attente_paiement: { label:'À payer',     color:'#2563eb', bg:'#dbeafe', border:'#bfdbfe', icon:'credit-card-fill' },
+  confirmee:           { label:'Confirmée',   color:'#059669', bg:'#d1fae5', border:'#a7f3d0', icon:'check-circle-fill' },
+  terminee:            { label:'Terminée',    color:'#059669', bg:'#d1fae5', border:'#a7f3d0', icon:'flag-fill' },
+  annulee:             { label:'Annulée',     color:'#dc2626', bg:'#fee2e2', border:'#fecaca', icon:'x-circle-fill' },
 };
 
 const TABS = [
-  { key: 'toutes',               label: 'Toutes',     icon: 'bi-list-ul' },
-  { key: 'en_attente',           label: 'En attente', icon: 'bi-clock' },
-  { key: 'en_attente_paiement',  label: 'À payer',    icon: 'bi-credit-card' },
-  { key: 'confirmee',            label: 'Confirmées', icon: 'bi-check-circle' },
-  { key: 'terminee',             label: 'Terminées',  icon: 'bi-flag' },
-  { key: 'annulee',              label: 'Annulées',   icon: 'bi-x-circle' },
+  { key:'toutes',              label:'Toutes',     icon:'list-ul' },
+  { key:'en_attente',          label:'En attente', icon:'clock' },
+  { key:'en_attente_paiement', label:'À payer',    icon:'credit-card' },
+  { key:'confirmee',           label:'Confirmées', icon:'check-circle' },
+  { key:'terminee',            label:'Terminées',  icon:'flag' },
+  { key:'annulee',             label:'Annulées',   icon:'x-circle' },
 ];
 
-const fmt = (d) => d
-  ? new Date(d).toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-  : '-';
+const fmt = d => d ? new Date(d).toLocaleString('fr-FR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
 
 export default function MesReservations() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [reservations, setReservations] = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [activeTab, setActiveTab]       = useState('toutes');
-  const [expandedId, setExpandedId]     = useState(null);
-  const [deleteModal, setDeleteModal]   = useState(null);
-  const [payModal, setPayModal]         = useState(null);
-  const [payPhone, setPayPhone]         = useState('');
-  const [payMethode, setPayMethode]     = useState('moov');
+  const [reservations,  setReservations]  = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [activeTab,     setActiveTab]     = useState('toutes');
+  const [expanded,      setExpanded]      = useState(null);
+  const [payModal,      setPayModal]      = useState(null);
+  const [payPhone,      setPayPhone]      = useState('');
+  const [payMethode,    setPayMethode]    = useState('moov');
   const [paySubmitting, setPaySubmitting] = useState(false);
-  const [payError, setPayError]         = useState('');
-  const [successModal, setSuccessModal] = useState(null); // { message, type }
-  const [errorPopup, setErrorPopup]     = useState('');
+  const [payError,      setPayError]      = useState('');
+  const [toast,         setToast]         = useState(null);
 
   useEffect(() => {
-    api.get('/reservations/')
-      .then(res => setReservations(res.data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    api.get('/reservations/').then(r => setReservations(r.data)).catch(console.error).finally(() => setLoading(false));
   }, []);
 
-  const handleDelete = async (id) => {
+  const showToast = (msg, type='success') => { setToast({msg,type}); setTimeout(() => setToast(null), 3500); };
+
+  const handleCancel = async (id) => {
     try {
-      await api.delete(`/reservations/${id}/`);
-      setReservations(prev => prev.filter(r => r.id !== id));
-      setDeleteModal(null);
-    } catch { setErrorPopup("Erreur lors de l'annulation de la réservation."); }
+      await api.patch(`/reservations/${id}/`, { statut:'annulee' });
+      setReservations(prev => prev.map(r => r.id===id ? {...r,statut:'annulee'} : r));
+      showToast('Réservation annulée.');
+    } catch { showToast('Erreur lors de l\'annulation.','error'); }
   };
 
-  const handleUpdateStatus = async (id, statut) => {
+  const handleTerminer = async (id) => {
     try {
-      await api.patch(`/reservations/${id}/`, { statut });
-      setReservations(prev => prev.map(r => r.id === id ? { ...r, statut } : r));
-    } catch (err) {
-      setErrorPopup(err.response?.data?.error || 'Erreur lors de la mise à jour du statut.');
-    }
+      await api.patch(`/reservations/${id}/`, { statut:'terminee' });
+      setReservations(prev => prev.map(r => r.id===id ? {...r,statut:'terminee'} : r));
+      showToast('Service marqué comme terminé !');
+    } catch { showToast('Erreur.','error'); }
   };
 
-  const initierPaiement = async (reservation) => {
-    if (!payPhone || payPhone.length < 8) { setPayError('Numéro invalide (8 chiffres).'); return; }
-    setPayError(''); setPaySubmitting(true);
+  const handlePay = async () => {
+    if (!payPhone) { setPayError('Entrez votre numéro.'); return; }
+    setPaySubmitting(true); setPayError('');
     try {
-      const payRes = await api.post('/paiement/initier/', {
-        service_id: reservation.service.id,
-        reservation_id: reservation.id,
-        phone_number: payPhone,
-        network: payMethode === 'moov' ? 'Flooz' : 'T-Money',
-        montant: reservation.montant,
-      });
-      if (payRes.data.simulation) {
-        setReservations(prev => prev.map(r =>
-          r.id === reservation.id ? { ...r, statut: 'confirmee', paiement: { statut: 'confirme' } } : r
-        ));
-        setPayModal(null);
-        setSuccessModal({
-          type: 'success',
-          message: '✅ Paiement confirmé !',
-          detail: 'Votre réservation est maintenant confirmée. Le chat avec le prestataire est ouvert.',
-        });
-      } else {
-        setPayModal(null);
-        setSuccessModal({
-          type: 'info',
-          message: '📲 Notification envoyée',
-          detail: 'Validez le paiement sur votre téléphone pour confirmer la réservation.',
-        });
-      }
-    } catch (err) {
-      setPayError(err.response?.data?.error || 'Erreur lors du paiement.');
-    } finally { setPaySubmitting(false); }
+      await api.post('/paiement/initier/', { reservation_id:payModal.id, phone_number:payPhone, network:payMethode, montant:payModal.montant });
+      setReservations(prev => prev.map(r => r.id===payModal.id ? {...r,statut:'confirmee'} : r));
+      setPayModal(null);
+      showToast('Paiement confirmé ! 🎉');
+    } catch(e) { setPayError(e.response?.data?.error || 'Erreur de paiement.'); }
+    finally { setPaySubmitting(false); }
   };
 
-  const filtered = activeTab === 'toutes'
-    ? reservations
-    : reservations.filter(r => r.statut === activeTab);
-
-  const countByTab = (key) => key === 'toutes'
-    ? reservations.length
-    : reservations.filter(r => r.statut === key).length;
+  const filtered = activeTab === 'toutes' ? reservations : reservations.filter(r => r.statut === activeTab);
+  const counts   = Object.fromEntries(TABS.map(t => [t.key, t.key==='toutes' ? reservations.length : reservations.filter(r=>r.statut===t.key).length]));
 
   if (loading) return (
-    <div style={{ textAlign: 'center', padding: 80 }}>
-      <i className="bi bi-hourglass-split" style={{ fontSize: '3rem', color: 'var(--primary-color)' }}></i>
-      <p className="mt-3 text-muted">Chargement...</p>
+    <div style={{ minHeight:'70vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
+      <div style={{ width:44, height:44, borderRadius:'50%', border:'4px solid #e0f2fe', borderTopColor:'#0284c7', animation:'spin .8s linear infinite' }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <p style={{ color:'#64748b', fontWeight:500 }}>Chargement des réservations…</p>
     </div>
   );
 
   return (
-    <div className="py-5">
-      <div className="container">
+    <>
+      <style>{`
+        @keyframes fadeUp  { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin    { to{transform:rotate(360deg)} }
+        @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(12px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+        @keyframes spinRing{ to{transform:rotate(360deg)} }
+        .mr-card  { transition:box-shadow .2s; }
+        .mr-card:hover { box-shadow:0 10px 32px rgba(2,132,199,.14) !important; }
+        .mr-tab   { transition:all .2s; }
+        .mr-btn   { transition:all .15s; }
+      `}</style>
 
-        {/* ── Header ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
-          <div className="avatar" style={{ background: 'var(--primary-color)', flexShrink: 0 }}>
-            {user?.username?.[0]?.toUpperCase()}
+      <div style={{ background:'#f0f8ff', minHeight:'100vh', paddingBottom:60 }}>
+
+        {/* Hero */}
+        <div style={{ background:'linear-gradient(135deg,#0c2340,#0284c7)', padding:'32px 0 56px', color:'#fff' }}>
+          <div className="container">
+            <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+              <div style={{ width:52, height:52, borderRadius:14, background:'rgba(255,255,255,.12)', backdropFilter:'blur(6px)', display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(255,255,255,.2)' }}>
+                <i className="bi bi-calendar-check-fill" style={{ fontSize:'1.5rem' }} />
+              </div>
+              <div>
+                <h1 style={{ fontWeight:900, fontSize:'1.5rem', margin:'0 0 3px' }}>Mes Réservations</h1>
+                <p style={{ opacity:.75, margin:0, fontSize:'0.85rem' }}>
+                  {reservations.length} réservation{reservations.length > 1 ? 's' : ''} au total
+                </p>
+              </div>
+            </div>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 style={{ fontWeight: 800, fontSize: '1.4rem', marginBottom: 2 }}>
-              <i className="bi bi-calendar-check text-primary me-2"></i>Mes Réservations
-            </h2>
-            <span className="text-muted" style={{ fontSize: '0.85rem' }}>
-              {user?.username} · {user?.type_compte}
-            </span>
-          </div>
-          <Link to="/mon-compte" className="btn-outline-primary-custom btn-sm-custom" style={{ flexShrink: 0 }}>
-            <i className="bi bi-person"></i>
-            <span className="hide-mobile ms-1">Mon compte</span>
-          </Link>
         </div>
 
-        {/* ── Onglets ── */}
-        <div style={{
-          display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8,
-          marginBottom: 20, msOverflowStyle: 'none', scrollbarWidth: 'none',
-        }}>
-          {TABS.filter(t => t.key === 'toutes' || countByTab(t.key) > 0).map(tab => {
-            const count = countByTab(tab.key);
-            const active = activeTab === tab.key;
+        {/* Tabs flottants */}
+        <div style={{ position:'sticky', top:0, zIndex:50, background:'transparent', paddingTop:0 }}>
+          <div style={{ maxWidth:900, margin:'-20px auto 0', padding:'0 16px' }}>
+            <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:4, scrollbarWidth:'none' }}>
+              {TABS.map(t => (
+                <button key={t.key} className="mr-tab" onClick={() => setActiveTab(t.key)}
+                  style={{ flexShrink:0, padding:'8px 14px', borderRadius:50, background: activeTab===t.key ? '#0284c7' : '#fff', border:'1.5px solid', borderColor: activeTab===t.key ? '#0284c7' : '#e0f2fe', color: activeTab===t.key ? '#fff' : '#64748b', fontSize:'.78rem', fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap', boxShadow:'0 2px 10px rgba(2,132,199,.1)' }}>
+                  <i className={`bi bi-${t.icon}`} />
+                  {t.label}
+                  <span style={{ background: activeTab===t.key ? 'rgba(255,255,255,.2)' : '#e0f2fe', color: activeTab===t.key ? '#fff' : '#0284c7', borderRadius:50, padding:'1px 7px', fontSize:'.7rem', fontWeight:700 }}>
+                    {counts[t.key]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Liste */}
+        <div style={{ maxWidth:900, margin:'20px auto 0', padding:'0 16px', display:'flex', flexDirection:'column', gap:14 }}>
+          {filtered.length === 0 ? (
+            <div style={{ textAlign:'center', padding:'70px 20px', animation:'fadeUp .4s ease' }}>
+              <div style={{ width:72, height:72, borderRadius:20, background:'#e0f2fe', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                <i className="bi bi-calendar-x" style={{ fontSize:'2.2rem', color:'#0284c7' }} />
+              </div>
+              <h4 style={{ fontWeight:800, color:'#0c2340', marginBottom:8 }}>Aucune réservation</h4>
+              <p style={{ color:'#94a3b8' }}>
+                {activeTab !== 'toutes' ? `Aucune réservation "${STATUT[activeTab]?.label?.toLowerCase()}"` : 'Vous n\'avez pas encore de réservation.'}
+              </p>
+              <Link to="/services" style={{ display:'inline-flex', alignItems:'center', gap:8, marginTop:16, padding:'11px 24px', borderRadius:12, background:'linear-gradient(135deg,#0c2340,#0284c7)', color:'#fff', textDecoration:'none', fontWeight:700, fontSize:'0.88rem' }}>
+                <i className="bi bi-search" /> Voir les services
+              </Link>
+            </div>
+          ) : filtered.map((r, idx) => {
+            const s = STATUT[r.statut] || STATUT.en_attente;
+            const isOpen = expanded === r.id;
             return (
-              <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', borderRadius: 50, border: 'none', cursor: 'pointer',
-                background: active ? 'var(--primary-color)' : 'white',
-                color: active ? 'white' : 'var(--text-muted)',
-                fontWeight: active ? 700 : 500, fontSize: '0.85rem',
-                whiteSpace: 'nowrap', flexShrink: 0,
-                boxShadow: active ? '0 4px 12px rgba(2,132,199,0.3)' : '0 1px 4px rgba(0,0,0,0.08)',
-                transition: 'all 0.2s',
-              }}>
-                <i className={tab.icon}></i>
-                {tab.label}
-                {count > 0 && (
-                  <span style={{
-                    background: active ? 'rgba(255,255,255,0.25)' : '#e0f2fe',
-                    color: active ? 'white' : 'var(--primary-color)',
-                    borderRadius: 20, padding: '1px 7px', fontSize: '0.72rem', fontWeight: 700,
-                  }}>{count}</span>
+              <div key={r.id} className="mr-card" style={{ background:'#fff', borderRadius:18, border:`1.5px solid ${isOpen ? '#bae6fd' : '#e0f2fe'}`, boxShadow:'0 4px 18px rgba(2,132,199,.07)', overflow:'hidden', animation:`fadeUp .4s ease ${idx*.05}s both` }}>
+
+                {/* En-tête card */}
+                <div onClick={() => setExpanded(isOpen ? null : r.id)} style={{ padding:'16px 18px', display:'flex', alignItems:'center', gap:14, cursor:'pointer' }}>
+
+                  {/* Image service */}
+                  <div style={{ width:56, height:56, borderRadius:14, overflow:'hidden', background:'linear-gradient(135deg,#e0f2fe,#f0f9ff)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    {r.service?.image_url ? <img src={r.service.image_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <i className="bi bi-briefcase" style={{ fontSize:'1.5rem', color:'#7dd3fc' }} />}
+                  </div>
+
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontWeight:800, color:'#0c2340', fontSize:'.95rem', marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {r.service?.nom || 'Service'}
+                    </div>
+                    <div style={{ fontSize:'.78rem', color:'#64748b', display:'flex', gap:10, flexWrap:'wrap', marginBottom:5 }}>
+                      <span><i className="bi bi-person me-1" />{r.service?.prestataire?.user?.username || '—'}</span>
+                      <span><i className="bi bi-clock me-1" />{fmt(r.date_res || r.created_at)}</span>
+                    </div>
+                    <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 10px', borderRadius:50, fontSize:'.72rem', fontWeight:700, background:s.bg, color:s.color, border:`1px solid ${s.border}` }}>
+                      <i className={`bi bi-${s.icon}`} style={{ fontSize:'.7rem' }} />{s.label}
+                    </span>
+                  </div>
+
+                  <div style={{ textAlign:'right', flexShrink:0 }}>
+                    <div style={{ fontWeight:900, color:'#0284c7', fontSize:'1rem', whiteSpace:'nowrap' }}>
+                      {Number(r.montant).toLocaleString()} F
+                    </div>
+                    <i className={`bi bi-chevron-down`} style={{ color:'#94a3b8', fontSize:'.85rem', transition:'transform .2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0)' }} />
+                  </div>
+                </div>
+
+                {/* Corps expandé */}
+                {isOpen && (
+                  <div style={{ padding:'0 18px 18px', borderTop:'1px solid #f1f5f9', animation:'fadeUp .2s ease' }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, margin:'14px 0' }}>
+                      {[
+                        { lbl:'Date réservation', val:fmt(r.date_res || r.created_at) },
+                        { lbl:'Date prestation',  val:r.date_debut ? fmt(r.date_debut) : 'Non définie' },
+                        { lbl:'Lieu',             val:r.lieu || 'Non précisé' },
+                        { lbl:'Notes',            val:r.notes || 'Aucune note' },
+                      ].map((d,i) => (
+                        <div key={i} style={{ background:'#f8faff', borderRadius:10, padding:'10px 12px' }}>
+                          <div style={{ fontSize:'.68rem', color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:2 }}>{d.lbl}</div>
+                          <div style={{ fontSize:'.85rem', fontWeight:600, color:'#0c2340' }}>{d.val}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:4 }}>
+                      {r.statut === 'en_attente_paiement' && user?.type_compte === 'client' && (
+                        <button className="mr-btn" onClick={() => { setPayModal(r); setPayError(''); setPayPhone(''); }}
+                          style={{ padding:'9px 16px', borderRadius:10, border:'none', background:'linear-gradient(135deg,#0c2340,#0284c7)', color:'#fff', fontWeight:700, fontSize:'.82rem', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                          <i className="bi bi-credit-card-fill" /> Payer maintenant
+                        </button>
+                      )}
+                      {r.statut === 'confirmee' && (
+                        <>
+                          <button className="mr-btn" onClick={() => handleTerminer(r.id)}
+                            style={{ padding:'9px 16px', borderRadius:10, border:'none', background:'#d1fae5', color:'#065f46', fontWeight:700, fontSize:'.82rem', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                            <i className="bi bi-flag-fill" /> Terminé
+                          </button>
+                          <Link to={`/chat/${r.id}`} style={{ padding:'9px 16px', borderRadius:10, background:'#e0f2fe', color:'#0284c7', fontWeight:700, fontSize:'.82rem', textDecoration:'none', display:'flex', alignItems:'center', gap:6 }}>
+                            <i className="bi bi-chat-dots-fill" /> Chat
+                          </Link>
+                        </>
+                      )}
+                      {r.statut === 'terminee' && !r.evaluation_id && (
+                        <Link to={`/evaluer/${r.id}`} style={{ padding:'9px 16px', borderRadius:10, background:'#fef3c7', color:'#d97706', fontWeight:700, fontSize:'.82rem', textDecoration:'none', display:'flex', alignItems:'center', gap:6 }}>
+                          <i className="bi bi-star-fill" /> Évaluer
+                        </Link>
+                      )}
+                      {r.statut === 'en_attente' && user?.type_compte === 'prestataire' && (
+                        <button className="mr-btn" onClick={async () => {
+                          try {
+                            await api.patch(`/reservations/${r.id}/`, { statut: 'en_attente_paiement' });
+                            setReservations(prev => prev.map(x => x.id===r.id ? {...x, statut:'en_attente_paiement'} : x));
+                            showToast('Réservation confirmée !');
+                          } catch(e) { showToast(e.response?.data?.error || 'Erreur de confirmation.', 'error'); }
+                        }}
+                          style={{ padding:'9px 16px', borderRadius:10, border:'none', background:'#d1fae5', color:'#065f46', fontWeight:700, fontSize:'.82rem', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                          <i className="bi bi-check-circle-fill" /> Confirmer
+                        </button>
+                      )}
+
+                      {['en_attente','en_attente_paiement'].includes(r.statut) && user?.type_compte === 'prestataire' && (
+                        <button className="mr-btn" onClick={() => handleCancel(r.id)}
+                          style={{ padding:'9px 16px', borderRadius:10, border:'none', background:'#fee2e2', color:'#dc2626', fontWeight:700, fontSize:'.82rem', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                          <i className="bi bi-x-circle" /> Annuler
+                        </button>
+                      )}
+
+                      {['en_attente','en_attente_paiement'].includes(r.statut) && user?.type_compte === 'client' && (
+                        <button className="mr-btn" onClick={() => handleCancel(r.id)}
+                          style={{ padding:'9px 16px', borderRadius:10, border:'none', background:'#fee2e2', color:'#dc2626', fontWeight:700, fontSize:'.82rem', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                          <i className="bi bi-x-circle" /> Annuler
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )}
-              </button>
+              </div>
             );
           })}
         </div>
-
-        {/* ── Liste ── */}
-        {filtered.length === 0 ? (
-          <div className="empty-state">
-            <i className="bi bi-calendar-x"></i>
-            <h4>Aucune réservation</h4>
-            <p>
-              {activeTab === 'toutes'
-                ? "Vous n'avez pas encore de réservations."
-                : `Aucune réservation dans cet onglet.`}
-            </p>
-            {activeTab === 'toutes' && (
-              <Link to="/services" className="btn-primary-custom">
-                <i className="bi bi-grid-3x3-gap"></i> Parcourir les services
-              </Link>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {filtered.map(r => {
-              const expanded = expandedId === r.id;
-              return (
-                <div key={r.id} className="card-custom" style={{ overflow: 'hidden' }}>
-
-                  {/* ── Ligne résumé (toujours visible) ── */}
-                  <div
-                    onClick={() => setExpandedId(expanded ? null : r.id)}
-                    style={{
-                      padding: '14px 16px', display: 'flex', alignItems: 'center',
-                      gap: 12, cursor: 'pointer',
-                      background: expanded ? '#f0f8ff' : 'white',
-                      transition: 'background 0.2s',
-                    }}
-                  >
-                    {/* Icône statut */}
-                    <div style={{
-                      width: 42, height: 42, borderRadius: 10, flexShrink: 0,
-                      background: STATUT_BG[r.statut] || '#f1f5f9',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <i className={`bi ${STATUT_ICON[r.statut] || 'bi-circle'}`}
-                        style={{ fontSize: '1.1rem', color: STATUT_COLOR[r.statut] || '#64748b' }}></i>
-                    </div>
-
-                    {/* Info principale */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontWeight: 700, fontSize: '0.95rem', marginBottom: 3,
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                      }}>
-                        {r.service?.nom || 'Service'}
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        <i className="bi bi-person me-1"></i>
-                        {user?.type_compte === 'client'
-                          ? r.service?.prestataire?.user?.username || '-'
-                          : r.client?.user?.username || r.client}
-                        {r.date_debut && (
-                          <span className="ms-2">
-                            <i className="bi bi-calendar2 me-1"></i>{fmt(r.date_debut)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Badge + montant + chevron */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                      <span className={`badge ${STATUT_CLASS[r.statut] || 'badge-secondary'}`}
-                        style={{ fontSize: '0.7rem' }}>
-                        {STATUT_LABEL[r.statut] || r.statut}
-                      </span>
-                      <span style={{ fontWeight: 800, color: 'var(--primary-color)', fontSize: '0.85rem' }}>
-                        {r.montant} F
-                      </span>
-                    </div>
-                    <i className={`bi bi-chevron-${expanded ? 'up' : 'down'}`}
-                      style={{ color: '#94a3b8', fontSize: '0.8rem', flexShrink: 0 }}></i>
-                  </div>
-
-                  {/* ── Détails expandés ── */}
-                  {expanded && (
-                    <div style={{ borderTop: '1px solid var(--border-color)', padding: 16 }}>
-
-                      {/* Grille d'infos */}
-                      <div style={{
-                        display: 'grid', gridTemplateColumns: '1fr 1fr',
-                        gap: '10px 20px', marginBottom: 16,
-                      }}>
-                        {[
-                          ['Date réservation', fmt(r.date_res)],
-                          ['Intervention', fmt(r.date_debut)],
-                          r.lieu    && ['Lieu', r.lieu],
-                          r.notes   && ['Notes', r.notes],
-                          r.paiement?.methode && ['Méthode paiement', r.paiement.methode],
-                          r.paiement?.transaction_ref && ['Référence', r.paiement.transaction_ref],
-                        ].filter(Boolean).map(([k, v]) => (
-                          <div key={k} style={{ fontSize: '0.82rem' }}>
-                            <div style={{ color: 'var(--text-muted)', marginBottom: 2 }}>{k}</div>
-                            <div style={{ fontWeight: 600, wordBreak: 'break-word' }}>{v}</div>
-                          </div>
-                        ))}
-                        <div style={{ fontSize: '0.82rem' }}>
-                          <div style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Total</div>
-                          <div style={{ fontWeight: 800, color: 'var(--primary-color)', fontSize: '1rem' }}>
-                            {r.montant} FCFA
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Boutons actions */}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-
-                        <Link to={`/services/${r.service?.id || r.service}`}
-                          className="btn-outline-primary-custom btn-sm-custom">
-                          <i className="bi bi-eye"></i> Voir service
-                        </Link>
-
-                        {user?.type_compte === 'client' && r.statut === 'en_attente_paiement' && (
-                          <button
-                            onClick={() => { setPayModal(r); setPayPhone(''); setPayError(''); }}
-                            className="btn-primary-custom btn-sm-custom"
-                            style={{ background: 'linear-gradient(135deg,#ffc107,#e0a800)', color: '#333' }}>
-                            <i className="bi bi-credit-card"></i> Payer {r.montant} FCFA
-                          </button>
-                        )}
-
-                        {r.statut === 'confirmee' && (
-                          <Link to={`/chat/${r.id}`} className="btn-primary-custom btn-sm-custom">
-                            <i className="bi bi-chat-dots"></i> Chat
-                          </Link>
-                        )}
-
-{/* Bouton pour marquer comme terminé (client uniquement si confirmé) */}
-                        {user?.type_compte === 'client' && r.statut === 'confirmee' && (
-                          <button onClick={() => handleUpdateStatus(r.id, 'terminee')}
-                            className="btn-outline-primary-custom btn-sm-custom"
-                            style={{ borderColor: '#059669', color: '#059669' }}>
-                            <i className="bi bi-flag"></i> Terminer
-                          </button>
-                        )}
-
-                        {/* Bouton évaluer - visible si confirmé ou terminé et pas encore évalué */}
-                        {user?.type_compte === 'client' && !r.evaluation && ['confirmee', 'terminee'].includes(r.statut) && (
-                          <Link to={`/evaluer/${r.id}`} className="btn-primary-custom btn-sm-custom"
-                            style={{ background: 'linear-gradient(135deg,#ffc107,#e0a800)', color: '#333' }}>
-                            <i className="bi bi-star"></i> Évaluer
-                          </Link>
-                        )}
-
-                        {r.evaluation && (
-                          <span className="badge badge-warning" style={{ padding: '8px 12px' }}>
-                            <i className="bi bi-star-fill me-1"></i>{r.evaluation.note}/5
-                          </span>
-                        )}
-
-                        {user?.type_compte === 'prestataire' && r.statut === 'en_attente' && (
-                          <button onClick={() => handleUpdateStatus(r.id, 'en_attente_paiement')}
-                            className="btn-primary-custom btn-sm-custom"
-                            style={{ background: 'linear-gradient(135deg,#28a745,#1e7e34)' }}>
-                            <i className="bi bi-check-circle"></i> Confirmer
-                          </button>
-                        )}
-
-                        {user?.type_compte === 'prestataire' && ['en_attente', 'en_attente_paiement'].includes(r.statut) && (
-                          <button onClick={() => handleUpdateStatus(r.id, 'annulee')}
-                            className="btn-outline-danger-custom btn-sm-custom">
-                            <i className="bi bi-x-circle"></i> Refuser
-                          </button>
-                        )}
-
-                        {user?.type_compte === 'client' && ['en_attente', 'en_attente_paiement'].includes(r.statut) && (
-                          <button onClick={() => setDeleteModal(r)}
-                            className="btn-outline-danger-custom btn-sm-custom">
-                            <i className="bi bi-trash"></i> Annuler
-                          </button>
-                        )}
-
-                        {r.paiement?.ussd_prestataire && (
-                          <button
-                            onClick={() => navigator.clipboard.writeText(r.paiement.ussd_prestataire)
-                              .then(() => setSuccessModal({ type:'success', message:'✅ USSD copié !', detail:'Le code USSD a été copié dans le presse-papiers.' }))}
-                            className="btn-primary-custom btn-sm-custom"
-                            style={{ background: 'linear-gradient(135deg,#28a745,#1e7e34)' }}>
-                            <i className="bi bi-copy"></i> Copier USSD
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
 
-      {/* ── Modal annulation ── */}
-      {deleteModal && (
-        <div className="modal-overlay" onClick={() => setDeleteModal(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-header-custom">
-              <h5 style={{ margin: 0 }}>Confirmer l'annulation</h5>
-              <button onClick={() => setDeleteModal(null)}
-                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>×</button>
-            </div>
-            <div className="modal-body-custom">
-              <p>Annuler la réservation pour <strong>{deleteModal.service?.nom}</strong> ?</p>
-              <div className="alert alert-warning">
-                <i className="bi bi-info-circle me-2"></i>Cette action est irréversible.
-              </div>
-            </div>
-            <div className="modal-footer-custom">
-              <button onClick={() => setDeleteModal(null)} className="btn-secondary-custom">Retour</button>
-              <button onClick={() => handleDelete(deleteModal.id)} className="btn-danger-custom">
-                <i className="bi bi-trash"></i> Confirmer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal paiement ── */}
+      {/* Modal paiement */}
       {payModal && (
-        <div className="modal-overlay" onClick={() => setPayModal(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
-            <div className="modal-header-custom">
-              <h5 style={{ margin: 0 }}><i className="bi bi-credit-card me-2"></i>Paiement</h5>
-              <button onClick={() => setPayModal(null)}
-                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>×</button>
-            </div>
-            <div className="modal-body-custom">
-              <p className="text-muted" style={{ fontSize: '0.9rem' }}>
-                <strong>{payModal.service?.nom}</strong> — <strong>{payModal.montant} FCFA</strong>
-              </p>
-              <div className="mb-3">
-                <label className="form-label">Opérateur</label>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  {[
-                    { key: 'moov', label: 'Moov Money', sub: 'Flooz', color: '#ffc107', bg: '#fff8e1' },
-                    { key: 'tmoney', label: 'T-Money', sub: 'Togocom', color: '#17a2b8', bg: '#e8f6f8' },
-                  ].map(op => (
-                    <button key={op.key} type="button" onClick={() => setPayMethode(op.key)} style={{
-                      flex: 1, border: `2px solid ${payMethode === op.key ? op.color : '#dee2e6'}`,
-                      borderRadius: 12, padding: '12px 8px', cursor: 'pointer',
-                      background: payMethode === op.key ? op.bg : 'white',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                    }}>
-                      <strong style={{ fontSize: '0.9rem' }}>{op.label}</strong>
-                      <small className="text-muted">{op.sub}</small>
-                    </button>
-                  ))}
+        <div onClick={e => e.target===e.currentTarget && setPayModal(null)}
+          style={{ position:'fixed', inset:0, background:'rgba(12,35,64,.55)', backdropFilter:'blur(4px)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16, animation:'fadeUp .2s ease' }}>
+          <div style={{ background:'#fff', borderRadius:20, padding:28, maxWidth:420, width:'100%', boxShadow:'0 20px 60px rgba(0,0,0,.2)', animation:'fadeUp .25s ease' }}>
+
+            {/* Header modal */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                <div style={{ width:44, height:44, borderRadius:12, background:'#e0f2fe', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <i className="bi bi-credit-card-fill" style={{ color:'#0284c7', fontSize:'1.2rem' }} />
+                </div>
+                <div>
+                  <h4 style={{ margin:0, fontWeight:800, color:'#0c2340', fontSize:'1rem' }}>Paiement Mobile</h4>
+                  <p style={{ margin:0, color:'#64748b', fontSize:'0.78rem' }}>Paiement sécurisé PayGate</p>
                 </div>
               </div>
-              <div className="mb-3">
-                <label className="form-label">Numéro +228</label>
-                <div className="input-group">
-                  <span className="input-group-text"><i className="bi bi-phone"></i>&nbsp;+228</span>
-                  <input type="tel" className="form-control"
-                    placeholder={payMethode === 'moov' ? 'Ex: 90000000' : 'Ex: 91000000'}
-                    value={payPhone}
-                    onChange={e => setPayPhone(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                    maxLength={8} />
-                </div>
-              </div>
-              {payError && (
-                <div className="alert alert-danger">
-                  <i className="bi bi-exclamation-triangle me-2"></i>{payError}
-                </div>
-              )}
+              <button onClick={() => setPayModal(null)} style={{ background:'#f1f5f9', border:'none', borderRadius:8, width:32, height:32, cursor:'pointer', color:'#64748b', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
             </div>
-            <div className="modal-footer-custom">
-              <button onClick={() => setPayModal(null)} className="btn-secondary-custom">Annuler</button>
-              <button onClick={() => initierPaiement(payModal)} className="btn-primary-custom"
-                disabled={paySubmitting || payPhone.length < 8}>
-                {paySubmitting
-                  ? <><span className="spinner-border spinner-border-sm me-2"></span>…</>
-                  : <><i className="bi bi-shield-check me-2"></i>Payer</>}
+
+            {/* Résumé */}
+            <div style={{ background:'#f0f9ff', border:'1px solid #bae6fd', borderRadius:12, padding:'12px 16px', marginBottom:18 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ color:'#0369a1', fontSize:'0.85rem' }}>{payModal.service?.nom}</span>
+                <span style={{ fontWeight:900, color:'#0c2340', fontSize:'1.05rem' }}>{Number(payModal.montant).toLocaleString()} Fcfa</span>
+              </div>
+            </div>
+
+            {/* Méthode */}
+            <div style={{ marginBottom:12 }}>
+              <label style={{ display:'block', fontWeight:700, fontSize:'0.78rem', color:'#374151', marginBottom:8, textTransform:'uppercase', letterSpacing:'.04em' }}>Méthode de paiement</label>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                {[{val:'moov',label:'Moov Money'},{val:'flooz',label:'Flooz (T-Money)'}].map(m => (
+                  <button key={m.val} onClick={() => setPayMethode(m.val)} style={{ padding:'10px', borderRadius:10, border:`1.5px solid ${payMethode===m.val ? '#0284c7' : '#e2e8f0'}`, background: payMethode===m.val ? '#e0f2fe' : '#f8fafc', color: payMethode===m.val ? '#0284c7' : '#475569', fontWeight: payMethode===m.val ? 700 : 500, fontSize:'0.85rem', cursor:'pointer' }}>
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Numéro */}
+            <div style={{ marginBottom:payError ? 8 : 18 }}>
+              <label style={{ display:'block', fontWeight:700, fontSize:'0.78rem', color:'#374151', marginBottom:8, textTransform:'uppercase', letterSpacing:'.04em' }}>Numéro de téléphone</label>
+              <div style={{ display:'flex', alignItems:'center', background:'#fff', border:'1.5px solid #e2e8f0', borderRadius:10, overflow:'hidden', transition:'border-color .2s' }}
+                onFocusCapture={e => e.currentTarget.style.borderColor='#0284c7'}
+                onBlurCapture={e => e.currentTarget.style.borderColor='#e2e8f0'}>
+                <span style={{ padding:'0 12px', color:'#94a3b8', fontSize:'0.88rem', borderRight:'1px solid #e2e8f0', lineHeight:'46px' }}>+228</span>
+                <input type="tel" placeholder="90 12 34 56" value={payPhone} onChange={e => setPayPhone(e.target.value)}
+                  style={{ flex:1, padding:'12px 12px', border:'none', outline:'none', fontSize:'0.92rem', color:'#0c2340' }} />
+              </div>
+            </div>
+
+            {payError && <div style={{ color:'#dc2626', fontSize:'.82rem', fontWeight:600, marginBottom:14, display:'flex', alignItems:'center', gap:6 }}><i className="bi bi-exclamation-circle" />{payError}</div>}
+
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={handlePay} disabled={paySubmitting}
+                style={{ flex:1, padding:'13px', borderRadius:12, border:'none', background:'linear-gradient(135deg,#0c2340,#0284c7)', color:'#fff', fontWeight:800, fontSize:'0.9rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                {paySubmitting ? <><span style={{ width:16, height:16, border:'2.5px solid rgba(255,255,255,.3)', borderTopColor:'#fff', borderRadius:'50%', animation:'spinRing .7s linear infinite', display:'inline-block' }} />Traitement…</> : <><i className="bi bi-check-circle-fill" /> Confirmer</>}
+              </button>
+              <button onClick={() => setPayModal(null)} style={{ padding:'13px 16px', borderRadius:12, border:'1.5px solid #e2e8f0', background:'#f8fafc', color:'#64748b', fontWeight:700, fontSize:'0.88rem', cursor:'pointer' }}>
+                Annuler
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Popup succès / info ── */}
-      {successModal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div style={{ background:'white', borderRadius:20, width:'min(400px,92vw)', padding:32, boxShadow:'0 24px 60px rgba(0,0,0,0.3)', textAlign:'center', animation:'fadeIn 0.2s ease' }}>
-            <div style={{ fontSize:'3rem', marginBottom:12 }}>
-              {successModal.type === 'success' ? '✅' : '📲'}
-            </div>
-            <h4 style={{ fontWeight:800, color: successModal.type === 'success' ? '#166534' : '#1e40af', marginBottom:8 }}>
-              {successModal.message}
-            </h4>
-            <p style={{ color:'#6b7280', fontSize:'0.9rem', marginBottom:24 }}>{successModal.detail}</p>
-            <button
-              onClick={() => setSuccessModal(null)}
-              style={{ background: successModal.type === 'success' ? '#22c55e' : '#3b82f6',
-                color:'white', border:'none', borderRadius:12, padding:'12px 32px',
-                fontWeight:700, fontSize:'1rem', cursor:'pointer', width:'100%' }}>
-              OK, compris
-            </button>
-          </div>
-          <style>{`@keyframes fadeIn{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}`}</style>
+      {/* Toast */}
+      {toast && (
+        <div style={{ position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)', background: toast.type==='error' ? '#dc2626' : '#0c2340', color:'#fff', borderRadius:14, padding:'12px 24px', fontWeight:600, fontSize:'.88rem', zIndex:10000, boxShadow:'0 8px 28px rgba(0,0,0,.25)', animation:'toastIn .3s ease', whiteSpace:'nowrap' }}>
+          {toast.type === 'success' ? '✅ ' : '❌ '}{toast.msg}
         </div>
       )}
-
-      {/* ── Popup erreur ── */}
-      {errorPopup && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div style={{ background:'white', borderRadius:20, width:'min(400px,92vw)', padding:32, boxShadow:'0 24px 60px rgba(0,0,0,0.3)', textAlign:'center' }}>
-            <div style={{ fontSize:'3rem', marginBottom:12 }}>❌</div>
-            <h4 style={{ fontWeight:800, color:'#991b1b', marginBottom:8 }}>Une erreur est survenue</h4>
-            <p style={{ color:'#6b7280', fontSize:'0.9rem', marginBottom:24 }}>{errorPopup}</p>
-            <button
-              onClick={() => setErrorPopup('')}
-              style={{ background:'#ef4444', color:'white', border:'none', borderRadius:12,
-                padding:'12px 32px', fontWeight:700, fontSize:'1rem', cursor:'pointer', width:'100%' }}>
-              Fermer
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

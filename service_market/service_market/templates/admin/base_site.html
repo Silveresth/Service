@@ -1,0 +1,14 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <style>
+    :root { --sm-primary:#00a859; --sm-primary-2:#0ea5e9; }
+    body { background:#f6f8fb; }
+    #header { background:linear-gradient(135deg,var(--sm-primary) 0%,var(--sm-primary-2) 100%) !important; }
+    #header a, #header span { color:#fff !important; }
+    .module { border-radius:14px; border:1px solid #e7eef8; }
+    input[type="submit"], .button { border-radius:10px !important; background:var(--sm-primary) !important; border-color:var(--sm-primary) !important; box-shadow:0 6px 18px rgba(0,168,89,0.18); }
+  </style>
+{% endblock %}
+

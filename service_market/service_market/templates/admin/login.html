@@ -1,0 +1,40 @@
+{% extends "admin/login.html" %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    :root {
+      --sm-primary: #00a859;
+      --sm-primary-2: #0ea5e9;
+    }
+
+    body {
+      background: #0b1220;
+    }
+
+    .login {
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.35);
+    }
+
+    .login h1 a {
+      background: linear-gradient(135deg, var(--sm-primary) 0%, var(--sm-primary-2) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    input[type="submit"] {
+      border-radius: 12px !important;
+      background: var(--sm-primary) !important;
+      border-color: var(--sm-primary) !important;
+    }
+
+    .submit-row input {
+      width: 100%;
+    }
+  </style>
+{% endblock %}
+

@@ -374,8 +374,6 @@ export default function Navbar() {
                           <i className="bi bi-speedometer2"></i> Analytics Dashboard
                         </Link></li>
 
-
-
                         <li><Link className="dropdown-item" to="/mes-reservations" onClick={() => setDropdownOpen(false)}>
                           <i className="bi bi-calendar-check"></i> Mes réservations
                         </Link></li>
