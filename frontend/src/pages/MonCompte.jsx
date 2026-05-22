@@ -4,9 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 
 const MC_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap');
+  /* Police uniformisée: Plus Jakarta Sans */
 
-  .mc-page { background: #f0f8ff; min-height: 100vh; padding-bottom: 60px; }
+  .mc-page {
 
   /* Hero */
   .mc-hero {
@@ -31,14 +31,17 @@ const MC_STYLES = `
     background: rgba(255,255,255,0.14);
     border: 3px solid rgba(255,255,255,0.28);
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800;
+    font-size: 2rem; font-weight: 800;
+
     margin: 0 auto 16px; color: white;
     box-shadow: 0 8px 28px rgba(0,0,0,0.2);
   }
   .mc-username {
-    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800;
     font-size: 1.6rem; margin: 0 0 8px;
+
   }
+
   .mc-type-badge {
     display: inline-flex; align-items: center; gap: 7px;
     padding: 5px 16px; border-radius: 50px;
@@ -71,7 +74,8 @@ const MC_STYLES = `
     display: flex; align-items: center; justify-content: space-between;
   }
   .mc-card-title {
-    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.95rem;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 0.95rem;
+
     color: #0c2340; margin: 0;
     display: flex; align-items: center; gap: 10px;
   }

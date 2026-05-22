@@ -29,7 +29,7 @@ const STATUT_LABEL = {
 const fmt = d => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
 
 const PD_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap');
+  /* Police uniformisée : Plus Jakarta Sans */
 
   .pd-page { background: #f0f8ff; min-height: 100vh; padding-bottom: 60px; }
 
@@ -60,8 +60,9 @@ const PD_STYLES = `
   /* Greeting */
   .pd-greeting { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .pd-greeting-text h1 {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 800; margin: 0 0 4px;
+
   }
   .pd-greeting-text p { margin: 0; opacity: 0.78; font-size: 0.9rem; }
   .pd-greeting-time {
@@ -85,7 +86,9 @@ const PD_STYLES = `
     box-shadow: 0 0 0 4px rgba(255,255,255,0.15), 0 0 20px rgba(255,255,255,0.1);
   }
   .pd-badge-info { flex: 1; min-width: 140px; }
-  .pd-badge-level { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.05rem; margin-bottom: 3px; }
+  .pd-badge-level { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 1.05rem; margin-bottom: 3px; }
+
+
   .pd-badge-pts { font-size: 0.82rem; opacity: 0.8; margin-bottom: 8px; }
   .pd-prog-track { height: 6px; background: rgba(255,255,255,0.18); border-radius: 3px; overflow: hidden; }
   .pd-prog-fill { height: 100%; border-radius: 3px; background: white; transition: width 0.8s cubic-bezier(0.22,1,0.36,1); }
@@ -149,7 +152,8 @@ const PD_STYLES = `
     font-size: 1.3rem; flex-shrink: 0;
   }
   .pd-metric-lbl { font-size: 0.76rem; color: #64748b; font-weight: 500; margin-bottom: 3px; }
-  .pd-metric-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem; color: #0c2340; }
+  .pd-metric-val { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 1.2rem; color: #0c2340; }
+
   .pd-metric-trend { font-size: 0.73rem; font-weight: 700; margin-top: 2px; }
   .pd-metric-trend.up   { color: #22c55e; }
   .pd-metric-trend.neutral { color: #94a3b8; }
@@ -172,7 +176,8 @@ const PD_STYLES = `
     display: flex; align-items: center; justify-content: space-between;
   }
   .pd-chart-head h3 {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+
     font-size: 0.95rem; font-weight: 800; color: #0c2340;
     margin: 0; display: flex; align-items: center; gap: 8px;
   }
@@ -198,7 +203,8 @@ const PD_STYLES = `
     display: flex; align-items: center; justify-content: space-between;
   }
   .pd-res-head h3 {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+
     font-size: 0.95rem; font-weight: 800; color: #0c2340;
     margin: 0; display: flex; align-items: center; gap: 8px;
   }
@@ -239,7 +245,8 @@ const PD_STYLES = `
     font-size: 0.73rem; font-weight: 700; white-space: nowrap;
   }
 
-  .pd-res-amount { font-family: 'Syne', sans-serif; font-weight: 800; color: #0284c7; }
+  .pd-res-amount { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; color: #0284c7; }
+
 
   .pd-confirm-btn {
     display: inline-flex; align-items: center; gap: 5px;
@@ -297,7 +304,8 @@ const PD_STYLES = `
     box-shadow: 0 8px 24px rgba(2,132,199,0.14);
   }
   .pd-tt-label { font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-bottom: 4px; }
-  .pd-tt-val { font-family: 'Syne', sans-serif; font-weight: 800; color: #0284c7; font-size: 0.95rem; }
+  .pd-tt-val { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; color: #0284c7; font-size: 0.95rem; }
+
 `;
 
 const CustomTooltip = ({ active, payload, label }) => {
