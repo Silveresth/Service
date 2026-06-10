@@ -201,7 +201,7 @@ export default function PrestataireAjouterService() {
     nom: '', description: '', prix: '', categorie: '', disponibilite: true,
   });
   const [imageFile, setImageFile]   = useState(null);
-  const [modelFile, setModelFile]   = useState(null);
+  // Modèle 3D supprimé
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState('');
@@ -216,7 +216,7 @@ export default function PrestataireAjouterService() {
     const file = e.target.files[0];
     if (file) { setImageFile(file); setImagePreview(URL.createObjectURL(file)); }
   };
-  const handleModel = e => { const file = e.target.files[0]; if (file) setModelFile(file); };
+
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -225,7 +225,7 @@ export default function PrestataireAjouterService() {
     const data = new FormData();
     Object.entries(form).forEach(([k, v]) => data.append(k, v));
     if (imageFile) data.append('image', imageFile);
-    if (modelFile) data.append('model_3d', modelFile);
+    // Suppression du modèle 3D : ne plus envoyer model_3d
     try {
       await api.post('/services/', data, { headers: { 'Content-Type': 'multipart/form-data' } });
       navigate('/prestataire-mes-services');
@@ -319,11 +319,11 @@ export default function PrestataireAjouterService() {
                 <div className="pas-upload-grid">
                   {/* Image */}
                   <div>
-                    <label className="pas-label">Photo du service</label>
-                    <div className="pas-upload-zone" onClick={() => document.getElementById('pas-img').click()}>
+                    <label className="pas-label" style={{ textAlign: 'center' }}>Photo du service</label>
+                    <div className="pas-upload-zone" onClick={() => document.getElementById('pas-img').click()} style={{ alignItems: 'center' }}>
                       <input type="file" id="pas-img" hidden accept="image/*" onChange={handleImage} />
                       {imagePreview
-                        ? <img src={imagePreview} alt="Aperçu" className="pas-upload-preview" />
+                        ? <img src={imagePreview} alt="Aperçu" className="pas-upload-preview" style={{ margin: '0 auto' }} />
                         : <>
                           <i className="bi bi-cloud-arrow-up-fill pas-upload-icon" style={{ color: '#7dd3fc' }}></i>
                           <span className="pas-upload-label">Ajouter une image</span>
@@ -333,22 +333,13 @@ export default function PrestataireAjouterService() {
                     </div>
                     {imagePreview && (
                       <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); }}
-                        style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
                         <i className="bi bi-x-circle"></i> Supprimer
                       </button>
                     )}
                   </div>
 
-                  {/* Modèle 3D */}
-                  <div>
-                    <label className="pas-label">Modèle 3D <span className="pas-optional">(GLB)</span></label>
-                    <div className="pas-upload-zone" onClick={() => document.getElementById('pas-model').click()}>
-                      <input type="file" id="pas-model" hidden accept=".glb,.gltf" onChange={handleModel} />
-                      <i className={`bi bi-box-seam pas-upload-icon`} style={{ color: modelFile ? '#22c55e' : '#94a3b8' }}></i>
-                      <span className="pas-upload-label">{modelFile ? modelFile.name : 'Modèle 3D'}</span>
-                      <span className="pas-upload-hint">.GLB ou .GLTF uniquement</span>
-                    </div>
-                  </div>
+
                 </div>
 
                 <div style={{ marginTop: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', fontSize: '0.8rem', color: '#166534', display: 'flex', alignItems: 'flex-start', gap: 8 }}>

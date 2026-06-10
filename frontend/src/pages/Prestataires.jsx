@@ -163,19 +163,28 @@ export default function Prestataires() {
                   {p.bio || `Professionnel en ${p.specialite||'services'} avec expérience confirmée.`}
                 </p>
                 <div className="prest-stats">
+                  {/*
+                    Backend (PrestataireViewSet.stats) renvoie:
+                    - services_count
+                    - avg_note
+                    - nb_notes
+                    (pas toujours reservations_count)
+                  */}
                   <div className="prest-stat">
-                    <span className="prest-stat-val">{p.services_count||0}</span>
+                    <span className="prest-stat-val">{typeof p.services_count === 'number' ? p.services_count : 0}</span>
                     <span className="prest-stat-lbl">Services</span>
                   </div>
                   <div className="prest-stat">
-                    <span className="prest-stat-val">{p.avg_note ? `${Number(p.avg_note).toFixed(1)}★`:'—'}</span>
+                    <span className="prest-stat-val">{typeof p.avg_note === 'number' ? `${Number(p.avg_note).toFixed(1)}★` : '—'}</span>
                     <span className="prest-stat-lbl">Note</span>
                   </div>
                   <div className="prest-stat">
-                    <span className="prest-stat-val">{p.reservations_count||0}</span>
+                    <span className="prest-stat-val">{typeof p.nb_notes === 'number' ? p.nb_notes : 0}</span>
                     <span className="prest-stat-lbl">Missions</span>
                   </div>
+
                 </div>
+
               </div>
               <div className="prest-card-footer">
 

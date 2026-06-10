@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import api from '../api/axios';
 import '../styles/admin.css';
+import { jsPDF } from 'jspdf';
 
 const COLORS = ['#0284c7','#10b981','#f59e0b','#8b5cf6','#ef4444'];
 
@@ -60,20 +61,394 @@ export default function AdminDashboard() {
       .finally(() => setLoading(false));
   };
 
-  const downloadPDF = async () => {
+  const downloadPDF = () => {
     setPdfLoading(true); setPdfMsg('');
     try {
-      const res = await api.get('/admin/rapport-pdf/', { params:{ mois, annee }, responseType:'blob' });
-      const url = URL.createObjectURL(new Blob([res.data], { type:'application/pdf' }));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `rapport_${annee}_${String(mois).padStart(2,'0')}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const MOIS_LABELS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+      const nomMois = MOIS_LABELS[mois - 1];
+      const dateGen = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = 210; const H = 297;
+      const margin = 18;
+      const contentW = W - margin * 2;
+
+      // ── Helpers ──────────────────────────────────────────────
+      const hex2rgb = hex => {
+        const r = parseInt(hex.slice(1,3),16);
+        const g = parseInt(hex.slice(3,5),16);
+        const b = parseInt(hex.slice(5,7),16);
+        return [r,g,b];
+      };
+      const setFill = (hex) => { const [r,g,b] = hex2rgb(hex); doc.setFillColor(r,g,b); };
+      const setStroke = (hex) => { const [r,g,b] = hex2rgb(hex); doc.setDrawColor(r,g,b); };
+      const setTextCol = (hex) => { const [r,g,b] = hex2rgb(hex); doc.setTextColor(r,g,b); };
+
+      // ── PAGE 1 ── COVER ───────────────────────────────────────
+
+      // Fond header dégradé (simulé par 2 rectangles)
+      setFill('#0c2340'); doc.rect(0, 0, W, 68, 'F');
+      setFill('#0284c7'); doc.rect(0, 52, W, 16, 'F');
+
+      // Ligne accent
+      setFill('#38bdf8'); doc.rect(0, 52, W, 2, 'F');
+
+      // Logo / titre principal
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      setTextCol('#ffffff');
+      doc.text('SERVICE MARKET TOGO', margin, 28);
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      setTextCol('#93c5fd');
+      doc.text('Plateforme de mise en relation prestataires & clients', margin, 36);
+
+      // Badge "RAPPORT MENSUEL"
+      setFill('#38bdf8');
+      doc.roundedRect(margin, 43, 52, 8, 2, 2, 'F');
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      setTextCol('#0c2340');
+      doc.text('RAPPORT MENSUEL', margin + 26, 48.2, { align: 'center' });
+
+      // Mois / Année à droite
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      setTextCol('#ffffff');
+      doc.text(`${nomMois} ${annee}`, W - margin, 28, { align: 'right' });
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      setTextCol('#93c5fd');
+      doc.text(`Généré le ${dateGen}`, W - margin, 35, { align: 'right' });
+
+      // ── KPI cards ─────────────────────────────────────────────
+      const kpis = [
+        { label: 'Utilisateurs',   value: stats.total_comptes,       icon: '👥', color: '#0284c7', bg: '#e0f2fe' },
+        { label: 'Services actifs', value: stats.total_services,      icon: '💼', color: '#10b981', bg: '#d1fae5' },
+        { label: 'Réservations',    value: stats.total_reservations,  icon: '📅', color: '#f59e0b', bg: '#fef3c7' },
+        { label: 'Prestataires',    value: stats.total_prestataires,  icon: '🏆', color: '#8b5cf6', bg: '#ede9fe' },
+      ];
+      const cardW = (contentW - 12) / 4;
+      const cardY = 76;
+      kpis.forEach((k, i) => {
+        const x = margin + i * (cardW + 4);
+        // Card shadow (simulé)
+        setFill('#e2e8f0'); doc.roundedRect(x + 0.5, cardY + 0.5, cardW, 32, 3, 3, 'F');
+        // Card bg
+        setFill('#ffffff'); doc.roundedRect(x, cardY, cardW, 32, 3, 3, 'F');
+        // Left accent bar
+        const [r,g,b] = hex2rgb(k.color);
+        doc.setFillColor(r,g,b); doc.roundedRect(x, cardY, 2.5, 32, 1, 1, 'F');
+        // Icon bg
+        setFill(k.bg); doc.roundedRect(x + 5, cardY + 7, 12, 12, 2, 2, 'F');
+        // Icon
+        doc.setFontSize(8); doc.text(k.icon, x + 11, cardY + 15, { align: 'center' });
+        // Value
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+        setTextCol('#0c2340');
+        doc.text(String(k.value ?? 0), x + cardW / 2 + 2, cardY + 14, { align: 'center' });
+        // Label
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+        setTextCol('#64748b');
+        doc.text(k.label, x + cardW / 2 + 2, cardY + 22, { align: 'center' });
+        // Trend
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+        setTextCol('#22c55e');
+        doc.text('+12% ce mois', x + cardW / 2 + 2, cardY + 28, { align: 'center' });
+      });
+
+      // ── Section revenus ───────────────────────────────────────
+      const secY1 = cardY + 42;
+      // Titre de section
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      setTextCol('#0284c7');
+      doc.text('ÉVOLUTION DES REVENUS (6 MOIS)', margin, secY1);
+      setStroke('#e0f2fe'); doc.setLineWidth(0.3);
+      doc.line(margin + 72, secY1 - 1, W - margin, secY1 - 1);
+
+      // Graphique à barres manuel
+      const revenueData2 = (stats.revenue_monthly || Array(6).fill(0)).map((v, i) => ({
+        month: MOIS[i], revenue: Number(v) || 0
+      }));
+      const chartY = secY1 + 6;
+      const chartH2 = 38;
+      const chartW2 = contentW;
+      const maxRev = Math.max(...revenueData2.map(d => d.revenue), 1);
+      const barW2 = (chartW2 - 20) / (revenueData2.length * 2 - 1);
+
+      // Grille
+      setStroke('#f1f5f9'); doc.setLineWidth(0.2);
+      [0.25, 0.5, 0.75, 1].forEach(ratio => {
+        const y = chartY + chartH2 - ratio * chartH2;
+        doc.line(margin + 14, y, margin + chartW2, y);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6);
+        setTextCol('#94a3b8');
+        doc.text(`${Math.round(maxRev * ratio / 1000)}k`, margin + 12, y + 1.5, { align: 'right' });
+      });
+
+      revenueData2.forEach((d, i) => {
+        const bH = (d.revenue / maxRev) * chartH2;
+        const bX = margin + 14 + i * (barW2 * 2);
+        const bY = chartY + chartH2 - bH;
+        // Gradient simulé (2 teintes)
+        setFill('#7dd3fc'); doc.roundedRect(bX, bY, barW2, bH, 1.5, 1.5, 'F');
+        setFill('#0284c7'); doc.roundedRect(bX, bY, barW2, Math.min(bH, 4), 1.5, 1.5, 'F');
+        // Valeur au-dessus si assez haute
+        if (d.revenue > 0) {
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(5.5);
+          setTextCol('#0284c7');
+          doc.text(`${Math.round(d.revenue/1000)}k`, bX + barW2/2, bY - 1, { align: 'center' });
+        }
+        // Label mois
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6);
+        setTextCol('#64748b');
+        doc.text(d.month, bX + barW2/2, chartY + chartH2 + 5, { align: 'center' });
+      });
+
+      // ── Section top services ──────────────────────────────────
+      const secY2 = chartY + chartH2 + 14;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      setTextCol('#0284c7');
+      doc.text('TOP SERVICES DE LA PLATEFORME', margin, secY2);
+      setStroke('#e0f2fe'); doc.setLineWidth(0.3);
+      doc.line(margin + 72, secY2 - 1, W - margin, secY2 - 1);
+
+      const topServices = (stats.top_services || stats.services || []).slice(0, 5);
+      const maxVal = Math.max(...topServices.map(s => Number(s.revenue ?? s.prix ?? 0)), 1);
+      topServices.forEach((s, i) => {
+        const rowY = secY2 + 8 + i * 9;
+        const val = Number(s.revenue ?? s.prix ?? 0);
+        const pct = val / maxVal;
+        const barMaxW = contentW - 60;
+
+        // Rang badge
+        const rankColors = ['#0284c7','#10b981','#f59e0b','#8b5cf6','#ec4899'];
+        setFill(rankColors[i % rankColors.length]);
+        doc.roundedRect(margin, rowY - 3.5, 6, 6, 1, 1, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5);
+        setTextCol('#ffffff');
+        doc.text(String(i + 1), margin + 3, rowY + 0.5, { align: 'center' });
+
+        // Nom service
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+        setTextCol('#0c2340');
+        const nomTronc = (s.nom || `Service ${i+1}`).substring(0, 28);
+        doc.text(nomTronc, margin + 9, rowY + 0.5);
+
+        // Barre de progression
+        setFill('#f1f5f9');
+        doc.roundedRect(margin + 70, rowY - 2.5, barMaxW, 4.5, 1, 1, 'F');
+        setFill(rankColors[i % rankColors.length] + '88');
+        // Fallback: inline rgb
+        const [r2,g2,b2] = hex2rgb(rankColors[i % rankColors.length]);
+        doc.setFillColor(r2, g2, b2, 0.6);
+        doc.roundedRect(margin + 70, rowY - 2.5, barMaxW * pct, 4.5, 1, 1, 'F');
+
+        // Valeur
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+        setTextCol(rankColors[i % rankColors.length]);
+        doc.text(`${val.toLocaleString()} F`, W - margin, rowY + 0.5, { align: 'right' });
+      });
+      if (topServices.length === 0) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+        setTextCol('#94a3b8');
+        doc.text('Aucun service enregistré pour cette période.', margin, secY2 + 12);
+      }
+
+      // ── Section répartition ───────────────────────────────────
+      const secY3 = secY2 + 10 + Math.max(topServices.length, 1) * 9;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      setTextCol('#0284c7');
+      doc.text('RÉPARTITION DE LA PLATEFORME', margin, secY3);
+      setStroke('#e0f2fe'); doc.setLineWidth(0.3);
+      doc.line(margin + 60, secY3 - 1, W - margin, secY3 - 1);
+
+      const repart = [
+        { label: 'Clients',       value: Math.max((stats.total_comptes || 0) - (stats.total_prestataires || 0), 0), color: '#0284c7' },
+        { label: 'Prestataires',  value: stats.total_prestataires || 0,  color: '#10b981' },
+        { label: 'Services actifs', value: stats.total_services || 0,   color: '#f59e0b' },
+        { label: 'Réservations',  value: stats.total_reservations || 0, color: '#8b5cf6' },
+      ];
+      const total3 = repart.reduce((s, d) => s + d.value, 0) || 1;
+      const repartW = (contentW - 8) / repart.length;
+      repart.forEach((r, i) => {
+        const x = margin + i * (repartW + 2.5);
+        const y = secY3 + 5;
+        const pct2 = Math.round((r.value / total3) * 100);
+        // Card
+        setFill('#f8fafc'); doc.roundedRect(x, y, repartW, 20, 2, 2, 'F');
+        const [rr,gg,bb] = hex2rgb(r.color);
+        doc.setFillColor(rr,gg,bb); doc.roundedRect(x, y, repartW, 2, 1, 1, 'F');
+        // Pct
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+        doc.setFillColor(rr,gg,bb); doc.setTextColor(rr,gg,bb);
+        doc.text(`${pct2}%`, x + repartW/2, y + 11, { align: 'center' });
+        // Label
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5);
+        setTextCol('#64748b');
+        doc.text(r.label, x + repartW/2, y + 16.5, { align: 'center' });
+        // Valeur brute
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+        setTextCol('#0c2340');
+        doc.text(String(r.value), x + repartW/2, y + 21, { align: 'center' });
+      });
+
+      // ── PAGE 2 — Tableaux détaillés ───────────────────────────
+      doc.addPage();
+
+      // Header page 2 (compact)
+      setFill('#0c2340'); doc.rect(0, 0, W, 20, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+      setTextCol('#ffffff');
+      doc.text('SERVICE MARKET TOGO', margin, 13);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+      setTextCol('#93c5fd');
+      doc.text(`Rapport détaillé — ${nomMois} ${annee}`, W - margin, 13, { align: 'right' });
+      setFill('#0284c7'); doc.rect(0, 18, W, 2, 'F');
+
+      let curY = 30;
+
+      // ── Table comptes ─────────────────────────────────────────
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      setTextCol('#0284c7');
+      doc.text('INSCRIPTIONS RÉCENTES', margin, curY);
+      setStroke('#e0f2fe'); doc.setLineWidth(0.3);
+      doc.line(margin + 55, curY - 1, W - margin, curY - 1);
+      curY += 5;
+
+      // En-têtes tableau
+      const th1 = ['#', 'Utilisateur', 'Email', 'Type', 'Statut'];
+      const tw1 = [8, 45, 55, 28, 28];
+      setFill('#f8fafc');
+      doc.roundedRect(margin, curY, contentW, 8, 1.5, 1.5, 'F');
+      setStroke('#e2e8f0'); doc.setLineWidth(0.2);
+      doc.roundedRect(margin, curY, contentW, 8, 1.5, 1.5, 'S');
+
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+      setTextCol('#64748b');
+      let txX = margin + 3;
+      th1.forEach((h, i) => { doc.text(h, txX, curY + 5); txX += tw1[i]; });
+      curY += 9;
+
+      const comptes = (stats.comptes || []).slice(0, 8);
+      comptes.forEach((c, i) => {
+        const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+        setFill(rowBg); doc.rect(margin, curY, contentW, 7.5, 'F');
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+        setTextCol('#0c2340');
+        let cx = margin + 3;
+        const nom = ((`${c.first_name||''} ${c.last_name||''}`).trim() || c.username || '—').substring(0, 22);
+        const vals = [String(i+1), nom, (c.email||'—').substring(0,26), c.type_compte || 'client', c.is_active ? 'Actif' : 'Inactif'];
+        vals.forEach((v, j) => {
+          if (j === 3) {
+            const bc = c.type_compte === 'prestataire' ? '#d1fae5' : '#e0f2fe';
+            const tc = c.type_compte === 'prestataire' ? '#065f46' : '#0369a1';
+            setFill(bc); doc.roundedRect(cx - 1, curY + 1.5, tw1[j] - 2, 5, 1, 1, 'F');
+            setTextCol(tc); doc.setFont('helvetica', 'bold');
+            doc.text(v, cx + (tw1[j]-4)/2, curY + 5, { align: 'center' });
+            doc.setFont('helvetica', 'normal'); setTextCol('#0c2340');
+          } else if (j === 4) {
+            const dotCol = c.is_active ? '#22c55e' : '#ef4444';
+            const [dr,dg,db] = hex2rgb(dotCol);
+            doc.setFillColor(dr,dg,db); doc.circle(cx + 2, curY + 4, 1.5, 'F');
+            setTextCol(dotCol); doc.setFont('helvetica', 'bold');
+            doc.text(v, cx + 5.5, curY + 5.5);
+            doc.setFont('helvetica', 'normal'); setTextCol('#0c2340');
+          } else {
+            doc.text(v, cx, curY + 5.5);
+          }
+          cx += tw1[j];
+        });
+        // Séparateur léger
+        setStroke('#f1f5f9'); doc.setLineWidth(0.15);
+        doc.line(margin, curY + 7.5, margin + contentW, curY + 7.5);
+        curY += 7.5;
+      });
+      if (comptes.length === 0) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+        setTextCol('#94a3b8');
+        doc.text('Aucun compte enregistré.', margin + contentW/2, curY + 6, { align: 'center' });
+        curY += 12;
+      }
+      curY += 10;
+
+      // ── Table services ────────────────────────────────────────
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      setTextCol('#10b981');
+      doc.text('SERVICES PUBLIÉS', margin, curY);
+      setStroke('#d1fae5'); doc.setLineWidth(0.3);
+      doc.line(margin + 40, curY - 1, W - margin, curY - 1);
+      curY += 5;
+
+      const th2 = ['#', 'Service', 'Catégorie', 'Prix (FCFA)', 'Prestataire'];
+      const tw2 = [8, 52, 38, 32, 44];
+      setFill('#f0fdf4'); doc.roundedRect(margin, curY, contentW, 8, 1.5, 1.5, 'F');
+      setStroke('#d1fae5'); doc.roundedRect(margin, curY, contentW, 8, 1.5, 1.5, 'S');
+
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+      setTextCol('#047857');
+      txX = margin + 3;
+      th2.forEach((h, i) => { doc.text(h, txX, curY + 5); txX += tw2[i]; });
+      curY += 9;
+
+      const services2 = (stats.services || []).slice(0, 8);
+      services2.forEach((s, i) => {
+        const rowBg = i % 2 === 0 ? '#ffffff' : '#f0fdf4';
+        setFill(rowBg); doc.rect(margin, curY, contentW, 7.5, 'F');
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+        setTextCol('#0c2340');
+        let sx = margin + 3;
+        const prest = ((`${s.prestataire?.user?.first_name||''} ${s.prestataire?.user?.last_name||''}`).trim() || s.prestataire?.user?.username || '—').substring(0, 20);
+        const vals2 = [
+          String(i+1),
+          (s.nom||'—').substring(0, 24),
+          (s.categorie?.nom||'—').substring(0, 16),
+          Number(s.prix||0).toLocaleString(),
+          prest,
+        ];
+        vals2.forEach((v, j) => {
+          if (j === 3) {
+            doc.setFont('helvetica', 'bold'); setTextCol('#0284c7');
+            doc.text(v, sx, curY + 5.5);
+            doc.setFont('helvetica', 'normal'); setTextCol('#0c2340');
+          } else {
+            doc.text(v, sx, curY + 5.5);
+          }
+          sx += tw2[j];
+        });
+        setStroke('#f1f5f9'); doc.setLineWidth(0.15);
+        doc.line(margin, curY + 7.5, margin + contentW, curY + 7.5);
+        curY += 7.5;
+      });
+      if (services2.length === 0) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+        setTextCol('#94a3b8');
+        doc.text('Aucun service enregistré.', margin + contentW/2, curY + 6, { align: 'center' });
+        curY += 12;
+      }
+
+      // ── Footer ────────────────────────────────────────────────
+      [1, 2].forEach(pNum => {
+        doc.setPage(pNum);
+        setFill('#f8fafc'); doc.rect(0, H - 12, W, 12, 'F');
+        setStroke('#e2e8f0'); doc.setLineWidth(0.3);
+        doc.line(0, H - 12, W, H - 12);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+        setTextCol('#94a3b8');
+        doc.text('Service Market Togo — Plateforme de mise en relation', margin, H - 5);
+        doc.text(`Rapport ${nomMois} ${annee} — Page ${pNum}/2`, W - margin, H - 5, { align: 'right' });
+      });
+
+      // ── Numérotation pages ────────────────────────────────────
+      doc.save(`rapport_SM_${annee}_${String(mois).padStart(2,'0')}.pdf`);
       setPdfMsg('✅ Rapport téléchargé !');
-    } catch {
-      setPdfMsg('❌ Erreur de génération. Vérifiez que reportlab est installé.');
-    } finally { setPdfLoading(false); }
+    } catch(e) {
+      console.error(e);
+      setPdfMsg('❌ Erreur lors de la génération du PDF.');
+    } finally {
+      setPdfLoading(false);
+    }
   };
 
   // Données charts

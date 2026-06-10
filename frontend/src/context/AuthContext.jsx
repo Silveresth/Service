@@ -15,18 +15,19 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      // ✅ FIX: Récupérer le vrai utilisateur depuis l'API au lieu d'un mock
-      api.get('/auth/me/')
-        .then(res => setUser(res.data))
-        .catch(() => {
-          // Token invalide ou expiré : on nettoie
-          localStorage.removeItem('token');
-        })
-        .finally(() => setLoading(false));
-    } else {
+    if (!token) {
       setLoading(false);
+      return;
     }
+
+    api.get('/auth/me/')
+      .then(res => setUser(res.data))
+      .catch(() => {
+        // Token invalide ou expiré : on nettoie
+        localStorage.removeItem('token');
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   // ✅ FIX: login reçoit { access, refresh, user } depuis le backend

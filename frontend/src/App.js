@@ -46,8 +46,10 @@ import AdminEvaluations from './pages/AdminEvaluations';
 import AdminAllPaiements from './pages/AdminAllPaiements';
 import AdminAllCategories from './pages/AdminAllCategories';
 import AdminAllServices from './pages/AdminAllServices';
+import PrivateRoute from './components/PrivateRoute';
 
 import './App.css';
+
 import './styles/global.css';
 import './styles/admin.css';
 
@@ -67,8 +69,23 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/mon-compte" element={<MonCompte />} />
             {/* <Route path="/ajouter-service" element={<AjouterService />} /> */}
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route
+              path="/admin-dashboard"
+              element={(
+                <PrivateRoute adminOnly>
+                  <AdminDashboard />
+                </PrivateRoute>
+              )}
+            />
+            <Route
+              path="/admin/dashboard"
+              element={(
+                <PrivateRoute adminOnly>
+                  <AdminDashboard />
+                </PrivateRoute>
+              )}
+            />
+
             <Route path="/mes-reservations" element={<MesReservations />} />
             <Route path="/mes-ateliers" element={<MesAteliers />} />
             {/* <Route path="/mes-services" element={<MesServices />} /> */}
@@ -88,25 +105,27 @@ function App() {
             <Route path="/prestataire-mes-services" element={<PrestataireMesServices />} />
             
             {/* Routes CRUD Admin */}
-            <Route path="/admin/services" element={<ServicesCRUD />} />
+            <Route path="/admin/services" element={<PrivateRoute adminOnly><ServicesCRUD /></PrivateRoute>} />
 
-            <Route path="/admin/categories" element={<CategoriesCRUD />} />
-            <Route path="/admin/reservations" element={<ReservationsCRUD />} />
-            <Route path="/admin/crud-evaluations" element={<EvaluationsCRUD />} />
-            <Route path="/admin/ateliers" element={<AteliersCRUD />} />
-            <Route path="/admin/prestataires" element={<PrestatairesCRUD />} />
+            <Route path="/admin/categories" element={<PrivateRoute adminOnly><CategoriesCRUD /></PrivateRoute>} />
+            <Route path="/admin/reservations" element={<PrivateRoute adminOnly><ReservationsCRUD /></PrivateRoute>} />
+            <Route path="/admin/crud-evaluations" element={<PrivateRoute adminOnly><EvaluationsCRUD /></PrivateRoute>} />
+            <Route path="/admin/ateliers" element={<PrivateRoute adminOnly><AteliersCRUD /></PrivateRoute>} />
+            <Route path="/admin/prestataires" element={<PrivateRoute adminOnly><PrestatairesCRUD /></PrivateRoute>} />
+
 
 
             {/* Routes Admin All (list views) */}
 
-            <Route path="/admin/all-ateliers" element={<AdminAllAteliers />} />
-            <Route path="/admin/all-reservations" element={<AdminAllReservations />} />
-            <Route path="/admin/all-comptes" element={<AdminAllComptes />} />
-            <Route path="/admin/all-evaluations" element={<AdminEvaluations />} />
-            <Route path="/admin/evaluations" element={<AdminEvaluations />} />
-            <Route path="/admin/all-paiements" element={<AdminAllPaiements />} />
-            <Route path="/admin/all-categories" element={<AdminAllCategories />} />
-            <Route path="/admin/All-services" element={<AdminAllServices />} />
+            <Route path="/admin/all-ateliers" element={<PrivateRoute adminOnly><AdminAllAteliers /></PrivateRoute>} />
+            <Route path="/admin/all-reservations" element={<PrivateRoute adminOnly><AdminAllReservations /></PrivateRoute>} />
+            <Route path="/admin/all-comptes" element={<PrivateRoute adminOnly><AdminAllComptes /></PrivateRoute>} />
+            <Route path="/admin/all-evaluations" element={<PrivateRoute adminOnly><AdminEvaluations /></PrivateRoute>} />
+            <Route path="/admin/evaluations" element={<PrivateRoute adminOnly><AdminEvaluations /></PrivateRoute>} />
+            <Route path="/admin/all-paiements" element={<PrivateRoute adminOnly><AdminAllPaiements /></PrivateRoute>} />
+            <Route path="/admin/all-categories" element={<PrivateRoute adminOnly><AdminAllCategories /></PrivateRoute>} />
+            <Route path="/admin/All-services" element={<PrivateRoute adminOnly><AdminAllServices /></PrivateRoute>} />
+
 
             {/* Aliases pour les anciens liens */}
             <Route path="/inscription-client" element={<Register />} />

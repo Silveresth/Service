@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from '../api/axios';
+import useSmartMatch from '../hooks/useSmartMatch';
 
 const BUDGET_OPTIONS = [
   { label: '< 5 000 F', value: 5000 },
@@ -9,12 +9,17 @@ const BUDGET_OPTIONS = [
 ];
 
 const SmartMatchButton = ({ onMatches, setMatches, setShowModal, categories = [] }) => {
+  const { runMatch } = useSmartMatch();
   const [step, setStep] = useState('idle');
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState('');
   const [selectedCat, setSelectedCat] = useState('');
   const [selectedBudget, setSelectedBudget] = useState(20000);
-  const [distanceMax] = useState(20);
+  const [budgetCustom, setBudgetCustom] = useState(false);
+  const [budgetMaxValue, setBudgetMaxValue] = useState(20000);
+
+  const [distanceMax, setDistanceMax] = useState(20);
+
   const [mieuxNote, setMieuxNote] = useState(false);
 
   const getCurrentLocation = () =>
@@ -33,18 +38,25 @@ const SmartMatchButton = ({ onMatches, setMatches, setShowModal, categories = []
     try {
       const pos = await getCurrentLocation();
       setLoadingStep(2);
-      const response = await axios.post('/smart-match/match/', {
-        lat: pos.lat, lon: pos.lon,
+      const { matches, raw } = await runMatch({
+        lat: pos.lat,
+        lon: pos.lon,
         budget_max: selectedBudget,
         categories: selectedCat ? [selectedCat] : [],
         distance_max: distanceMax,
         mieux_note: mieuxNote,
+        debug: true,
       });
+
+      // Si réponse vide, afficher debug en console
+      if (!matches || matches.length === 0) {
+        console.warn('[smartmatch] backend returned empty matches:', raw);
+      }
       setLoadingStep(3);
-      const matches = response.data.top_matches || [];
-      setMatches(matches);
-      onMatches?.(matches);
-      if (matches.length > 0) {
+      const matchesFinal = matches || [];
+      setMatches(matchesFinal);
+      onMatches?.(matchesFinal);
+      if (matchesFinal.length > 0) {
         setStep('done');
         setTimeout(() => { setShowModal?.(true); setStep('idle'); }, 700);
       } else {
@@ -201,7 +213,7 @@ const SmartMatchButton = ({ onMatches, setMatches, setShowModal, categories = []
           ))}
         </div>
 
-        {/* Budget — 2 lignes x 2 */}
+        {/* Budget — boutons + personnalisable (option B) */}
         <p style={{
           margin: '12px 0 8px', fontSize: '0.75rem', fontWeight: 700,
           color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.05em',
@@ -213,19 +225,114 @@ const SmartMatchButton = ({ onMatches, setMatches, setShowModal, categories = []
             <button
               key={opt.value}
               className="sm-chip"
-              onClick={() => setSelectedBudget(opt.value)}
+              onClick={() => {
+                setBudgetCustom(false);
+                setSelectedBudget(opt.value);
+                setBudgetMaxValue(opt.value);
+              }}
               style={{
                 padding: '8px', borderRadius: 10, border: '1.5px solid',
-                borderColor: selectedBudget === opt.value ? '#0284c7' : '#e2e8f0',
-                background: selectedBudget === opt.value ? '#e0f2fe' : '#f8fafc',
-                color: selectedBudget === opt.value ? '#0284c7' : '#475569',
-                fontWeight: selectedBudget === opt.value ? 700 : 500,
+                borderColor: selectedBudget === opt.value && !budgetCustom ? '#0284c7' : '#e2e8f0',
+                background: selectedBudget === opt.value && !budgetCustom ? '#e0f2fe' : '#f8fafc',
+                color: selectedBudget === opt.value && !budgetCustom ? '#0284c7' : '#475569',
+                fontWeight: selectedBudget === opt.value && !budgetCustom ? 700 : 500,
                 fontSize: '0.82rem', textAlign: 'center',
               }}
             >
               {opt.label}
             </button>
           ))}
+        </div>
+
+        <div style={{
+          marginTop: 8,
+          padding: '10px 12px', borderRadius: 10,
+          border: '1.5px dashed #bae6fd',
+          background: '#f0f9ff',
+        }}>
+          <label style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 10,
+            cursor: 'pointer',
+          }}>
+            <span style={{ fontWeight: 800, color: '#0369a1', fontSize: '0.82rem' }}>
+              Personnaliser le budget
+            </span>
+            <input
+              type="checkbox"
+              checked={budgetCustom}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setBudgetCustom(next);
+                if (next) {
+                  setSelectedBudget(budgetMaxValue);
+                }
+              }}
+              style={{ accentColor: '#0284c7' }}
+            />
+          </label>
+
+          <div style={{ marginTop: 8, opacity: budgetCustom ? 1 : 0.6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontWeight: 900, color: '#0284c7', fontSize: '0.82rem' }}>
+                {budgetCustom ? budgetMaxValue.toLocaleString() : selectedBudget.toLocaleString()} F
+              </span>
+              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 700 }}>1 000 → 200 000</span>
+            </div>
+            <input
+              type="range"
+              min={1000}
+              max={200000}
+              step={1000}
+              value={budgetMaxValue}
+              disabled={!budgetCustom}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setBudgetMaxValue(v);
+                setSelectedBudget(v);
+              }}
+              style={{ width: '100%', accentColor: '#0284c7' }}
+            />
+          </div>
+        </div>
+
+
+        {/* Distance — personnalisable */}
+        <p style={{
+          margin: '12px 0 8px', fontSize: '0.75rem', fontWeight: 700,
+          color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.05em',
+        }}>
+          <i className="bi bi-arrows-collapse me-1" />Distance maximale
+        </p>
+        <div style={{
+          padding: '10px 12px', borderRadius: 10,
+          border: '1.5px solid #e2e8f0',
+          background: '#f8fafc',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: 6,
+          }}>
+            <span style={{ fontWeight: 800, color: '#0369a1', fontSize: '0.82rem' }}>
+              {distanceMax} km
+            </span>
+            <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>
+              Ajustez la zone
+            </span>
+          </div>
+          <input
+            type="range"
+            min={1}
+            max={80}
+            step={1}
+            value={distanceMax}
+            onChange={(e) => setDistanceMax(Number(e.target.value))}
+            style={{ width: '100%', accentColor: '#0284c7' }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+            <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700 }}>1 km</span>
+            <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700 }}>80 km</span>
+          </div>
         </div>
 
         {/* Option mieux noté */}
@@ -237,6 +344,7 @@ const SmartMatchButton = ({ onMatches, setMatches, setShowModal, categories = []
           border: `1.5px solid ${mieuxNote ? '#f59e0b' : '#e2e8f0'}`,
           transition: 'all .15s',
         }}>
+
           <input
             type="checkbox" checked={mieuxNote}
             onChange={e => setMieuxNote(e.target.checked)}
@@ -393,3 +501,4 @@ const SmartMatchButton = ({ onMatches, setMatches, setShowModal, categories = []
 };
 
 export default SmartMatchButton;
+

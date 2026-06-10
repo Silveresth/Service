@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
 
+import GoogleMapAteliers from '../components/GoogleMapAteliers';
+
 export default function MesAteliers() {
   const [ateliers, setAteliers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,22 +13,7 @@ export default function MesAteliers() {
     api.get('/ateliers/mes_ateliers/').then(r => setAteliers(r.data)).catch(console.error).finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    if (!loading && ateliers.length > 0 && window.L) {
-      const existing = document.getElementById('map-mes-ateliers');
-      if (existing && existing._leaflet_id) return;
-      const map = window.L.map('map-mes-ateliers').setView([6.125580, 1.232456], 7);
-      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap' }).addTo(map);
-      const bounds = [];
-      ateliers.forEach(a => {
-        if (a.latitude && a.longitude) {
-          window.L.marker([a.latitude, a.longitude]).addTo(map).bindPopup(`<b>${a.nom}</b><br>${a.adresse}`);
-          bounds.push([parseFloat(a.latitude), parseFloat(a.longitude)]);
-        }
-      });
-      if (bounds.length > 0) map.fitBounds(bounds, { padding:[50,50] });
-    }
-  }, [loading, ateliers]);
+
 
   const handleDelete = async (id) => {
     try { await api.delete(`/ateliers/${id}/`); setAteliers(p => p.filter(a => a.id !== id)); setDeleteModal(null); }
@@ -88,7 +75,9 @@ export default function MesAteliers() {
           <div className="card-custom">
             <div className="card-header-custom"><i className="bi bi-map text-primary"></i> Aperçu sur carte</div>
             <div className="card-body-custom">
-              <div id="map-mes-ateliers" style={{ height:300, borderRadius:8 }}></div>
+              <div style={{ height:300, borderRadius:8, overflow:'hidden' }}>
+                <GoogleMapAteliers ateliers={ateliers} selectedAtelier={null} onSelectAtelier={() => {}} zoom={7} searchLatLng={{ lat: 6.125580, lng: 1.232456 }} style={{ height:'100%' }} />
+              </div>
             </div>
           </div>
         )}

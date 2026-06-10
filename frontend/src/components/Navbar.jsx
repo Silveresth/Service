@@ -219,15 +219,21 @@ export default function Navbar() {
     const ws = new WebSocket(`${backendWs}/ws/notifications/?token=${token}`);
 
     ws.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      if (data.type === 'notification') {
-        setNotifications(prev => [data, ...prev].slice(0, 20));
-        setUnreadCount(c => c + 1);
-        showToast(data.message, data.level || 'info');
+      try {
+        const data = JSON.parse(e.data);
+        if (data?.type === 'notification') {
+          setNotifications(prev => [data, ...prev].slice(0, 20));
+          setUnreadCount(c => c + 1);
+          showToast(data.message, data.level || 'info');
+        }
+      } catch {
+        // ignore parsing errors
       }
     };
 
-    ws.onerror = () => {};
+    ws.onerror = () => {
+      // Connexion WS notification en échec => on laisse l’UI fonctionner sur le fallback HTTP
+    };
     wsNotifRef.current = ws;
 
     api.get('/notifications/').then(r => {
@@ -251,6 +257,37 @@ export default function Navbar() {
     setNotifications(prev => prev.map(n => ({ ...n, lue: true })));
     api.post('/notifications/lire_tout/').catch(() => {});
   };
+
+  // deleteOneNotification/deleteAllNotifications are defined below
+
+  const deleteOneNotification = async (id) => {
+    try {
+      const res = await api.post('/notifications/supprimer_un/', { id });
+      if (res?.data?.ok) {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+        setUnreadCount(prevUnread => {
+          const removed = notifications.find(n => n.id === id);
+          const wasUnread = removed && !removed.lue;
+          return wasUnread ? Math.max(0, prevUnread - 1) : prevUnread;
+        });
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const deleteAllNotifications = async () => {
+    try {
+      const res = await api.post('/notifications/supprimer_tout/');
+      if (res?.data?.ok) {
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
 
   const handleLogout = () => {
     logout();
@@ -309,11 +346,19 @@ export default function Navbar() {
                       <span style={{ fontWeight: 700, color: '#0c2340', fontSize: '0.9rem' }}>
                         <i className="bi bi-bell-fill text-primary me-2"></i>Notifications
                       </span>
-                      {unreadCount > 0 && (
-                        <button onClick={markAllRead} style={{ background: 'none', border: 'none', color: 'var(--primary-color)', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600 }}>
-                          Tout marquer lu
-                        </button>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {unreadCount > 0 && (
+                          <button onClick={markAllRead} style={{ background: 'none', border: 'none', color: 'var(--primary-color)', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600 }}>
+                            Tout marquer lu
+                          </button>
+                        )}
+                        {notifications.length > 0 && (
+                          <button onClick={deleteAllNotifications} style={{ background: 'none', border: 'none', color: '#dc3545', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 700 }}>
+                            Tout supprimer
+                          </button>
+                        )}
+                      </div>
+
                     </div>
                     <div style={{ maxHeight: 320, overflowY: 'auto' }}>
                       {notifications.length === 0 && (
@@ -323,11 +368,12 @@ export default function Navbar() {
                         </div>
                       )}
                       {notifications.map((n, i) => (
-                        <div key={i} style={{
+                        <div key={n.id ?? i} style={{
                           padding: '10px 16px', borderBottom: '1px solid #f8f9fa',
                           background: n.lue ? 'white' : '#f0f8ff',
                           display: 'flex', gap: 10, alignItems: 'flex-start',
                         }}>
+
                           <div style={{
                             width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                             background: n.type === 'reservation' ? '#dbeafe' : n.type === 'chat' ? '#dcfce7' : n.type === 'paiement' ? '#fef9c3' : '#f0f4ff'
@@ -341,8 +387,28 @@ export default function Navbar() {
                               {n.created_at ? new Date(n.created_at).toLocaleString('fr', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : "À l'instant"}
                             </p>
                           </div>
-                          {!n.lue && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#0284c7', flexShrink: 0, marginTop: 4 }}></div>}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                            {!n.lue && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#0284c7', flexShrink: 0, marginTop: 4 }}></div>}
+                            <button
+                              onClick={() => deleteOneNotification(n.id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#dc3545',
+                                cursor: 'pointer',
+                                fontWeight: 800,
+                                fontSize: '0.72rem',
+                                padding: 0,
+                                lineHeight: 1.1,
+                              }}
+                              aria-label="Supprimer notification"
+                              title="Supprimer"
+                            >
+                              <i className="bi bi-trash" style={{ fontSize: '0.9rem' }}></i>
+                            </button>
+                          </div>
                         </div>
+
                       ))}
                     </div>
                   </div>

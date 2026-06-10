@@ -288,7 +288,7 @@ export default function MesReservations() {
             <div style={{ marginBottom:12 }}>
               <label style={{ display:'block', fontWeight:700, fontSize:'0.78rem', color:'#374151', marginBottom:8, textTransform:'uppercase', letterSpacing:'.04em' }}>Méthode de paiement</label>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                {[{val:'moov',label:'Moov Money'},{val:'flooz',label:'Flooz (T-Money)'}].map(m => (
+                {[{val:'moov',label:'Flooz'},{val:'flooz',label:'Mix By Yas'}].map(m => (
                   <button key={m.val} onClick={() => setPayMethode(m.val)} style={{ padding:'10px', borderRadius:10, border:`1.5px solid ${payMethode===m.val ? '#0284c7' : '#e2e8f0'}`, background: payMethode===m.val ? '#e0f2fe' : '#f8fafc', color: payMethode===m.val ? '#0284c7' : '#475569', fontWeight: payMethode===m.val ? 700 : 500, fontSize:'0.85rem', cursor:'pointer' }}>
                     {m.label}
                   </button>

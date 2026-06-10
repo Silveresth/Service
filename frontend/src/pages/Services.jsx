@@ -140,129 +140,179 @@ export default function Services() {
   const resetFilters = () => { setCatFiltre('all'); setDispoOnly(false); setPrixTranche('all'); setTriBy('pertinence'); };
 
   // ── MODAL SMART MATCH ──────────────────────────────────────
+  const RANK_CONFIG = [
+    { emoji: '🥇', label: 'Meilleur match', scoreColor: '#0284c7', scoreBg: '#e0f2fe', cardBg: '#f8fbff', border: '#bae6fd' },
+    { emoji: '🥈', label: '2ᵉ choix',        scoreColor: '#7c3aed', scoreBg: '#f5f3ff', cardBg: '#fafafa',  border: '#e2e8f0' },
+    { emoji: '🥉', label: '3ᵉ choix',        scoreColor: '#b45309', scoreBg: '#fef3c7', cardBg: '#fafafa',  border: '#e2e8f0' },
+  ];
+
   const SmartMatchModal = () => (
     <div
       className="modal-backdrop"
       onClick={closeModal}
       style={{
         position: 'fixed', inset: 0, zIndex: 10000,
-        background: 'rgba(12,35,64,0.55)', backdropFilter: 'blur(4px)',
+        background: 'rgba(12,35,64,0.6)', backdropFilter: 'blur(5px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 20,
+        padding: 16,
       }}
     >
       <div
         className="modal-box"
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480,
-          boxShadow: '0 24px 80px rgba(0,0,0,.2)', overflow: 'hidden',
+          background: '#fff', borderRadius: 22, width: '100%', maxWidth: 460,
+          boxShadow: '0 32px 80px rgba(0,0,0,.25)', overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          maxHeight: '92vh',
         }}
       >
-        {/* Header */}
+        {/* ── Header ── */}
         <div style={{
-          background: 'linear-gradient(135deg, #0c2340, #0284c7)',
-          padding: '20px 24px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'linear-gradient(135deg, #0c2340 0%, #0284c7 100%)',
+          padding: '18px 20px',
+          display: 'flex', alignItems: 'center', gap: 12,
+          flexShrink: 0,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 42, height: 42, borderRadius: 12,
-              background: 'rgba(255,255,255,.15)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <i className="bi bi-stars" style={{ color: '#fff', fontSize: '1.3rem' }} />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, color: '#fff', fontWeight: 800, fontSize: '1.1rem' }}>
-                {matches.length} match{matches.length > 1 ? 'es' : ''} IA trouvé{matches.length > 1 ? 's' : ''} !
-              </h3>
-              <p style={{ margin: 0, color: 'rgba(255,255,255,.75)', fontSize: '0.8rem' }}>
-                Prestataires parfaits à proximité
-              </p>
-            </div>
+          <div style={{
+            width: 44, height: 44, borderRadius: 13, flexShrink: 0,
+            background: 'rgba(255,255,255,.15)',
+            border: '1.5px solid rgba(255,255,255,.25)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <i className="bi bi-stars" style={{ color: '#fff', fontSize: '1.3rem' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{ margin: 0, color: '#fff', fontWeight: 800, fontSize: '1rem', lineHeight: 1.2 }}>
+              {matches.length} prestataire{matches.length > 1 ? 's' : ''} recommandé{matches.length > 1 ? 's' : ''}
+            </h3>
+            <p style={{ margin: '3px 0 0', color: 'rgba(255,255,255,.7)', fontSize: '0.77rem' }}>
+              Classés par pertinence · distance · budget
+            </p>
           </div>
           <button onClick={closeModal} style={{
-            background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: 10,
-            width: 32, height: 32, cursor: 'pointer', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem',
-          }}>✕</button>
+            background: 'rgba(255,255,255,.15)', border: '1.5px solid rgba(255,255,255,.25)',
+            borderRadius: 10, width: 34, height: 34,
+            cursor: 'pointer', color: '#fff', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem',
+          }}>
+            <i className="bi bi-x-lg" />
+          </button>
         </div>
 
-        {/* Cards */}
-        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 420, overflowY: 'auto' }}>
-          {matches.slice(0, 3).map((match, idx) => (
-            <div key={match.service_id} style={{
-              padding: '16px', borderRadius: 16,
-              background: idx === 0 ? 'linear-gradient(135deg, #f0f9ff, #e0f2fe)' : '#f8fafc',
-              border: `1.5px solid ${idx === 0 ? '#bae6fd' : '#e2e8f0'}`,
-              display: 'flex', flexDirection: 'column', gap: 12,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {/* Rang */}
-                <div style={{
-                  width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-                  background: idx === 0
-                    ? 'linear-gradient(135deg, #0c2340, #0284c7)'
-                    : 'linear-gradient(135deg, #475569, #64748b)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontWeight: 900, fontSize: '1.1rem',
-                }}>
-                  {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <h4 style={{ margin: 0, fontWeight: 800, fontSize: '1rem', color: '#0c2340' }}>
-                      {match.nom}
-                    </h4>
+        {/* ── Liste des matches ── */}
+        <div style={{ overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {matches.slice(0, 3).map((match, idx) => {
+            const cfg = RANK_CONFIG[idx] || RANK_CONFIG[2];
+            const score = Math.round((match.similarity || 0) * 100);
+            const isTop = idx === 0;
+
+            return (
+              <div key={match.service_id} style={{
+                background: cfg.cardBg,
+                border: `1.5px solid ${cfg.border}`,
+                borderRadius: 16, overflow: 'hidden',
+              }}>
+                {/* Ligne principale */}
+                <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {/* Médaille + score */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, gap: 4 }}>
+                    <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{cfg.emoji}</span>
                     <span style={{
-                      padding: '3px 8px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700,
-                      background: '#0284c7', color: '#fff',
+                      fontSize: '0.72rem', fontWeight: 800,
+                      color: cfg.scoreColor, background: cfg.scoreBg,
+                      padding: '2px 7px', borderRadius: 20,
+                      whiteSpace: 'nowrap',
                     }}>
-                      {Math.round(match.similarity * 100)}%
+                      {score}%
                     </span>
                   </div>
-                  <p style={{ margin: '3px 0 0', color: '#64748b', fontSize: '0.82rem' }}>
-                    par <strong>{match.prestataire}</strong>
-                  </p>
+
+                  {/* Infos service */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0c2340', lineHeight: 1.2, marginBottom: 2 }}>
+                      {match.nom}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <i className="bi bi-person" style={{ flexShrink: 0 }} />
+                      {match.prestataire}
+                      {match.note_moyenne > 0 && (
+                        <span style={{ marginLeft: 4, color: '#f59e0b', fontWeight: 700, fontSize: '0.76rem' }}>
+                          ⭐ {match.note_moyenne?.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Prix */}
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0c2340' }}>
+                      {match.prix?.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600 }}>Fcfa</div>
+                  </div>
+                </div>
+
+                {/* Barre de score */}
+                <div style={{ margin: '0 16px', height: 4, background: '#e2e8f0', borderRadius: 4, marginBottom: 4 }}>
+                  <div style={{
+                    height: '100%', width: `${score}%`,
+                    background: `linear-gradient(90deg, ${cfg.scoreColor}88, ${cfg.scoreColor})`,
+                    borderRadius: 4, transition: 'width .6s ease',
+                  }} />
+                </div>
+
+                {/* Tags info + bouton */}
+                <div style={{ padding: '8px 16px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {match.distance != null && (
+                    <span style={{
+                      padding: '3px 9px', borderRadius: 20, fontSize: '0.74rem', fontWeight: 600,
+                      background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0',
+                      display: 'flex', alignItems: 'center', gap: 4,
+                    }}>
+                      <i className="bi bi-geo-alt-fill" style={{ fontSize: '0.68rem' }} />
+                      {match.distance.toFixed(1)} km
+                    </span>
+                  )}
+                  {match.categorie && (
+                    <span style={{
+                      padding: '3px 9px', borderRadius: 20, fontSize: '0.74rem', fontWeight: 600,
+                      background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe',
+                    }}>
+                      {match.categorie}
+                    </span>
+                  )}
+                  <Link
+                    to={`/services/${match.service_id}`}
+                    onClick={closeModal}
+                    style={{
+                      marginLeft: 'auto',
+                      padding: '7px 16px', borderRadius: 10, textDecoration: 'none',
+                      background: isTop ? 'linear-gradient(135deg, #0c2340, #0284c7)' : '#f1f5f9',
+                      color: isTop ? '#fff' : '#475569',
+                      fontWeight: 700, fontSize: '0.82rem',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      boxShadow: isTop ? '0 3px 10px rgba(2,132,199,.3)' : 'none',
+                      transition: 'all .15s',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <i className="bi bi-calendar-check" />
+                    Réserver
+                  </Link>
                 </div>
               </div>
+            );
+          })}
 
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{
-                  padding: '4px 10px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700,
-                  background: '#0c2340', color: '#fff',
-                }}>
-                  {match.prix?.toLocaleString()} Fcfa
-                </span>
-                {match.distance && (
-                  <span style={{
-                    padding: '4px 10px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 600,
-                    background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0',
-                  }}>
-                    <i className="bi bi-geo-alt me-1" />{match.distance?.toFixed(1)} km
-                  </span>
-                )}
-              </div>
-
-              <Link
-                to={`/services/${match.service_id}`}
-                onClick={closeModal}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '10px', borderRadius: 10, textDecoration: 'none',
-                  background: idx === 0
-                    ? 'linear-gradient(135deg, #0c2340, #0284c7)'
-                    : '#f1f5f9',
-                  color: idx === 0 ? '#fff' : '#475569',
-                  fontWeight: 700, fontSize: '0.85rem', transition: 'all .15s',
-                }}
-              >
-                <i className="bi bi-calendar-check" />
-                Réserver
-              </Link>
-            </div>
-          ))}
+          {/* Note de bas */}
+          <p style={{
+            margin: '4px 0 0', textAlign: 'center',
+            fontSize: '0.73rem', color: '#94a3b8',
+          }}>
+            <i className="bi bi-info-circle me-1" />
+            Score calculé selon proximité, budget et disponibilité
+          </p>
         </div>
       </div>
     </div>

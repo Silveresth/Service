@@ -78,8 +78,30 @@ export default function Reserver() {
   const total = prix;
 
   const bloques = selDate
-    ? existantes.filter(r=>r.date_debut?.startsWith(fmtDate(selDate))&&['en_attente','en_attente_paiement','confirmee'].includes(r.statut)).map(r=>r.date_debut?.split('T')[1]?.slice(0,5))
+    ? existantes
+        .filter(
+          (r) =>
+            r.date_debut?.startsWith(fmtDate(selDate)) &&
+            ['en_attente', 'en_attente_paiement', 'confirmee'].includes(r.statut),
+        )
+        .map((r) => r.date_debut?.split('T')[1]?.slice(0, 5))
     : [];
+
+  // Désactivation des créneaux déjà passés (sur la journée d’aujourd’hui)
+  const computeBlockedForSlot = (slotHHMM) => {
+    if (!selDate) return false;
+    const now = new Date();
+    const isSameDay = selDate.toDateString() === now.toDateString();
+    if (!isSameDay) return bloques.includes(slotHHMM);
+
+    const [hh, mm] = slotHHMM.split(':').map(Number);
+    const slotTime = new Date(selDate);
+    slotTime.setHours(hh, mm, 0, 0);
+
+    // bloqué si déjà réservé OU si l’heure du créneau est déjà passée
+    return bloques.includes(slotHHMM) || slotTime.getTime() <= now.getTime();
+  };
+
 
   const isPast = d => { const t=new Date(); t.setHours(0,0,0,0); return d<t; };
 
@@ -234,11 +256,12 @@ export default function Reserver() {
                           </p>
                           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))', gap:8 }}>
                             {CRENEAUX.map(h => {
-                              const blocked = bloques.includes(h);
+                              const blocked = computeBlockedForSlot(h);
                               const sel     = selHeure===h;
                               return (
                                 <button key={h} disabled={blocked} onClick={()=>setSelHeure(h)} className="rv-slot"
                                   style={{ padding:'10px 6px', borderRadius:10, textAlign:'center', border:`1.5px solid ${sel?'#0284c7':blocked?'#f1f5f9':'#e2e8f0'}`, background:blocked?'#f8fafc':sel?'#0284c7':'#fff', color:blocked?'#cbd5e1':sel?'#fff':'#0c2340', fontWeight:sel?700:400, fontSize:'0.85rem', cursor:blocked?'not-allowed':'pointer' }}>
+
                                   {h}
                                   {blocked && <div style={{ fontSize:'0.6rem', color:'#ef4444', marginTop:2 }}>Réservé</div>}
                                 </button>

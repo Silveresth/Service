@@ -97,7 +97,19 @@ const PMS_STYLES = `
     position: relative; overflow: hidden;
   }
   .pms-thumb img { width: 100%; height: 100%; object-fit: cover; }
-  .pms-thumb-icon { font-size: 3rem; color: #7dd3fc; }
+  /* Make the placeholder icon more prominent/visible */
+  .pms-thumb-icon {
+    font-size: 3.2rem;
+    color: #0369a1;
+    text-shadow: 0 2px 10px rgba(2,132,199,.22);
+    filter: drop-shadow(0 6px 18px rgba(0,0,0,.08));
+    background: rgba(255,255,255,.55);
+    border: 1.5px solid rgba(186,230,253,.95);
+    width: 74px; height: 74px;
+    border-radius: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
   .pms-status-badge {
     position: absolute; top: 10px; right: 10px;
     padding: 4px 12px; border-radius: 50px; font-size: 0.71rem; font-weight: 800;

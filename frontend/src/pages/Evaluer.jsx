@@ -7,9 +7,11 @@ const NOTE_COLORS = ['', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#d97706'];
 const NOTE_BGS    = ['', '#fef2f2', '#fff7ed', '#fefce8', '#f0fdf4', '#fffbeb'];
 
 const EV_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap');
+  /* IMPORTANT: garder la police globale (ne pas importer Syne ici)
+     sinon certaines pages ne respectent pas la police globale */
 
   .ev-page {
+
     background: #f0f8ff; min-height: 100vh;
     display: flex; flex-direction: column; align-items: center;
     padding: 0 0 60px;
@@ -41,7 +43,7 @@ const EV_STYLES = `
   }
   @keyframes ev-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
   .ev-hero-title {
-    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-weight: 800;
     font-size: 1.7rem; margin: 0 0 6px; position: relative; z-index: 1;
   }
   .ev-hero-sub { font-size: 0.88rem; opacity: 0.75; margin: 0; position: relative; z-index: 1; }
@@ -70,7 +72,7 @@ const EV_STYLES = `
     display: flex; align-items: center; justify-content: center;
     font-size: 1.4rem; color: #0284c7;
   }
-  .ev-service-name { font-family: 'Syne',sans-serif; font-weight: 800; color: #0c2340; font-size: 0.95rem; margin-bottom: 3px; }
+  .ev-service-name { font-weight: 800; color: #0c2340; font-size: 0.95rem; margin-bottom: 3px; font-family: inherit; }
   .ev-service-meta { font-size: 0.78rem; color: #64748b; display: flex; gap: 12px; }
 
   /* Star section */
@@ -230,7 +232,7 @@ export default function Evaluer() {
         </div>
         <div className="ev-success">
           <div className="ev-success-icon"><i className="bi bi-check-lg"></i></div>
-          <h2 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, color: '#0c2340', marginBottom: 8 }}>Avis publié !</h2>
+          <h2 style={{ fontWeight: 800, color: '#0c2340', marginBottom: 8 }}>Avis publié !</h2>
           <p style={{ color: '#64748b', lineHeight: 1.7, marginBottom: 24 }}>
             Merci pour votre retour. Votre avis aide d'autres clients à choisir les meilleurs services.
           </p>
