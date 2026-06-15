@@ -109,6 +109,10 @@ ROOT_URLCONF = 'service_market.urls'
 PAYGATE_TOKEN = config('PAYGATE_TOKEN', default='')
 PAYGATE_CALLBACK_PATH = "/api/paiement/callback/" 
 
+# ─── Groq (Chatbot) ─────────────────────────────────────────────────────────
+GROQ_API_KEY = config('GROQ_API_KEY', default='')
+
+
 # ─── CHANNELS (WebSocket) ─────────────────────────────────────────────────────
 ASGI_APPLICATION = 'service_market.asgi.application'
 if DEBUG:
