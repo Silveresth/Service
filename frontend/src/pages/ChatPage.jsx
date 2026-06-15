@@ -11,6 +11,12 @@ const CHAT_STYLES = `
     height: 100vh; max-height: 100vh;
     background: #f0f8ff;
     overflow: hidden;
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    border: 1px solid #bae6fd;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(2,132,199,0.12);
   }
 
   /* ── Header ── */
@@ -130,6 +136,7 @@ const CHAT_STYLES = `
     background: #f0f8ff; border: 1.5px solid #bae6fd;
     border-radius: 14px; overflow: hidden; padding: 4px 14px;
     transition: border-color .2s, box-shadow .2s;
+    max-width: 100%;
   }
   .ch-input-wrap:focus-within { border-color: #0284c7; box-shadow: 0 0 0 4px rgba(2,132,199,0.10); background: white; }
   .ch-input {

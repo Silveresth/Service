@@ -1,10 +1,10 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NODE_ENV === 'development' 
-    ? '/api/'  // Use CRA proxy in development
-    : (process.env.REACT_APP_API_URL 
-       ? `${process.env.REACT_APP_API_URL.replace(/\/$/, '')}/api/` 
+  baseURL: process.env.REACT_APP_API_URL
+    ? `${process.env.REACT_APP_API_URL.replace(/\/$/, '')}/api/`
+    : (process.env.NODE_ENV === 'development'
+       ? '/api/'  // Use CRA proxy in development
        : 'http://192.168.100.19:8000/api/'),
 });
 

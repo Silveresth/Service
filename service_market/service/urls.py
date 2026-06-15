@@ -4,7 +4,7 @@ from .views import (
     AuthViewSet, CompteViewSet, ServiceViewSet, ReservationViewSet,
     PrestataireViewSet, AtelierViewSet, CategorieViewSet, AdminViewSet,
     EvaluationViewSet, NotificationViewSet, initier_paiement, paygate_callback, verifier_paiement, SmartMatchViewSet,
-    mes_points_fidelite, rapport_pdf_admin, ajouter_points
+    mes_points_fidelite, rapport_pdf_admin, ajouter_points, chatbot_view
 )
 
 router = DefaultRouter()
@@ -27,4 +27,5 @@ urlpatterns = router.urls + [
     path('fidelite/mes-points/',    mes_points_fidelite,  name='fidelite-points'),
     path('fidelite/ajouter-points/', ajouter_points,      name='fidelite-ajouter-points'),
     path('admin/rapport-pdf/',      rapport_pdf_admin,    name='admin-rapport-pdf'),
+    path('chatbot/',                chatbot_view,         name='chatbot'),
 ]
