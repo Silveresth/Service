@@ -38,7 +38,7 @@ function ChatFlottant({ user, onClose }) {
     if (wsRef.current) wsRef.current.close();
     const token = localStorage.getItem('token');
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://192.168.100.19:8000/api/';
+    const apiBaseUrl = process.env.REACT_APP_API_URL || 'https://apk-back.onrender.com/api/';
     const backendHost = apiBaseUrl.replace('/api/', '').replace(/\/$/, '');
     const backendWs = backendHost.replace(/^http/, proto);
     const ws = new WebSocket(`${backendWs}/ws/chat/${reservation.id}/?token=${token}`);
@@ -213,7 +213,7 @@ export default function Navbar() {
     if (!user) return;
     const token = localStorage.getItem('token');
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://192.168.100.19:8000/api/';
+    const apiBaseUrl = process.env.REACT_APP_API_URL || 'https://apk-back.onrender.com/api/';
     const backendHost = apiBaseUrl.replace('/api/', '').replace(/\/$/, '');
     const backendWs = backendHost.replace(/^http/, proto);
     const ws = new WebSocket(`${backendWs}/ws/notifications/?token=${token}`);

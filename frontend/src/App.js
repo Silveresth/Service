@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Chatbot from './components/Chatbot';
@@ -56,7 +56,7 @@ import './styles/admin.css';
 
 function App() {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className="App">
         <Navbar />
         <OfflineBanner />
@@ -136,7 +136,7 @@ function App() {
         <Footer />
         <Chatbot />
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
