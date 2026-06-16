@@ -11,5 +11,6 @@ dj-database-url
 numpy
 scikit-learn
 requests
+Pillow
 whitenoise
 gunicorn
