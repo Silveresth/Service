@@ -16,8 +16,6 @@ from .serializers import (
     MessageSerializer, NotificationSerializer
 )
 
-import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 from math import radians, sin, cos, sqrt, atan2
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -711,6 +709,8 @@ class SmartMatchViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'])
     def match(self, request):
+        import numpy as np
+        from sklearn.metrics.pairwise import cosine_similarity
         data = request.data
         client_lat = data.get('lat', 6.125)
         client_lon = data.get('lon', 1.232)

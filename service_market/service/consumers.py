@@ -79,7 +79,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """Send a WebSocket notification to the current user when receiving a chat message"""
         try:
             from channels.layers import get_channel_layer
-            from asgiref.sync import async_to_sync
             
             # Create notification record
             await database_sync_to_async(self._save_notification_record)(self.user.id, message, 'chat')
@@ -88,7 +87,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             channel_layer = get_channel_layer()
             user_group = f"user_{self.user.id}"
             
-            async_to_sync(channel_layer.group_send)(
+            await channel_layer.group_send(
                 user_group,
                 {
                     'type': 'notification',
