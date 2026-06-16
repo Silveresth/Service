@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 class Compte(AbstractUser):
-    telephone = models.CharField(max_length=15)
+    telephone = models.CharField(max_length=20)
     adresse = models.TextField()
     
     CHOIX_TYPE = (

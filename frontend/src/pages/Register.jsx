@@ -383,7 +383,7 @@ export default function Register() {
                 <div className="rf-step-title"><i className="bi bi-telephone-fill"></i> Coordonnées</div>
                 <InputField label="Adresse email" name="email" type="email" placeholder="jean@exemple.com" icon="envelope" value={form.email} onChange={set('email')} error={errors.email} />
                 <div className="rf-grid">
-                  <InputField label="Téléphone" name="telephone" type="tel" placeholder="+228 90 00 00 00" icon="telephone" value={form.telephone} onChange={set('telephone')} error={errors.telephone} />
+                  <InputField label="Téléphone" name="telephone" type="tel" placeholder="+22890000000" icon="telephone" value={form.telephone} onChange={set('telephone')} error={errors.telephone} />
                   <InputField label="Adresse" name="adresse" placeholder="Lomé, Togo" icon="geo-alt" value={form.adresse} onChange={set('adresse')} error={errors.adresse} />
                 </div>
               </div>

@@ -102,7 +102,7 @@ export default function Login() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:18 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
               {/* Username */}
               <div>
                 <label style={{ display:'block', fontWeight:700, fontSize:'0.82rem', color:'#374151', marginBottom:8, textTransform:'uppercase', letterSpacing:'.04em' }}>
@@ -137,7 +137,7 @@ export default function Login() {
               </div>
 
               {/* Bouton */}
-              <button type="submit" className="login-btn" disabled={loading} style={{ width:'100%', padding:'14px', borderRadius:12, border:'none', background:'linear-gradient(135deg,#0c2340,#0284c7)', color:'#fff', fontWeight:800, fontSize:'0.95rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, boxShadow:'0 4px 18px rgba(2,132,199,.35)', marginTop:4 }}>
+              <button type="button" onClick={handleSubmit} className="login-btn" disabled={loading} style={{ width:'100%', padding:'14px', borderRadius:12, border:'none', background:'linear-gradient(135deg,#0c2340,#0284c7)', color:'#fff', fontWeight:800, fontSize:'0.95rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, boxShadow:'0 4px 18px rgba(2,132,199,.35)', marginTop:4 }}>
                 {loading ? (
                   <>
                     <span style={{ width:18, height:18, border:'2.5px solid rgba(255,255,255,.3)', borderTopColor:'#fff', borderRadius:'50%', animation:'spinRing .7s linear infinite', display:'inline-block', flexShrink:0 }} />
@@ -147,7 +147,7 @@ export default function Login() {
                   <><i className="bi bi-box-arrow-in-right" /> Se connecter</>
                 )}
               </button>
-            </form>
+            </div>
 
             {/* Séparateur */}
             <div style={{ display:'flex', alignItems:'center', gap:12, margin:'24px 0' }}>
