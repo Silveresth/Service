@@ -84,6 +84,9 @@ CORS_ALLOWED_ORIGINS = [
     #'http://192.168.10.102:3000',
     #'http://10.150.20.134:3000',
     'https://cloud-ensure-impure.ngrok-free.dev',
+    'capacitor://localhost',
+    'http://localhost',
+    'https://apk-back.onrender.com',
 ]
 
 # Autoriser les origines supplémentaires via .env (ngrok, IP réseau, domaine prod)

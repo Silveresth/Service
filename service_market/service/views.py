@@ -1757,10 +1757,8 @@ def chatbot_view(request):
             context_data += "\n"
 
         # 2. Appeler l'API Groq
-        GROQ_API_KEY = getattr(settings, 'GROQ_API_KEY', None)
-        if not GROQ_API_KEY:
-            return Response({'error': 'Clé GROQ manquante (GROQ_API_KEY) - config serveur incomplète.'}, status=500)
-
+        import os
+        GROQ_API_KEY = os.getenv("GROQ_API_KEY")
         base_url = "https://api.groq.com/openai/v1"
         url = f"{base_url}/chat/completions"
 
