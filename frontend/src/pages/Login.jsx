@@ -33,6 +33,7 @@ export default function Login() {
       const type = res.data?.user?.type_compte;
       if (res.data?.user?.is_staff || type === 'admin') navigate('/admin-dashboard');
       else if (type === 'prestataire') navigate('/prestataire-dashboard');
+      else if (type === 'client') navigate('/services');
       else navigate('/services');
     } catch {
       setError("Nom d'utilisateur ou mot de passe incorrect.");
