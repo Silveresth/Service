@@ -14,96 +14,14 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-fallback-do-not-use-i
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
+# Autoriser TOUTES les origines pour l'APK et le développement (plus simple pour Capacitor)
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
+# Configuration ALLOWED_HOSTS
 ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    config('NGROK_URL', default=''),
-    config('SERVER_IP', default=''),   # IP locale du serveur (ex: 192.168.x.x)
-    'cloud-ensure-impure.ngrok-free.dev',  # ← ajoute cette ligne
-    '.ngrok-free.app',
-    '.ngrok-free.dev',
-    '.ngrok.io',                        # wildcard ngrok
-    '.ngrok-free.app',
-    '192.168.10.102',
-    '10.150.20.134',                 # nouveau domaine ngrok gratuit
+    '*', # Permissif pour faciliter le déploiement sur Render/APK
 ]
-
-# En prod (Railway, etc.) on peut compléter via .env
-_extra_allowed_hosts = config('ALLOWED_HOSTS', default='')
-if _extra_allowed_hosts:
-    ALLOWED_HOSTS += [h.strip() for h in _extra_allowed_hosts.split(',') if h.strip()]
-
-# Supprimer les valeurs vides
-ALLOWED_HOSTS = [h for h in ALLOWED_HOSTS if h]
-
-
-AUTH_USER_MODEL = 'service.Compte'
-
-INSTALLED_APPS = [
-    'daphne',
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    # Real-time
-    'channels',
-    # Packages
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'corsheaders',
-    # Ton app
-    'service',
-]
-
-MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',   # ← EN PREMIER obligatoire
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
-    ],
-}
-
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    #'http://192.168.10.102:3000',
-    #'http://10.150.20.134:3000',
-    'https://cloud-ensure-impure.ngrok-free.dev',
-    'capacitor://localhost',
-    'http://localhost',
-    'https://apk-back.onrender.com',
-]
-
-# Autoriser les origines supplémentaires via .env (ngrok, IP réseau, domaine prod)
-_extra_origins = config('CORS_EXTRA_ORIGINS', default='')
-if _extra_origins:
-    CORS_ALLOWED_ORIGINS += [o.strip() for o in _extra_origins.split(',') if o.strip()]
-
-# Autoriser le frontend déployé sur Vercel
-CORS_ALLOWED_ORIGINS += ['https://servicemarket.vercel.app']
-
-# En développement : garder une config stricte (pas de *)
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = False  # Security: even dev, explicit origins
-    CORS_ALLOWED_ORIGINS += ['http://localhost:3000', 'http://127.0.0.1:3000']
-
-# Dedoublonnage + suppression des valeurs vides
-CORS_ALLOWED_ORIGINS = list({o for o in CORS_ALLOWED_ORIGINS if o})
 
 ROOT_URLCONF = 'service_market.urls'
 

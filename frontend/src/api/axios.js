@@ -4,7 +4,7 @@ const BASE_URL = process.env.REACT_APP_API_URL
   ? `${process.env.REACT_APP_API_URL.replace(/\/$/, '')}/api/`
   : (process.env.NODE_ENV === 'development'
      ? '/api/'
-     : 'http://192.168.100.19:8000/api/');
+     : 'https://apk-back.onrender.com/api/');
 
 const api = axios.create({
   baseURL: BASE_URL,

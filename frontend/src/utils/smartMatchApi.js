@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 export async function smartMatchRequest(payload) {
-  const apiBase = process.env.REACT_APP_API_URL || 'http://192.168.100.19:8000/api/';
+  const apiBase = process.env.REACT_APP_API_URL || 'https://apk-back.onrender.com/api/';
 
   // CRA (dev) => /api est proxied vers http://localhost:8000/api
   // Prod => on utilise REACT_APP_API_URL
