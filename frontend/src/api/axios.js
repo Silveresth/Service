@@ -31,7 +31,8 @@ api.interceptors.response.use(
     }
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      // On utilise /#/login pour HashRouter (obligatoire pour Capacitor)
+      window.location.href = '/#/login';
     }
     return Promise.reject(error);
   }

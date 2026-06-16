@@ -40,7 +40,10 @@ function ChatFlottant({ user, onClose }) {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const apiBaseUrl = process.env.REACT_APP_API_URL || 'https://apk-back.onrender.com/api/';
     const backendHost = apiBaseUrl.replace('/api/', '').replace(/\/$/, '');
-    const backendWs = backendHost.replace(/^http/, proto);
+    // Force wss pour Render
+    const backendWs = backendHost.includes('onrender.com') 
+      ? backendHost.replace(/^http/, 'wss') 
+      : backendHost.replace(/^http/, proto);
     const ws = new WebSocket(`${backendWs}/ws/chat/${reservation.id}/?token=${token}`);
     ws.onopen = () => {
       console.log('[WS Chat] Connexion ouverte pour réservation', reservation.id);
@@ -215,7 +218,10 @@ export default function Navbar() {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const apiBaseUrl = process.env.REACT_APP_API_URL || 'https://apk-back.onrender.com/api/';
     const backendHost = apiBaseUrl.replace('/api/', '').replace(/\/$/, '');
-    const backendWs = backendHost.replace(/^http/, proto);
+    // Force wss pour Render
+    const backendWs = backendHost.includes('onrender.com') 
+      ? backendHost.replace(/^http/, 'wss') 
+      : backendHost.replace(/^http/, proto);
     const ws = new WebSocket(`${backendWs}/ws/notifications/?token=${token}`);
 
     ws.onmessage = (e) => {
