@@ -4,7 +4,6 @@
   "private": true,
   "dependencies": {
     "@capacitor/android": "^8.4.0",
-    "@capacitor/cli": "^8.4.0",
     "@capacitor/core": "^8.4.0",
     "@craco/craco": "^7.1.0",
     "@tanstack/react-query": "^5.100.8",
@@ -59,5 +58,8 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:8000"
+  "proxy": "http://localhost:8000",
+  "devDependencies": {
+    "@capacitor/cli": "^7.6.6"
+  }
 }
