@@ -1724,7 +1724,7 @@ def rapport_pdf_admin(request):
         )
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([permissions.AllowAny])
 def chatbot_view(request):
     """
     Chatbot IA (Groq) qui a accès aux données des prestataires et services 
