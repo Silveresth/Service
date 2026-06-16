@@ -4,7 +4,7 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('service', '0001_initial'),  # Adaptez avec votre dernière migration
+        ('service', '0001_initial'),
     ]
     operations = [
         migrations.CreateModel(

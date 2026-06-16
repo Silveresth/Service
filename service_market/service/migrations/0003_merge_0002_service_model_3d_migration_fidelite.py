@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('service', '0002_service_model_3d'),
-        ('service', '0004_fidelite'),
+        ('service', 'migration_fidelite'),
     ]
 
     operations = [
