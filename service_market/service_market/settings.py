@@ -19,9 +19,48 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 # Configuration ALLOWED_HOSTS
-ALLOWED_HOSTS = [
-    '*', # Permissif pour faciliter le déploiement sur Render/APK
+ALLOWED_HOSTS = ['*']
+
+AUTH_USER_MODEL = 'service.Compte'
+
+INSTALLED_APPS = [
+    'daphne',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    # Real-time
+    'channels',
+    # Packages
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'corsheaders',
+    # Ton app
+    'service',
 ]
+
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',   # ← EN PREMIER obligatoire
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+}
 
 ROOT_URLCONF = 'service_market.urls'
 
