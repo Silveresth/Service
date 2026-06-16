@@ -308,10 +308,19 @@ export default function Register() {
       navigate('/login');
     } catch (err) {
       const data = err.response?.data || {};
-      if (data.non_field_errors) setGlobalError(Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors);
-      else if (typeof data === 'string') setGlobalError(data);
-      else setErrors(data);
-      setStep(0);
+      let msg = '';
+      if (data.non_field_errors) {
+        msg = Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors;
+      } else if (typeof data === 'string') {
+        msg = data;
+      } else {
+        // Collect all field errors into one message
+        const fieldErrors = Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v[0] : v}`).join(' | ');
+        msg = fieldErrors || 'Une erreur est survenue. Vérifiez vos informations.';
+        setErrors(data);
+      }
+      setGlobalError(msg || 'Erreur de connexion au serveur. Réessayez.');
+      // Don't reset to step 0 — stay on current step so user sees the error
     } finally { setLoading(false); }
   };
 

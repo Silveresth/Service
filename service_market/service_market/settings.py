@@ -247,9 +247,15 @@ LOGGING = {
 }
 
 CSRF_TRUSTED_ORIGINS = [
-    #'http://192.168.100.19:8000',
-    'https://cloud-ensure-impure.ngrok-free.dev',
+    'https://apk-back.onrender.com',
+    'https://*.onrender.com',
+    'capacitor://localhost',
+    'http://localhost',
 ]
+
+_extra_csrf = config('CSRF_TRUSTED_ORIGINS', default='')
+if _extra_csrf:
+    CSRF_TRUSTED_ORIGINS += [o.strip() for o in _extra_csrf.split(',') if o.strip()]
 
 from datetime import timedelta
  
