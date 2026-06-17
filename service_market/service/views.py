@@ -8,12 +8,12 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db.models import F, Sum, Count
 
-from .models import Compte, Client, Prestataire, Service, Reservation, Paiement, Evaluation, Categorie, Atelier, Message, Notification
+from .models import Compte, Client, Prestataire, Service, Reservation, Paiement, Evaluation, Categorie, Atelier, Message, Notification, DemandeRetrait
 from .serializers import (
     CompteSerializer, CompteUpdateSerializer, RegisterClientSerializer, RegisterPrestataireSerializer,
     ServiceSerializer, ReservationSerializer, PaiementSerializer,
     EvaluationSerializer, CategorieSerializer, AtelierSerializer, PrestataireSerializer,
-    MessageSerializer, NotificationSerializer
+    MessageSerializer, NotificationSerializer, DemandeRetraitSerializer
 )
 
 from math import radians, sin, cos, sqrt, atan2
@@ -28,32 +28,7 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 
 
-# ── Helper: Envoyer notification WebSocket ──────────────────────
-import logging
-logger = logging.getLogger(__name__)
-
-def send_notification_ws(user_id, message, notif_type='systeme', level='info'):
-    channel_layer = get_channel_layer()
-    try:
-        async_to_sync(channel_layer.group_send)(
-            f"user_{user_id}",
-            {
-                'type': 'notification',
-                'message': message,
-                'notif_type': notif_type,
-                'level': level,
-                'created_at': str(__import__('datetime').datetime.now()),
-            }
-        )
-    except Exception as e:
-        logger.error(f"Notification WS failed for user {user_id}: {e}")
-
-
-def create_notification(user, message, notif_type='systeme'):
-    notif = Notification.objects.create(user=user, type=notif_type, message=message)
-    send_notification_ws(user.id, message, notif_type)
-    return notif
-
+from .utils_notifications import create_notification, send_notification_ws
 
 # ── Auth ─────────────────────────────────────────────────────────
 class AuthViewSet(viewsets.ViewSet):
@@ -459,13 +434,6 @@ class ReservationViewSet(viewsets.ModelViewSet):
             date_debut=date_debut or None,
             lieu=lieu,
             notes=notes,
-        )
-
-        # Notifier le prestataire
-        create_notification(
-            service.prestataire.user,
-            f"Nouvelle réservation de '{service.nom}' par {client.user.username}. Confirmez-la dans vos réservations.",
-            'reservation'
         )
 
         return Response({
@@ -1199,6 +1167,83 @@ class AdminViewSet(viewsets.ViewSet):
             return Response({'error': str(e)}, status=500)
 
 
+# ── RETRAITS (Withdrawals) ───────────────────────────────────────
+class DemandeRetraitViewSet(viewsets.ModelViewSet):
+    serializer_class = DemandeRetraitSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return DemandeRetrait.objects.all()
+        try:
+            prestataire = Prestataire.objects.get(user=user)
+            return DemandeRetrait.objects.filter(prestataire=prestataire)
+        except Prestataire.DoesNotExist:
+            return DemandeRetrait.objects.none()
+
+    def perform_create(self, serializer):
+        try:
+            prestataire = Prestataire.objects.get(user=self.request.user)
+            montant = serializer.validated_data['montant']
+            
+            if prestataire.solde < montant:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError("Solde insuffisant pour ce retrait.")
+            
+            # Déduire du solde immédiatement (sécurité)
+            prestataire.solde = F('solde') - montant
+            prestataire.save()
+            
+            serializer.save(prestataire=prestataire)
+            
+            # Notifier l'admin
+            logger.info(f"Nouvelle demande de retrait de {montant} par {self.request.user.username}")
+        except Prestataire.DoesNotExist:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Seuls les prestataires peuvent demander un retrait.")
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    def valider(self, request, pk=None):
+        retrait = self.get_object()
+        if retrait.statut != 'en_attente':
+            return Response({'error': 'Cette demande a déjà été traitée.'}, status=400)
+        
+        retrait.statut = 'validee'
+        retrait.date_validation = timezone.now()
+        retrait.notes_admin = request.data.get('notes_admin', '')
+        retrait.save()
+        
+        create_notification(
+            retrait.prestataire.user,
+            f"Votre demande de retrait de {retrait.montant} FCFA a été validée. L'argent a été envoyé sur votre numéro {retrait.numero_paiement}.",
+            'systeme'
+        )
+        return Response(DemandeRetraitSerializer(retrait).data)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    def rejeter(self, request, pk=None):
+        retrait = self.get_object()
+        if retrait.statut != 'en_attente':
+            return Response({'error': 'Cette demande a déjà été traitée.'}, status=400)
+        
+        retrait.statut = 'rejetee'
+        retrait.notes_admin = request.data.get('notes_admin', "Refusé par l'admin.")
+        retrait.save()
+        
+        # Rendre l'argent au prestataire
+        prestataire = retrait.prestataire
+        prestataire.solde = F('solde') + retrait.montant
+        prestataire.save()
+        
+        create_notification(
+            retrait.prestataire.user,
+            f"Votre demande de retrait de {retrait.montant} FCFA a été rejetée. Motif : {retrait.notes_admin}",
+            'systeme'
+        )
+        return Response(DemandeRetraitSerializer(retrait).data)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def initier_paiement(request):
@@ -1250,6 +1295,11 @@ def initier_paiement(request):
         reservation.paiement = paiement
         reservation.statut = 'confirmee'
         reservation.save()
+
+        # Créditer le solde du prestataire
+        prestataire = service_obj.prestataire
+        prestataire.solde = F('solde') + montant_prestataire
+        prestataire.save()
 
         # Notifications
         create_notification(
@@ -1341,6 +1391,11 @@ def paygate_callback(request):
         paiement.statut = 'confirme'
         reservation.statut = 'confirmee'
         reservation.save()
+
+        # Créditer le solde du prestataire
+        prestataire = reservation.service.prestataire
+        prestataire.solde = F('solde') + paiement.montant_prestataire
+        prestataire.save()
 
         # Notifications
         create_notification(
@@ -1489,13 +1544,14 @@ def rapport_pdf_admin(request):
         # Police Unicode pour bien gérer les accents (français)
         try:
             pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+            pdf_font = 'DejaVuSans'
         except Exception:
-            pdfmetrics.registerFont(TTFont('DejaVuSans', 'C:\\\\Windows\\\\Fonts\\\\arial.ttf'))
+            pdf_font = 'Helvetica' # Fallback standard
 
-        title_style = ParagraphStyle('title', fontSize=22, textColor=DARK, fontName='DejaVuSans', spaceAfter=4)
-        sub_style = ParagraphStyle('sub', fontSize=11, textColor=colors.HexColor('#64748b'), fontName='DejaVuSans', spaceAfter=18)
-        h2_style = ParagraphStyle('h2', fontSize=14, textColor=PRIMARY, fontName='DejaVuSans', spaceBefore=14, spaceAfter=8)
-        small_style = ParagraphStyle('small', fontSize=9.5, textColor=colors.HexColor('#334155'), fontName='DejaVuSans', spaceAfter=2)
+        title_style = ParagraphStyle('title', fontSize=22, textColor=DARK, fontName=pdf_font, spaceAfter=4)
+        sub_style = ParagraphStyle('sub', fontSize=11, textColor=colors.HexColor('#64748b'), fontName=pdf_font, spaceAfter=18)
+        h2_style = ParagraphStyle('h2', fontSize=14, textColor=PRIMARY, fontName=pdf_font, spaceBefore=14, spaceAfter=8)
+        small_style = ParagraphStyle('small', fontSize=9.5, textColor=colors.HexColor('#334155'), fontName=pdf_font, spaceAfter=2)
 
         content = []
         content.append(Paragraph("Service Market – Rapport Mensuel", title_style))
@@ -1759,6 +1815,10 @@ def chatbot_view(request):
         # 2. Appeler l'API Groq
         import os
         GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+        if not GROQ_API_KEY:
+            logger.error("GROQ_API_KEY non configurée dans les variables d'environnement.")
+            return Response({'error': "Le chatbot n'est pas configuré (clé API manquante)."}, status=500)
+
         base_url = "https://api.groq.com/openai/v1"
         url = f"{base_url}/chat/completions"
 
@@ -1767,26 +1827,32 @@ def chatbot_view(request):
             "Content-Type": "application/json"
         }
 
+        # System Prompt
         system_prompt = (
             "Tu es 'SM-Assistant', l'IA officielle de Service Market Togo. "
             "Ton but est d'aider les utilisateurs à trouver les meilleurs prestataires de services (plombiers, électriciens, informaticiens, etc.). "
-            "Tu avez accès en temps réel aux données de la plateforme ci-dessous. "
-            "Sois poli, professionnel et réponds en français. "
+            "Tu as accès en temps réel aux données de la plateforme ci-dessous. "
+            "Sois poli, professionnel et réponds en français de manière concise. "
             "Si un utilisateur demande qui est le meilleur, regarde les notes moyennes. "
             "Donne toujours les prix des services et suggère de réserver directement sur la plateforme."
         )
 
         payload = {
-            "model": "llama-3.3-70b-versatile",
+            "model": "llama3-70b-8192",  # Modèle plus standard
             "messages": [
                 {"role": "system", "content": f"{system_prompt}\n\nDONNÉES DE LA PLATEFORME :\n{context_data[:5000]}"},
                 {"role": "user", "content": user_message}
             ],
-            "temperature": 0.7,
+            "temperature": 0.6,
             "max_tokens": 1024
         }
+        
+        logger.info(f"Appel Groq pour message: {user_message[:50]}...")
         response = requests.post(url, headers=headers, json=payload, timeout=25)
-        response.raise_for_status()
+        
+        if response.status_code != 200:
+            logger.error(f"Groq API Error {response.status_code}: {response.text}")
+            return Response({'error': "L'IA est temporairement indisponible."}, status=500)
 
         bot_reply = response.json()['choices'][0]['message']['content']
         return Response({'reply': bot_reply})

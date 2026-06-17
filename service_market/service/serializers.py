@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from .models import DemandeRetrait
 from .models import Compte, Client, Prestataire, Service, Reservation, Paiement, Evaluation, Categorie, Atelier, Message, Notification
 
 
@@ -91,7 +92,7 @@ class PrestataireSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Prestataire
-        fields = ['user', 'specialite', 'numero_flooz', 'numero_mix', 'photo', 'photo_url']
+        fields = ['id', 'user', 'specialite', 'numero_flooz', 'numero_mix', 'photo', 'photo_url', 'solde']
 
     def get_photo_url(self, obj):
         if obj.photo:
@@ -100,6 +101,20 @@ class PrestataireSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.photo.url)
             return obj.photo.url
         return None
+
+
+class DemandeRetraitSerializer(serializers.ModelSerializer):
+    prestataire_nom = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DemandeRetrait
+        fields = ['id', 'prestataire', 'prestataire_nom', 'montant', 'methode', 'numero_paiement',
+                  'statut', 'date_demande', 'date_validation', 'notes_admin']
+        read_only_fields = ['id', 'prestataire', 'date_demande', 'date_validation', 'statut']
+
+    def get_prestataire_nom(self, obj):
+        user = obj.prestataire.user
+        return user.get_full_name() or user.username
 
 
 # ── Client ────────────────────────────────────────────────────

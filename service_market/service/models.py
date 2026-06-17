@@ -27,9 +27,37 @@ class Prestataire(models.Model):
     numero_flooz = models.CharField(max_length=15, blank=True, default='', help_text="Numéro Flooz (ex: 97430290)")
     numero_mix = models.CharField(max_length=15, blank=True, default='', help_text="Numéro Mix by Yas (ex: 93354922)")
     photo = models.ImageField(upload_to='prestataires/', blank=True, null=True, help_text="Photo de profil du prestataire")
+    solde = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Solde disponible pour retrait (FCFA)")
     
     def __str__(self):
         return f"Prestataire: {self.user.username}"
+
+
+class DemandeRetrait(models.Model):
+    STATUT_CHOICES = (
+        ('en_attente', 'En attente'),
+        ('validee', 'Validée'),
+        ('rejetee', 'Rejetée'),
+    )
+    METHODE_CHOICES = (
+        ('flooz', 'Flooz'),
+        ('tmoney', 'T-Money / Mix'),
+    )
+
+    prestataire = models.ForeignKey(Prestataire, on_delete=models.CASCADE, related_name='demandes_retrait')
+    montant = models.DecimalField(max_digits=12, decimal_places=2)
+    methode = models.CharField(max_length=20, choices=METHODE_CHOICES)
+    numero_paiement = models.CharField(max_length=20, help_text="Numéro sur lequel recevoir l'argent")
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='en_attente')
+    date_demande = models.DateTimeField(auto_now_add=True)
+    date_validation = models.DateTimeField(null=True, blank=True)
+    notes_admin = models.TextField(blank=True, default='')
+
+    class Meta:
+        ordering = ['-date_demande']
+
+    def __str__(self):
+        return f"Retrait {self.montant} FCFA - {self.prestataire.user.username} ({self.statut})"
 
     def get_phone_for_method(self, method):
         if method == 'flooz':

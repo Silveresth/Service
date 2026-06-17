@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Geolocation } from '@capacitor/geolocation';
 import useSmartMatch from '../hooks/useSmartMatch';
 
 const BUDGET_OPTIONS = [
@@ -22,14 +23,23 @@ const SmartMatchButton = ({ onMatches, setMatches, setShowModal, categories = []
 
   const [mieuxNote, setMieuxNote] = useState(false);
 
-  const getCurrentLocation = () =>
-    new Promise((resolve, reject) => {
-      if (!navigator.geolocation) { reject('Géolocalisation non supportée.'); return; }
-      navigator.geolocation.getCurrentPosition(
-        pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-        err => reject(err.message)
-      );
-    });
+  const getCurrentLocation = async () => {
+    try {
+      // Tenter d'utiliser Capacitor (natif mobile)
+      const coordinates = await Geolocation.getCurrentPosition();
+      return { lat: coordinates.coords.latitude, lon: coordinates.coords.longitude };
+    } catch (e) {
+      console.warn('Capacitor Geolocation error in SmartMatch, falling back to Web API:', e);
+      // Fallback Web API
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) { reject('Géolocalisation non supportée.'); return; }
+        navigator.geolocation.getCurrentPosition(
+          pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+          err => reject(err.message)
+        );
+      });
+    }
+  };
 
   const handleSearch = async () => {
     setStep('loading');

@@ -80,25 +80,65 @@ body {
 }
 
 /* ── Liens de navigation — zone centrale ── */
+.navbar-links-wrapper {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
 .navbar-links {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center; /* centre la barre de navigation */
   list-style: none;
   margin: 0;
   padding: 0;
-  gap: 2px;
-  flex: 1;                  /* prend tout l'espace disponible au centre */
+  gap: 4px;
+}
+
+@media (max-width: 860px) {
+  .navbar-links-wrapper {
+    overflow-x: auto;
+    justify-content: flex-start;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 0 5px;
+  }
+  .navbar-links-wrapper::-webkit-scrollbar {
+    display: none;
+  }
+  .navbar-links {
+    gap: 2px;
+  }
+  .navbar-custom .nav-link {
+    padding: 6px 10px !important;
+    font-size: 0.8rem !important;
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px !important;
+  }
+  .navbar-custom .nav-link i {
+    font-size: 1.1rem;
+  }
+  .navbar-custom .nav-link span {
+    font-size: 0.65rem;
+    font-weight: 600;
+  }
 }
 
 /* Liens de la navbar */
 .navbar-custom .nav-link {
-  color: rgba(255, 255, 255, 0.9) !important; /* Blanc cassé pour le texte */
+  color: rgba(255, 255, 255, 0.9) !important;
   font-weight: 500;
-  padding: 8px 15px !important;
+  padding: 8px 16px !important;
   transition: all 0.2s;
   text-decoration: none !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .navbar-custom .nav-link:hover {
@@ -832,10 +872,8 @@ textarea.form-control { min-height: 100px; resize: vertical; }
   .navbar-custom {
     padding: 10px 0;
   }
-}
 
-/* ── Mobile Dropdown Adjustments ── */
-@media (max-width: 768px) {
+  /* ── Mobile Dropdown Adjustments ── */
   .dropdown-menu {
     position: fixed !important;
     top: 60px !important;
@@ -2078,5 +2116,373 @@ html, body {
   
   .match-card h4 {
     font-size: 1rem;
+  }
+}
+
+/* ── Footer: hidden on mobile ── */
+@media (max-width: 768px) {
+  .footer-custom {
+    display: none !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   CORRECTIFS RESPONSIVE CRITIQUES
+   ══════════════════════════════════════════════════════ */
+
+/* ── Prestataires: 2 colonnes mobile ── */
+@media (max-width: 576px) {
+  [class*="prest-grid"] { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  [class*="prest-card-top"] { padding: 16px 12px 12px !important; }
+  [class*="prest-avatar"] { width: 60px !important; height: 60px !important; font-size: 1.4rem !important; }
+  [class*="prest-name"] { font-size: 0.82rem !important; }
+  [class*="prest-card-body"] { padding: 10px 12px !important; }
+  [class*="prest-bio"] { font-size: 0.72rem !important; }
+  [class*="prest-stat-val"] { font-size: 0.8rem !important; }
+  [class*="prest-stat-lbl"] { font-size: 0.6rem !important; }
+  [class*="prest-hero"] { padding: 32px 16px 40px !important; }
+  [class*="prest-hero"] h1 { font-size: 1.2rem !important; }
+  [class*="prest-search-wrap"] { margin-top: -20px !important; }
+  [class*="prest-chip"] { padding: 4px 12px !important; font-size: 0.72rem !important; }
+}
+
+/* ── Services: 2 colonnes mobile, filtres compacts ── */
+@media (max-width: 620px) {
+  [style*="grid-template-columns"][style*="repeat(auto-fill, minmax(280px, 1fr))"] {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  [style*="overflow-x: auto"][style*="scrollbar-width: none"] button,
+  [class*="cat-pill"] { padding: 4px 10px !important; font-size: 0.72rem !important; }
+}
+@media (max-width: 400px) {
+  [style*="grid-template-columns"][style*="repeat(auto-fill, minmax(280px, 1fr))"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── ServiceDetail: sidebar cachée mobile ── */
+@media (max-width: 900px) {
+  [style*="grid-template-columns: 1fr 280px"] { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 768px) {
+  [style*="grid-template-columns: 1fr 280px"] > div:last-child { display: none !important; }
+}
+
+/* ── Ateliers: map visible en haut, pas cachée ── */
+@media (max-width: 768px) {
+  .ateliers-map, #carte-ateliers { display: block !important; width: 100% !important; }
+  [class*="ateliers-layout"] { flex-direction: column-reverse !important; }
+}
+
+/* ── Chatbot compact mobile ── */
+@media (max-width: 480px) {
+  [class*="chatbot-toggle"] span { display: none !important; }
+  [class*="chatbot-container"] {
+    position: fixed !important; right: 10px !important; bottom: 10px !important;
+    width: calc(100vw - 20px) !important; height: 75vh !important;
+  }
+}
+
+/* ── Home hero search fix mobile ── */
+@media (max-width: 480px) {
+  form[style*="max-width: 580"] button[type="submit"] {
+    padding: 8px 12px !important; font-size: 0.78rem !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   CORRECTIFS RESPONSIVE GLOBAUX — pages principales
+   ══════════════════════════════════════════════════════ */
+
+/* ── Services page: override inline grid 1col → 2col mobile ── */
+@media (max-width: 576px) {
+  div[style*="grid-template-columns"][style*="repeat(auto-fill, minmax(280px, 1fr))"] {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  /* SmartMatch compact */
+  div[style*="background: linear-gradient(135deg, #0c2340 0%, #0284c7 100%)"][style*="border-radius: 14"] {
+    padding: 10px 12px !important;
+  }
+  div[style*="background: linear-gradient(135deg, #0c2340 0%, #0284c7 100%)"][style*="border-radius: 14"] div[style*="padding: '6px 12px'"] {
+    padding: 2px 8px !important;
+    font-size: 0.65rem !important;
+  }
+  dv[style*="max-width: 380"][style*="width: 100%"] {
+    max-width: 100% !important;
+  }
+  /* Filtres mobiles compact */
+  div[style*="display: flex"][style*="overflow-x: auto"][style*="scrollbar-width: none"] {
+    gap: 4px !important;
+  }
+  div[style*="display: flex"][style*="overflow-x: auto"][style*="scrollbar-width: none"] button {
+    padding: 5px 10px !important;
+    font-size: 0.72rem !important;
+  }
+}
+
+@media (max-width: 400px) {
+  div[style*="grid-template-columns"][style*="repeat(auto-fill, minmax(280px, 1fr))"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── ServiceDetail: override grid ── */
+@media (max-width: 900px) {
+  div[style*="grid-template-columns: 1fr 280px"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+@media (max-width: 768px) {
+  div[style*="grid-template-columns: 1fr 280px"] > div:last-child {
+    display: none !important;
+  }
+  /* Hero service detail mobile */
+  div[style*="background: linear-gradient(135deg,#0c2340 0%,#1e3a5f 50%,#0284c7 100%)"] {
+    padding-top: 24px !important;
+    padding-bottom: 40px !important;
+  }
+}
+
+/* ── Prestataires: 2 colonnes au lieu de 1 sur mobile ── */
+@media (max-width: 480px) {
+  .prest-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  .prest-card-top {
+    padding: 16px 12px 12px !important;
+  }
+  .prest-avatar {
+    width: 60px !important;
+    height: 60px !important;
+    font-size: 1.4rem !important;
+  }
+  .prest-name {
+    font-size: 0.82rem !important;
+  }
+  .prest-card-body {
+    padding: 10px 12px !important;
+  }
+  .prest-bio {
+    font-size: 0.72rem !important;
+  }
+  .prest-stat-val {
+    font-size: 0.8rem !important;
+  }
+  .prest-stat-lbl {
+    font-size: 0.6rem !important;
+  }
+  .prest-spec {
+    font-size: 0.7rem !important;
+    padding: 2px 8px !important;
+  }
+  .prest-stats {
+    padding: 6px 0 !important;
+  }
+  .prest-fidel-badge {
+    font-size: 0.6rem !important;
+    padding: 2px 6px !important;
+  }
+  .prest-hero {
+    padding: 32px 16px 40px !important;
+  }
+  .prest-hero h1 {
+    font-size: 1.2rem !important;
+  }
+  .prest-hero p {
+    font-size: 0.8rem !important;
+  }
+  .prest-search-wrap {
+    margin-top: -20px !important;
+  }
+  .prest-chips {
+    padding: 16px 12px 0 !important;
+    gap: 4px !important;
+  }
+  .prest-chip {
+    padding: 4px 12px !important;
+    font-size: 0.72rem !important;
+  }
+}
+
+/* ── Home: hero réduit, search fixé ── */
+@media (max-width: 768px) {
+  section[style*="padding: 80px 0 110px"] {
+    padding: 40px 0 60px !important;
+  }
+  section[style*="padding: 80px 0 110px"] h1 {
+    font-size: 1.5rem !important;
+  }
+  section[style*="padding: 80px 0 110px"] p[style*="margin-bottom: 36"] {
+    font-size: 0.85rem !important;
+  }
+  form[style*="max-width: 580"] {
+    max-width: 100% !important;
+  }
+  form[style*="max-width: 580"] button[type="submit"] {
+    padding: 10px 16px !important;
+    font-size: 0.8rem !important;
+  }
+}
+
+/* ── Ateliers: map en haut, liste compacte ── */
+@media (max-width: 768px) {
+  .ateliers-page-row {
+    flex-direction: column-reverse !important;
+  }
+  .ateliers-map {
+    width: 100% !important;
+    min-height: 220px !important;
+    position: relative !important;
+    display: block !important;
+  }
+  .ateliers-liste {
+    width: 100% !important;
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+  /* Filtres ateliers compacts */
+  div[style*="padding: 16px 20px"] button[style*="padding: 5px 13px"] {
+    padding: 4px 10px !important;
+    font-size: 0.72rem !important;
+  }
+  div[style*="padding: 16px 20px"] select {
+    font-size: 0.78rem !important;
+    padding: 5px 8px !important;
+  }
+}
+
+/* ── Chatbot: full width mobile ── */
+@media (max-width: 480px) {
+  .chatbot-wrapper {
+    bottom: 20px !important;
+    right: 10px !important;
+  }
+  .chatbot-toggle {
+    padding: 10px 16px !important;
+    font-size: 0.82rem !important;
+  }
+  .chatbot-toggle span {
+    display: none !important;
+  }
+  .chatbot-container {
+    width: calc(100vw - 20px) !important;
+    max-width: 100vw !important;
+    height: 75vh !important;
+    position: fixed !important;
+    right: 10px !important;
+    bottom: 10px !important;
+  }
+  .chatbot-header {
+    padding: 14px 16px !important;
+  }
+  .chatbot-messages {
+    padding: 12px !important;
+  }
+  .message-bubble {
+    max-width: 90% !important;
+    font-size: 0.85rem !important;
+    padding: 10px 14px !important;
+  }
+  .chatbot-input {
+    padding: 12px !important;
+  }
+  .chatbot-input input {
+    font-size: 16px !important;
+    padding: 8px 14px !important;
+  }
+}
+
+/* ── Services page category pills scrollable ── */
+@media (max-width: 576px) {
+  div[style*="overflow-x: auto"][style*="padding-bottom: 8"][style*="margin-bottom: 12"] {
+    gap: 4px !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   CORRECTIFS RESPONSIVE PAGES (override inline styles)
+   ══════════════════════════════════════════════════════ */
+
+/* ── Dashboard: override inline flex 25% sur mobile ── */
+@media (max-width: 768px) {
+  div[class*="dashboard-stat-grid"],
+  [style*="flex: 0 0 25%"] {
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+  }
+}
+@media (max-width: 576px) {
+  div[class*="dashboard-stat-grid"],
+  [style*="flex: 0 0 25%"] {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ── Ateliers page: carte + liste en colonne sur mobile ── */
+@media (max-width: 768px) {
+  .ateliers-page-row,
+  [class*="ateliers-layout"] {
+    flex-direction: column !important;
+  }
+}
+
+/* ── Reserver: sidebar + formulaire en colonne sur mobile ── */
+@media (max-width: 768px) {
+  [class*="reserver-page"] [style*="width: 260px"],
+  [class*="reserver-page"] [style*="flex-shrink: 0"][style*="width: 260"] {
+    width: 100% !important;
+    flex-shrink: 1 !important;
+  }
+  [class*="reserver-page"] > [style*="gap: 24px"][style*="flex-wrap: wrap"] {
+    flex-direction: column !important;
+  }
+}
+
+/* ── MesReservations: grid détails 1fr 1fr → 1fr sur mobile ── */
+@media (max-width: 576px) {
+  [style*="grid-template-columns: 1fr 1fr"][style*="margin: 14px 0"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── MesAteliers: boutons dans tableau sur mobile ── */
+@media (max-width: 768px) {
+  td[style*="display: flex"][style*="gap: 6"]
+  td[style*="display: flex"][style*="gap: 6px"] {
+    flex-wrap: wrap;
+    gap: 6px !important;
+  }
+  td[style*="display: flex"] a,
+  td[style*="display: flex"] button {
+    flex-shrink: 0;
+  }
+}
+
+/* ── Services: SmartMatchButton overflow fix ── */
+@media (max-width: 576px) {
+  [style*="max-width: 380"][style*="width: 100%"] {
+    max-width: 100% !important;
+  }
+}
+
+/* ── ChatFlottant: full width sur mobile ── */
+@media (max-width: 576px) {
+  [style*="position: fixed"][style*="bottom: 80"][style*="right: 20"][style*="width: 340"] {
+    right: 10px !important;
+    left: 10px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
+/* ── Hero search: éviter débordement ── */
+@media (max-width: 420px) {
+  [class*="hero"] button[type="submit"] {
+    font-size: 0.8rem !important;
+    padding: 10px 16px !important;
   }
 }

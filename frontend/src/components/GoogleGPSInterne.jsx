@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Geolocation } from '@capacitor/geolocation';
 
 // Google Maps (marker + polyline) GPS “simple” (sans Driving Directions API)
 // - démarre via geolocation
@@ -176,17 +177,7 @@ export default function GoogleGPSInterne({ atelier, onClose }) {
     };
   }, [apiKey, center, atelier?.nom, atelier?.adresse]);
 
-  const startNavigation = () => {
-    if (!navigator.geolocation) {
-      setErrGps('GPS non disponible sur cet appareil.');
-      return;
-    }
-
-    const isHTTPS = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (!isHTTPS && /Mobi|Android/i.test(navigator.userAgent)) {
-      setErrGps("ATTENTION: Le GPS fonctionne mieux en HTTPS. Lancez quand même...");
-    }
-
+  const startNavigation = async () => {
     if (!Number.isFinite(destLat) || !Number.isFinite(destLng)) {
       setErrGps('Destination GPS invalide.');
       return;
@@ -195,79 +186,93 @@ export default function GoogleGPSInterne({ atelier, onClose }) {
     setNavStarted(true);
     setErrGps('');
 
-    const geoOptions = {
-      enableHighAccuracy: true,
-      maximumAge: 5000,
-      timeout: 15000,
-    };
+    try {
+      const waitId = await Geolocation.watchPosition(
+        { enableHighAccuracy: true, timeout: 15000 },
+        (pos, err) => {
+          if (err) {
+            console.error('Google GPS Watch Error:', err);
+            setErrGps(err.message);
+            return;
+          }
+          if (!pos) return;
 
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        setUserPos({ lat, lng });
+          const { latitude: lat, longitude: lng } = pos.coords;
+          setUserPos({ lat, lng });
 
-        const dist = haversine(lat, lng, destLat, destLng);
-        const b = calcBearing(lat, lng, destLat, destLng);
-        setDistance(dist);
-        setBearing(b);
+          const dist = haversine(lat, lng, destLat, destLng);
+          const b = calcBearing(lat, lng, destLat, destLng);
+          setDistance(dist);
+          setBearing(b);
 
-        if (!mapRef.current) return;
+          if (!mapRef.current) return;
 
-        // user marker
-        const userIcon = {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          fillColor: '#0284c7',
-          fillOpacity: 1,
-          strokeColor: 'white',
-          strokeWeight: 3,
-          scale: 7,
-        };
+          // user marker
+          const userIcon = {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            fillColor: '#0284c7',
+            fillOpacity: 1,
+            strokeColor: 'white',
+            strokeWeight: 3,
+            scale: 7,
+          };
 
-        if (userMarkerRef.current) {
-          userMarkerRef.current.setPosition({ lat, lng });
-        } else {
-          userMarkerRef.current = new window.google.maps.Marker({
-            position: { lat, lng },
-            map: mapRef.current,
-            icon: userIcon,
-            title: 'Vous êtes ici',
+          if (userMarkerRef.current) {
+            userMarkerRef.current.setPosition({ lat, lng });
+          } else {
+            userMarkerRef.current = new window.google.maps.Marker({
+              position: { lat, lng },
+              map: mapRef.current,
+              icon: userIcon,
+              title: 'Vous êtes ici',
+            });
+          }
+
+          // polyline
+          if (routePolylineRef.current) routePolylineRef.current.setMap(null);
+          routePolylineRef.current = new window.google.maps.Polyline({
+            path: [
+              { lat, lng },
+              { lat: destLat, lng: destLng },
+            ],
+            strokeColor: '#0284c7',
+            strokeOpacity: 0.7,
+            strokeWeight: 4,
+            geodesic: true,
           });
+          routePolylineRef.current.setMap(mapRef.current);
+
+          // fit bounds
+          const bounds = new window.google.maps.LatLngBounds();
+          bounds.extend({ lat, lng });
+          bounds.extend({ lat: destLat, lng: destLng });
+          mapRef.current.fitBounds(bounds, 40);
         }
-
-        // polyline
-        if (routePolylineRef.current) routePolylineRef.current.setMap(null);
-        routePolylineRef.current = new window.google.maps.Polyline({
-          path: [
-            { lat, lng },
-            { lat: destLat, lng: destLng },
-          ],
-          strokeColor: '#0284c7',
-          strokeOpacity: 0.7,
-          strokeWeight: 4,
-          geodesic: true,
-        });
-        routePolylineRef.current.setMap(mapRef.current);
-
-        // fit bounds
-        const bounds = new window.google.maps.LatLngBounds();
-        bounds.extend({ lat, lng });
-        bounds.extend({ lat: destLat, lng: destLng });
-        mapRef.current.fitBounds(bounds, 40);
-      },
-      (err) => {
-        let msg = 'Erreur GPS inconnue';
-        if (err.code === 1) msg = "Permission GPS refusée. Veuillez autoriser la géolocalisation dans les paramètres du navigateur.";
-        else if (err.code === 2) msg = 'Position indisponible. Vérifiez que le GPS est activé.';
-        else if (err.code === 3) msg = 'Délai dépassé. Réessayez dans un espace ouvert.';
-        setErrGps(msg);
-        console.warn('GPS Error:', err.code, err.message);
-      },
-      geoOptions
-    );
+      );
+      watchIdRef.current = waitId;
+    } catch (e) {
+      console.warn('Capacitor Google GPS Watch failed, fallback to Web API:', e);
+      // Fallback
+      if (navigator.geolocation) {
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          (pos) => {
+             // ... logic userPos, distance, bearing, markers ...
+             const { latitude: lat, longitude: lng } = pos.coords;
+             setUserPos({ lat, lng });
+             if (mapRef.current) mapRef.current.setCenter({ lat, lng });
+          },
+          (err) => { setErrGps(err.message); },
+          { enableHighAccuracy: true, timeout: 15000 }
+        );
+      }
+    }
   };
 
   const stopNavigation = () => {
-    if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
+    if (watchIdRef.current) {
+      if (typeof watchIdRef.current === 'string') Geolocation.clearWatch({ id: watchIdRef.current });
+      else navigator.geolocation.clearWatch(watchIdRef.current);
+    }
 
     setNavStarted(false);
     setUserPos(null);
@@ -284,7 +289,10 @@ export default function GoogleGPSInterne({ atelier, onClose }) {
 
   useEffect(() => {
     return () => {
-      if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
+      if (watchIdRef.current) {
+        if (typeof watchIdRef.current === 'string') Geolocation.clearWatch({ id: watchIdRef.current });
+        else navigator.geolocation.clearWatch(watchIdRef.current);
+      }
     };
   }, []);
 

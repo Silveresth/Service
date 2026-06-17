@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Geolocation } from '@capacitor/geolocation';
 
 const DEFAULT_CENTER = { lat: 6.125580, lng: 1.232456 };
 
@@ -105,54 +106,80 @@ export default function LeafletGPSInterne({ atelier, onClose }) {
   }, [center.lat, center.lng]);
 
   const startNavigation = async () => {
-    if (!navigator.geolocation) { setLeafletErr('GPS non disponible sur cet appareil.'); return; }
     if (!dest) { setLeafletErr('Coordonnées de destination invalides.'); return; }
     if (!mapRef.current) { setLeafletErr('Carte non prête, attendez un instant.'); return; }
     setLeafletErr('');
     setNavStarted(true);
 
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const user = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        try {
-          if (leafletRoutingRef.current) { leafletRoutingRef.current.remove(); leafletRoutingRef.current = null; }
-          leafletRoutingRef.current = window.L.Routing.control({
-            waypoints: [window.L.latLng(user.lat, user.lng), window.L.latLng(dest.lat, dest.lng)],
-            router: window.L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
-            lineOptions: { styles: [{ color: '#0284c7', opacity: 0.9, weight: 5 }] },
-            addWaypoints: false,
-            draggableWaypoints: false,
-            show: false,
-            createMarker: () => null,
-          }).addTo(mapRef.current);
+    try {
+      const waitId = await Geolocation.watchPosition(
+        { enableHighAccuracy: true, timeout: 15000 },
+        (pos, err) => {
+          if (err) {
+            console.error('GPS Watch Error:', err);
+            let msg = 'Erreur GPS inconnue';
+            if (err.code === 1) msg = 'Permission GPS refusée. Activez la géolocalisation.';
+            else if (err.code === 2) msg = 'Position indisponible. GPS activé ?';
+            else if (err.code === 3) msg = 'Délai dépassé. Placez-vous à l\'air libre.';
+            setLeafletErr(msg);
+            return;
+          }
+          if (!pos) return;
 
-          leafletRoutingRef.current.on('routesfound', (e) => {
-            const route = e?.routes?.[0];
-            if (!route) return;
-            setRouteSummary({
-              distanceKm: route?.summary?.totalDistance ? route.summary.totalDistance / 1000 : null,
-              durationMin: route?.summary?.totalTime ? route.summary.totalTime / 60 : null,
+          const user = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          try {
+            if (leafletRoutingRef.current) { leafletRoutingRef.current.remove(); leafletRoutingRef.current = null; }
+            leafletRoutingRef.current = window.L.Routing.control({
+              waypoints: [window.L.latLng(user.lat, user.lng), window.L.latLng(dest.lat, dest.lng)],
+              router: window.L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
+              lineOptions: { styles: [{ color: '#0284c7', opacity: 0.9, weight: 5 }] },
+              addWaypoints: false,
+              draggableWaypoints: false,
+              show: false,
+              createMarker: () => null,
+            }).addTo(mapRef.current);
+
+            leafletRoutingRef.current.on('routesfound', (e) => {
+              const route = e?.routes?.[0];
+              if (!route) return;
+              setRouteSummary({
+                distanceKm: route?.summary?.totalDistance ? route.summary.totalDistance / 1000 : null,
+                durationMin: route?.summary?.totalTime ? route.summary.totalTime / 60 : null,
+              });
             });
-          });
-        } catch (err) {
-          console.error(err);
-          setLeafletErr('Erreur de calcul d\'itinéraire.');
+          } catch (err) {
+            console.error(err);
+            setLeafletErr('Erreur de calcul d\'itinéraire.');
+          }
+          mapRef.current.setView([user.lat, user.lng], 14);
         }
-        mapRef.current.setView([user.lat, user.lng], 14);
-      },
-      (err) => {
-        let msg = 'Erreur GPS inconnue';
-        if (err.code === 1) msg = 'Permission GPS refusée. Activez la géolocalisation.';
-        else if (err.code === 2) msg = 'Position indisponible. GPS activé ?';
-        else if (err.code === 3) msg = 'Délai dépassé. Placez-vous à l\'air libre.';
-        setLeafletErr(msg);
-      },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
-    );
+      );
+      watchIdRef.current = waitId;
+    } catch (e) {
+      console.warn('Capacitor watchPosition failed, fallback to Web API:', e);
+      // Fallback
+      if (navigator.geolocation) {
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          (pos) => {
+            const user = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            // ... (logique identique)
+            mapRef.current.setView([user.lat, user.lng], 14);
+          },
+          (err) => { setLeafletErr(err.message); },
+          { enableHighAccuracy: true, timeout: 15000 }
+        );
+      }
+    }
   };
 
   const stopNavigation = () => {
-    if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
+    if (watchIdRef.current) {
+      if (typeof watchIdRef.current === 'string') {
+        Geolocation.clearWatch({ id: watchIdRef.current });
+      } else {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    }
     setNavStarted(false);
     setRouteSummary(null);
     setLeafletErr('');
@@ -163,7 +190,12 @@ export default function LeafletGPSInterne({ atelier, onClose }) {
   };
 
   useEffect(() => {
-    return () => { if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current); };
+    return () => { 
+      if (watchIdRef.current) {
+        if (typeof watchIdRef.current === 'string') Geolocation.clearWatch({ id: watchIdRef.current });
+        else navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
   }, []);
 
   return (

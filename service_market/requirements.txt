@@ -15,3 +15,6 @@ Pillow
 whitenoise
 gunicorn
 uvicorn[standard]
+django-cloudinary-storage
+cloudinary
+python-dateutil

@@ -21,6 +21,10 @@ CORS_ALLOW_CREDENTIALS = True
 # Configuration ALLOWED_HOSTS
 ALLOWED_HOSTS = ['*']
 
+# ─── RENDER CONFIG ────────────────────────────────────────────────────────────
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 AUTH_USER_MODEL = 'service.Compte'
 
 INSTALLED_APPS = [
@@ -31,6 +35,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Storage
+    'cloudinary_storage',
+    'cloudinary',
     # Real-time
     'channels',
     # Packages
@@ -226,3 +233,12 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+# ─── CLOUDINARY STORAGE ───────────────────────────────────────────────────────
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME', default=''),
+    'API_KEY': config('CLOUDINARY_API_KEY', default=''),
+    'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
+}
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'

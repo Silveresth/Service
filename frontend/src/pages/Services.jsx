@@ -43,6 +43,21 @@ const ANIMATIONS = `
     transform: translateY(-4px);
     box-shadow: 0 16px 48px rgba(2,132,199,.18) !important;
   }
+  .services-grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  @media (max-width: 640px) {
+    .services-grid-container {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .svc-card h5 { font-size: 0.85rem !important; }
+    .svc-card p { display: none; }
+    .svc-card .price { font-size: 0.9rem !important; }
+    .svc-card .btn-voir { padding: 6px 10px !important; font-size: 0.75rem !important; }
+  }
   .cat-pill { transition: all .15s; }
   .cat-pill:hover { transform: translateY(-1px); }
   .search-clear { transition: opacity .15s; }
@@ -354,25 +369,19 @@ export default function Services() {
           {/* ── EN-TÊTE ── */}
           <div style={{
             display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-            gap: 16, marginBottom: 24, flexWrap: 'wrap',
+            gap: 16, marginBottom: 20, flexWrap: 'wrap',
             animation: 'fadeUp .4s ease',
           }}>
             <div>
-              <h2 style={{ fontWeight: 800, fontSize: '1.6rem', color: '#0c2340', margin: 0 }}>
+              <h2 style={{ fontWeight: 800, fontSize: '1.5rem', color: '#0c2340', margin: 0 }}>
                 Nos Services
               </h2>
-              <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.88rem' }}>
-                <strong style={{ color: '#0284c7' }}>{servicesFiltres.length}</strong> service(s)
-                {matches.length > 0 && (
-                  <span style={{ marginLeft: 8, color: '#10b981', fontWeight: 600 }}>
-                    · ✨ {matches.length} match{matches.length > 1 ? 'es' : ''} IA
-                  </span>
-                )}
+              <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '0.85rem' }}>
+                <strong style={{ color: '#0284c7' }}>{servicesFiltres.length}</strong> services disponibles
               </p>
             </div>
 
-            {/* Smart Match — compact, dans le header */}
-            <div style={{ width: '100%', maxWidth: 380 }}>
+            <div style={{ width: '100%', maxWidth: 360 }}>
               <SmartMatchButton
                 onMatches={handleSmartMatches}
                 setMatches={setMatches}
@@ -382,25 +391,20 @@ export default function Services() {
             </div>
           </div>
 
-          {/* ── BARRE DE RECHERCHE ── */}
-          <div style={{ marginBottom: 16, position: 'relative', animation: 'fadeUp .45s ease' }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: '#fff', borderRadius: 14,
-              border: '1.5px solid #e2e8f0', padding: '8px 12px',
-              boxShadow: '0 2px 12px rgba(2,132,199,.06)',
-              transition: 'border-color .2s, box-shadow .2s',
-            }}
-              onFocusCapture={e => {
-                e.currentTarget.style.borderColor = '#0284c7';
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(2,132,199,.1)';
-              }}
-              onBlurCapture={e => {
-                e.currentTarget.style.borderColor = '#e2e8f0';
-                e.currentTarget.style.boxShadow = '0 2px 12px rgba(2,132,199,.06)';
-              }}
-            >
-              <i className="bi bi-search" style={{ color: '#94a3b8', fontSize: '1rem', flexShrink: 0 }} />
+          {/* ── BARRE DE RECHERCHE ET FILTRES (Style Ateliers) ── */}
+          <div style={{
+            background: 'white', borderRadius: 16,
+            padding: '16px 20px', marginBottom: 24,
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            animation: 'fadeUp .45s ease',
+          }}>
+            {/* Barre de recherche */}
+            <div style={{ position: 'relative', marginBottom: 14 }}>
+              <i className="bi bi-search" style={{
+                position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+                color: '#94a3b8', fontSize: '0.95rem', pointerEvents: 'none',
+              }} />
               <input
                 type="text"
                 placeholder="Rechercher un service, catégorie, prestataire…"
@@ -408,225 +412,132 @@ export default function Services() {
                 onChange={e => setInputVal(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter') { applySearch(inputVal); setShowSugg(false); }
-                  if (e.key === 'Escape') setShowSugg(false);
                 }}
                 onFocus={() => suggestions.length > 0 && setShowSugg(true)}
-                onBlur={() => setTimeout(() => setShowSugg(false), 150)}
                 style={{
-                  flex: 1, border: 'none', outline: 'none',
-                  fontSize: '0.9rem', color: '#0c2340', background: 'transparent',
+                  width: '100%', padding: '10px 40px',
+                  border: '1.5px solid #e2e8f0', borderRadius: 12,
+                  fontSize: '0.9rem', background: '#f8fafc',
+                  outline: 'none', transition: 'border-color 0.15s',
                 }}
               />
               {inputVal && (
-                <button
-                  className="search-clear"
-                  onClick={() => { setInputVal(''); applySearch(''); }}
-                  style={{
-                    background: '#f1f5f9', border: 'none', borderRadius: 6,
-                    width: 24, height: 24, cursor: 'pointer', color: '#64748b',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem',
-                  }}
-                >✕</button>
-              )}
-              <button
-                onClick={() => applySearch(inputVal)}
-                style={{
-                  padding: '7px 14px', borderRadius: 10, border: 'none',
-                  background: '#0c2340', color: '#fff',
-                  fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', flexShrink: 0,
-                }}
-              >
-                Rechercher
-              </button>
-            </div>
-
-            {/* Suggestions */}
-            {showSugg && suggestions.length > 0 && (
-              <div style={{
-                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
-                background: '#fff', borderRadius: 14, marginTop: 4,
-                border: '1.5px solid #e0f2fe',
-                boxShadow: '0 8px 32px rgba(2,132,199,.12)',
-                overflow: 'hidden',
-              }}>
-                {suggestions.map((s, i) => (
-                  <div
-                    key={i}
-                    onClick={() => applySearch(s.label)}
-                    style={{
-                      padding: '10px 14px', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      borderBottom: i < suggestions.length - 1 ? '1px solid #f1f5f9' : 'none',
-                      transition: 'background .1s',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#f0f9ff'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <i className="bi bi-search" style={{ color: '#94a3b8', fontSize: '0.85rem' }} />
-                    <span style={{ flex: 1, fontSize: '0.88rem', color: '#0c2340' }}>{s.label}</span>
-                    {s.cat && (
-                      <span style={{
-                        padding: '2px 8px', borderRadius: 20, fontSize: '0.72rem',
-                        background: '#e0f2fe', color: '#0284c7', fontWeight: 600,
-                      }}>{s.cat}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* ── FILTRES CATÉGORIES ── */}
-          <div style={{
-            display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, marginBottom: 12,
-            scrollbarWidth: 'none', animation: 'fadeUp .5s ease',
-          }}>
-            <button
-              className="cat-pill"
-              onClick={() => setCatFiltre('all')}
-              style={{
-                padding: '6px 14px', borderRadius: 20, border: '1.5px solid', cursor: 'pointer',
-                fontSize: '0.82rem', fontWeight: catFiltre === 'all' ? 700 : 500, whiteSpace: 'nowrap', flexShrink: 0,
-                borderColor: catFiltre === 'all' ? '#0284c7' : '#e2e8f0',
-                background: catFiltre === 'all' ? '#0284c7' : '#fff',
-                color: catFiltre === 'all' ? '#fff' : '#64748b',
-              }}
-            >
-              <i className="bi bi-grid me-1" />Tous
-            </button>
-            {categories.map(c => (
-              <button
-                key={c.id}
-                className="cat-pill"
-                onClick={() => setCatFiltre(String(c.id))}
-                style={{
-                  padding: '6px 12px', borderRadius: 20, border: '1.5px solid', cursor: 'pointer',
-                  fontSize: '0.78rem', fontWeight: catFiltre === String(c.id) ? 700 : 500,
-                  whiteSpace: 'nowrap', flexShrink: 0,
-                  borderColor: catFiltre === String(c.id) ? '#0284c7' : '#e2e8f0',
-                  background: catFiltre === String(c.id) ? '#0284c7' : '#fff',
-                  color: catFiltre === String(c.id) ? '#fff' : '#64748b',
-                  display: 'flex', alignItems: 'center', gap: 4,
-                }}
-              >
-                {c.icone && <i className={`bi ${c.icone}`} style={{ fontSize: '0.75rem' }} />}
-                {c.nom}
-              </button>
-            ))}
-            <button
-              className="cat-pill"
-              onClick={() => setShowFilters(!showFilters)}
-              style={{
-                marginLeft: 'auto', padding: '6px 12px', borderRadius: 20, border: '1.5px solid',
-                cursor: 'pointer', fontSize: '0.78rem', whiteSpace: 'nowrap', flexShrink: 0,
-                borderColor: hasActiveFilters ? '#0284c7' : '#e2e8f0',
-                background: hasActiveFilters ? '#e0f2fe' : '#fff',
-                color: hasActiveFilters ? '#0284c7' : '#64748b',
-                fontWeight: hasActiveFilters ? 700 : 500,
-                display: 'flex', alignItems: 'center', gap: 5,
-              }}
-            >
-              <i className="bi bi-sliders" />
-              Filtres
-              {hasActiveFilters && (
-                <span style={{
-                  width: 18, height: 18, borderRadius: '50%',
-                  background: '#0284c7', color: '#fff',
-                  fontSize: '0.68rem', fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                <button onClick={() => { setInputVal(''); applySearch(''); }} style={{
+                  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                  background: '#e2e8f0', border: 'none', borderRadius: 6,
+                  width: 22, height: 22, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', cursor: 'pointer', color: '#64748b', fontSize: '0.75rem',
                 }}>
-                  {[catFiltre !== 'all', dispoOnly, prixTranche !== 'all'].filter(Boolean).length}
-                </span>
+                  <i className="bi bi-x" />
+                </button>
               )}
-            </button>
+              
+              {/* Suggestions */}
+              {showSugg && suggestions.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                  background: '#fff', borderRadius: 12, marginTop: 4,
+                  border: '1.5px solid #e0f2fe',
+                  boxShadow: '0 8px 32px rgba(2,132,199,.12)',
+                  overflow: 'hidden',
+                }}>
+                  {suggestions.map((s, i) => (
+                    <div key={i} onClick={() => applySearch(s.label)} style={{
+                        padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+                        borderBottom: i < suggestions.length - 1 ? '1px solid #f1f5f9' : 'none',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f0f9ff'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <i className="bi bi-search" style={{ color: '#94a3b8', fontSize: '0.85rem' }} />
+                      <span style={{ flex: 1, fontSize: '0.88rem', color: '#0c2340' }}>{s.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Pills de Catégories */}
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 10, marginBottom: 14, scrollbarWidth: 'none' }}>
+              <button
+                onClick={() => setCatFiltre('all')}
+                style={{
+                  padding: '5px 14px', borderRadius: 20, border: '1.5px solid', cursor: 'pointer',
+                  fontSize: '0.8rem', fontWeight: catFiltre === 'all' ? 700 : 500, whiteSpace: 'nowrap',
+                  borderColor: catFiltre === 'all' ? '#0284c7' : '#e2e8f0',
+                  background: catFiltre === 'all' ? '#0284c7' : 'white',
+                  color: catFiltre === 'all' ? 'white' : '#64748b',
+                }}
+              >
+                Tous
+              </button>
+              {categories.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => setCatFiltre(String(c.id))}
+                  style={{
+                    padding: '5px 12px', borderRadius: 20, border: '1.5px solid', cursor: 'pointer',
+                    fontSize: '0.8rem', fontWeight: catFiltre === String(c.id) ? 700 : 500,
+                    whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5,
+                    borderColor: catFiltre === String(c.id) ? '#0284c7' : '#e2e8f0',
+                    background: catFiltre === String(c.id) ? '#0284c7' : 'white',
+                    color: catFiltre === String(c.id) ? 'white' : '#64748b',
+                  }}
+                >
+                  {c.icone && <i className={`bi ${c.icone}`} style={{ fontSize: '0.8rem' }} />}
+                  {c.nom}
+                </button>
+              ))}
+            </div>
+
+            {/* Filtres secondaires */}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <select value={triBy} onChange={e => setTriBy(e.target.value)} style={{
+                padding: '7px 12px', border: '1.5px solid #e2e8f0',
+                borderRadius: 10, fontSize: '0.83rem', background: '#f8fafc',
+                color: '#374151', cursor: 'pointer', outline: 'none',
+              }}>
+                {TRIS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+
+              <select value={prixTranche} onChange={e => setPrixTranche(e.target.value)} style={{
+                padding: '7px 12px', border: '1.5px solid #e2e8f0',
+                borderRadius: 10, fontSize: '0.83rem', background: '#f8fafc',
+                color: '#374151', cursor: 'pointer', outline: 'none',
+              }}>
+                <option value="all">Tous les prix</option>
+                {PRIX_TRANCHES.slice(1).map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+              </select>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', userSelect: 'none' }}>
+                <input type="checkbox" checked={dispoOnly} onChange={e => setDispoOnly(e.target.checked)}
+                  style={{ accentColor: '#0284c7', width: 16, height: 16 }} />
+                <span style={{ fontSize: '0.83rem', color: '#64748b', fontWeight: 500 }}>Disponibles</span>
+              </label>
+
+              {(catFiltre !== 'all' || dispoOnly || prixTranche !== 'all' || triBy !== 'pertinence') && (
+                <button onClick={resetFilters} style={{
+                  marginLeft: 'auto', fontSize: '0.8rem', color: '#94a3b8',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px',
+                }}>
+                  <i className="bi bi-x-circle" /> Réinitialiser
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Filtres avancés */}
-          {showFilters && (
-            <div style={{
-              background: '#fff', borderRadius: 14, padding: '16px 20px',
-              border: '1.5px solid #e0f2fe', marginBottom: 16,
-              animation: 'fadeUp .2s ease',
-              boxShadow: '0 4px 20px rgba(2,132,199,.07)',
-            }}>
-              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                <div>
-                  <p style={{ margin: '0 0 8px', fontSize: '0.75rem', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase' }}>
-                    Prix
-                  </p>
-                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                    {PRIX_TRANCHES.map(p => (
-                      <button key={p.id} onClick={() => setPrixTranche(p.id)} style={{
-                        padding: '5px 11px', borderRadius: 8, border: '1.5px solid', cursor: 'pointer',
-                        fontSize: '0.78rem', fontWeight: prixTranche === p.id ? 700 : 400,
-                        borderColor: prixTranche === p.id ? '#0284c7' : '#e2e8f0',
-                        background: prixTranche === p.id ? '#e0f2fe' : '#f8fafc',
-                        color: prixTranche === p.id ? '#0284c7' : '#64748b',
-                      }}>{p.label}</button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p style={{ margin: '0 0 8px', fontSize: '0.75rem', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase' }}>
-                    Trier par
-                  </p>
-                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                    {TRIS.map(t => (
-                      <button key={t.id} onClick={() => setTriBy(t.id)} style={{
-                        padding: '5px 11px', borderRadius: 8, border: '1.5px solid', cursor: 'pointer',
-                        fontSize: '0.78rem', fontWeight: triBy === t.id ? 700 : 400,
-                        borderColor: triBy === t.id ? '#0284c7' : '#e2e8f0',
-                        background: triBy === t.id ? '#e0f2fe' : '#f8fafc',
-                        color: triBy === t.id ? '#0284c7' : '#64748b',
-                      }}>{t.label}</button>
-                    ))}
-                  </div>
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: '0.83rem', color: '#475569' }}>
-                  <input type="checkbox" checked={dispoOnly} onChange={e => setDispoOnly(e.target.checked)}
-                    style={{ accentColor: '#0284c7', width: 15, height: 15 }} />
-                  Disponibles seulement
-                </label>
-                {hasActiveFilters && (
-                  <button onClick={resetFilters} style={{
-                    marginLeft: 'auto', background: 'none', border: '1.5px solid #ef4444',
-                    color: '#ef4444', padding: '6px 12px', borderRadius: 8,
-                    cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
-                  }}>
-                    <i className="bi bi-x-circle me-1" />Réinitialiser
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── COMPTEUR + TRI ── */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            marginBottom: 20, flexWrap: 'wrap', gap: 8,
-          }}>
-            <p style={{ fontSize: '0.88rem', color: '#64748b', margin: 0 }}>
-              {query && <><strong style={{ color: '#0c2340' }}>"{query}"</strong> — </>}
-              <strong style={{ color: '#0284c7' }}>{servicesFiltres.length}</strong> résultat(s)
+          {/* ── COMPTEUR ── */}
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
+              {query && <><i className="bi bi-search me-1"></i>Résultats pour <strong style={{ color: '#0c2340' }}>"{query}"</strong> · </>}
+              <strong style={{ color: '#0284c7' }}>{servicesFiltres.length}</strong> service(s) trouvé(s)
             </p>
-            <select
-              value={triBy} onChange={e => setTriBy(e.target.value)}
-              style={{
-                border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '5px 10px',
-                fontSize: '0.82rem', color: '#475569', background: '#fff', cursor: 'pointer',
-              }}
-            >
-              {TRIS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-            </select>
           </div>
 
           {/* ── GRILLE DE SERVICES ── */}
           {servicesFiltres.length > 0 ? (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: 20,
-            }}>
+            <div className="services-grid-container">
               {servicesFiltres.map((service, idx) => {
                 const isMatch = matchIds.has(service.id);
                 return (
@@ -636,119 +547,59 @@ export default function Services() {
                     style={{
                       background: '#fff', borderRadius: 16, overflow: 'hidden',
                       border: '1.5px solid',
-                      borderColor: isMatch ? '#10b981' : '#e8f4fd',
+                      borderColor: isMatch ? '#10b981' : '#e2e8f0',
                       boxShadow: isMatch
                         ? '0 0 0 3px #10b981, 0 8px 30px rgba(16,185,129,.2)'
-                        : '0 4px 20px rgba(2,132,199,.07)',
+                        : '0 4px 15px rgba(0,0,0,0.03)',
                       animationDelay: `${idx * 0.05}s`,
                       position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
                     }}
                   >
-                    {/* Badge IA Match */}
-                    {isMatch && (
-                      <div style={{
-                        position: 'absolute', top: 10, right: 10, zIndex: 10,
-                        background: 'linear-gradient(135deg, #10b981, #059669)',
-                        color: '#fff', padding: '4px 10px', borderRadius: 20,
-                        fontSize: '0.72rem', fontWeight: 800,
-                        boxShadow: '0 4px 12px rgba(16,185,129,.4)',
-                        display: 'flex', alignItems: 'center', gap: 4,
-                      }}>
-                        <i className="bi bi-stars" style={{ fontSize: '0.7rem' }} />
-                        Match #{Array.from(matchIds).indexOf(service.id) + 1}
-                      </div>
-                    )}
-
                     {/* Image */}
                     <div style={{
-                      height: 170, overflow: 'hidden', position: 'relative',
-                      background: 'linear-gradient(135deg, #e0f2fe, #f0f9ff)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      height: 140, overflow: 'hidden', position: 'relative',
+                      background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {service.image_url ? (
-                        <img
-                          src={service.image_url} alt={service.nom}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
+                        <img src={service.image_url} alt={service.nom} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
-                        <i className={`bi ${service.categorie?.icone || 'bi-briefcase'}`}
-                          style={{ fontSize: '3.5rem', color: '#0284c7', opacity: 0.5 }} />
+                        <i className={`bi ${service.categorie?.icone || 'bi-briefcase'}`} style={{ fontSize: '2.5rem', color: '#cbd5e1' }} />
+                      )}
+                      {isMatch && (
+                        <div style={{ position: 'absolute', top: 8, right: 8, background: '#10b981', color: '#fff', padding: '2px 8px', borderRadius: 20, fontSize: '0.65rem', fontWeight: 800 }}>IA Match</div>
                       )}
                     </div>
 
                     {/* Contenu */}
-                    <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{
-                          padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700,
-                          background: '#e0f2fe', color: '#0284c7',
-                        }}>
-                          {service.categorie?.nom || 'Service'}
-                        </span>
-                        <span style={{
-                          fontSize: '0.72rem', fontWeight: 600,
-                          color: service.disponibilite ? '#10b981' : '#94a3b8',
-                          display: 'flex', alignItems: 'center', gap: 4,
-                        }}>
-                          <span style={{
-                            width: 6, height: 6, borderRadius: '50%',
-                            background: service.disponibilite ? '#10b981' : '#cbd5e1',
-                            display: 'inline-block',
-                          }} />
-                          {service.disponibilite ? 'Disponible' : 'Indisponible'}
-                        </span>
+                    <div style={{ padding: '12px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase' }}>{service.categorie?.nom}</span>
+                        {service.note_avg && <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#f59e0b' }}>★ {parseFloat(service.note_avg).toFixed(1)}</span>}
                       </div>
-
-                      <h5 style={{ margin: 0, fontWeight: 800, fontSize: '1rem', color: '#0c2340', lineHeight: 1.3 }}>
+                      
+                      <h5 style={{ margin: '0 0 6px', fontWeight: 800, fontSize: '0.9rem', color: '#0c2340', lineHeight: 1.2, height: '2.4em', overflow: 'hidden' }}>
                         {service.nom}
                       </h5>
 
-                      <p style={{ margin: 0, color: '#64748b', fontSize: '0.83rem', lineHeight: 1.5 }}>
-                        {service.description?.split(' ').slice(0, 18).join(' ')}
-                        {service.description?.split(' ').length > 18 ? '…' : ''}
-                      </p>
-
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <div style={{
-                            width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                            background: 'linear-gradient(135deg, #0c2340, #0284c7)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: '#fff', fontWeight: 700, fontSize: '0.72rem',
-                          }}>
-                            {service.prestataire?.user?.username?.[0]?.toUpperCase()}
-                          </div>
-                          <small style={{ color: '#64748b', fontSize: '0.78rem' }}>
-                            {service.prestataire?.user?.username}
-                          </small>
+                      {/* Bio / Prestataire (très compact) */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                        <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#0c2340', color: '#fff', fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                          {service.prestataire?.user?.username?.[0].toUpperCase()}
                         </div>
-                        {service.note_avg && (
-                          <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: '0.82rem' }}>
-                            ★ {parseFloat(service.note_avg).toFixed(1)}
-                            <span style={{ color: '#94a3b8', fontWeight: 400, fontSize: '0.72rem' }}>
-                              {' '}({service.nb_notes || 0})
-                            </span>
-                          </span>
-                        )}
+                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{service.prestataire?.user?.username}</span>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                        <span style={{ fontWeight: 800, fontSize: '1rem', color: '#0c2340' }}>
-                          {parseFloat(service.prix).toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Fcfa</span>
-                        </span>
-                        <Link
-                          to={`/services/${service.id}`}
-                          style={{
-                            padding: '8px 16px', borderRadius: 10, textDecoration: 'none',
-                            background: 'linear-gradient(135deg, #0c2340, #0284c7)',
-                            color: '#fff', fontWeight: 700, fontSize: '0.82rem',
-                            transition: 'all .15s',
-                            display: 'flex', alignItems: 'center', gap: 5,
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.opacity = '.85'}
-                          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                        >
-                          Voir <i className="bi bi-arrow-right" />
+                      <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0c2340' }}>
+                          {parseFloat(service.prix).toLocaleString()} <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>F</span>
+                        </div>
+                        <Link to={`/services/${service.id}`} className="btn-voir" style={{
+                            padding: '6px 12px', borderRadius: 8, textDecoration: 'none',
+                            background: '#0c2340', color: '#fff', fontWeight: 700, fontSize: '0.75rem',
+                          }}>
+                          Détails
                         </Link>
                       </div>
                     </div>

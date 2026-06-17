@@ -20,8 +20,12 @@ const PAS_STYLES = `
     clip-path: ellipse(55% 100% at 50% 100%);
   }
   .pas-hero-inner {
-    max-width: 800px; margin: 0 auto; padding: 0 24px;
+    max-width: 800px; margin: 0 auto; padding: 0 16px;
     position: relative; z-index: 1;
+  }
+  @media (max-width: 640px) {
+    .pas-hero { padding: 20px 0 40px; }
+    .pas-hero-inner { padding: 0 12px; }
   }
   .pas-hero-deco {
     position: absolute; border-radius: 50%;
@@ -42,8 +46,13 @@ const PAS_STYLES = `
 
   /* Content */
   .pas-content {
-    max-width: 800px; margin: -24px auto 0;
-    padding: 0 24px; position: relative; z-index: 2;
+    width: 100%; max-width: 800px; margin: -24px auto 0;
+    padding: 0 16px; position: relative; z-index: 2;
+    box-sizing: border-box;
+  }
+  @media (max-width: 640px) {
+    .pas-content { margin: -16px auto 0; padding: 0 12px; }
+    .pas-card { border-radius: 16px; }
   }
 
   /* Section card */
@@ -53,6 +62,7 @@ const PAS_STYLES = `
     box-shadow: 0 4px 20px rgba(2,132,199,0.08);
     overflow: hidden; margin-bottom: 16px;
     animation: pas-in .35s ease;
+    width: 100%;
   }
   @keyframes pas-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 

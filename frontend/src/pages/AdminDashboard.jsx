@@ -51,7 +51,12 @@ export default function AdminDashboard() {
   const [mois, setMois]     = useState(new Date().getMonth() + 1);
   const [annee, setAnnee]   = useState(new Date().getFullYear());
 
-  useEffect(() => { fetchStats(); }, []);
+  const [retraits, setRetraits] = useState([]);
+
+  useEffect(() => { 
+    fetchStats();
+    fetchRetraits();
+  }, []);
 
   const fetchStats = () => {
     setLoading(true);
@@ -59,6 +64,29 @@ export default function AdminDashboard() {
       .then(r => { setStats(r.data); setError(null); })
       .catch(() => setError('Impossible de récupérer les statistiques.'))
       .finally(() => setLoading(false));
+  };
+
+  const fetchRetraits = () => {
+    api.get('/retraits/').then(r => setRetraits(r.data || [])).catch(() => {});
+  };
+
+  const validerRetrait = async (id) => {
+    const note = prompt("Notes optionnelles pour le prestataire :");
+    try {
+      await api.post(`/retraits/${id}/valider/`, { notes_admin: note || '' });
+      fetchRetraits();
+      fetchStats();
+    } catch { alert('Erreur lors de la validation.'); }
+  };
+
+  const rejeterRetrait = async (id) => {
+    const note = prompt("Motif du rejet (obligatoire) :");
+    if (!note) return;
+    try {
+      await api.post(`/retraits/${id}/rejeter/`, { notes_admin: note });
+      fetchRetraits();
+      fetchStats();
+    } catch { alert('Erreur lors du rejet.'); }
   };
 
   const downloadPDF = () => {
@@ -523,13 +551,13 @@ export default function AdminDashboard() {
           padding:0 24px; position:relative; z-index:2;
         }
         @media(max-width:900px){ .adash-stats{grid-template-columns:repeat(2,1fr)} }
-        @media(max-width:480px){ .adash-stats{grid-template-columns:1fr; padding:0 12px} }
-
-        .adash-stat {
-          background:#fff; border-radius:20px;
-          box-shadow:0 4px 24px rgba(2,132,199,.1); border:1.5px solid #e0f2fe;
-          padding:20px; display:flex; align-items:center; gap:14px;
-          transition:all .25s; cursor:default;
+        @media(max-width:480px){ 
+          .adash-stats{grid-template-columns:repeat(2,1fr); padding:0 10px; gap:10px} 
+          .adash-stat { padding:12px 10px; gap:8px; border-radius:14px; }
+          .adash-stat-icon { width:36px; height:36px; border-radius:10px; font-size:1rem; }
+          .adash-stat-val { font-size:1.1rem; }
+          .adash-stat-lbl { font-size:0.68rem; margin-top:1px; }
+          .adash-stat-trend { font-size:0.62rem; margin-top:2px; }
         }
         .adash-stat:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(2,132,199,.18); border-color:#7dd3fc; }
         .adash-stat-icon { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0; }
@@ -770,6 +798,55 @@ export default function AdminDashboard() {
                 </button>
                 {pdfMsg && <span style={{ fontSize:'.8rem', fontWeight:600, opacity:.9 }}>{pdfMsg}</span>}
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Demandes de retrait ── */}
+        <div className="adash-section" style={{ marginTop:28 }}>
+          <div className="adash-section-title"><i className="bi bi-cash-stack"></i>Demandes de retrait</div>
+          <div className="adash-table-card">
+            <div className="adash-table-head">
+              <i className="bi bi-clock-history" style={{ color:'#d97706' }}></i>
+              Demandes en attente
+            </div>
+            <div style={{ overflowX:'auto' }}>
+              <table className="adash-tbl">
+                <thead>
+                  <tr>
+                    <th>Prestataire</th>
+                    <th>Montant</th>
+                    <th>Méthode</th>
+                    <th>Numéro</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {retraits.filter(r => r.statut === 'en_attente').map(r => (
+                    <tr key={r.id}>
+                      <td style={{ fontWeight:700 }}>{r.prestataire_nom}</td>
+                      <td style={{ color:'#0284c7', fontWeight:800 }}>{Number(r.montant).toLocaleString()} F</td>
+                      <td style={{ textTransform:'uppercase', fontSize:'.75rem', fontWeight:600 }}>{r.methode}</td>
+                      <td style={{ fontStyle:'italic' }}>{r.numero_paiement}</td>
+                      <td>
+                        <span style={{ background:'#fef3c7', color:'#d97706', padding:'3px 10px', borderRadius:50, fontSize:'.72rem', fontWeight:700 }}>
+                          En attente
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display:'flex', gap:6 }}>
+                          <button onClick={() => validerRetrait(r.id)} style={{ padding:'4px 10px', background:'#d1fae5', color:'#065f46', border:'none', borderRadius:6, fontSize:'.75rem', fontWeight:700, cursor:'pointer' }}>Valider</button>
+                          <button onClick={() => rejeterRetrait(r.id)} style={{ padding:'4px 10px', background:'#fee2e2', color:'#991b1b', border:'none', borderRadius:6, fontSize:'.75rem', fontWeight:700, cursor:'pointer' }}>Rejeter</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {retraits.filter(r => r.statut === 'en_attente').length === 0 && (
+                    <tr><td colSpan={6} style={{ textAlign:'center', color:'#94a3b8', padding:24 }}>Aucune demande en attente</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

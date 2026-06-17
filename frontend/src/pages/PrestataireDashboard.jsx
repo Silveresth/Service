@@ -136,7 +136,16 @@ const PD_STYLES = `
   /* ── Metrics ── */
   .pd-metrics {
     max-width: 1200px; margin: 22px auto 0; padding: 0 24px;
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  }
+  @media (max-width: 900px) { .pd-metrics { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { 
+    .pd-metrics { padding: 0 12px; gap: 10px; }
+    .pd-metric { padding: 12px 10px; gap: 10px; border-radius: 14px; }
+    .pd-metric-ico { width: 38px; height: 38px; border-radius: 10px; font-size: 1.1rem; }
+    .pd-metric-lbl { font-size: 0.65rem; margin-bottom: 1px; }
+    .pd-metric-val { font-size: 0.95rem; }
+    .pd-metric-trend { font-size: 0.62rem; }
   }
   .pd-metric {
     background: white; border-radius: 16px;
@@ -358,6 +367,36 @@ export default function PrestataireDashboard() {
     return 'Bonsoir';
   };
 
+  const [showRetrait, setShowRetrait] = useState(false);
+  const [retraitAmount, setRetraitAmount] = useState('');
+  const [retraitMethode, setRetraitMethode] = useState('flooz');
+  const [retraitNumero, setRetraitNumero] = useState('');
+  const [retraitLoading, setRetraitLoading] = useState(false);
+
+  const handleRetrait = async (e) => {
+    e.preventDefault();
+    if (!retraitAmount || Number(retraitAmount) <= 0) return showToast('Montant invalide.');
+    if (Number(retraitAmount) > (stats?.solde || 0)) return showToast('Solde insuffisant.');
+    
+    setRetraitLoading(true);
+    try {
+      await api.post('/retraits/', {
+        montant: retraitAmount,
+        methode: retraitMethode,
+        numero_paiement: retraitNumero
+      });
+      showToast('Demande de retrait envoyée !');
+      setShowRetrait(false);
+      // Rafraîchir les stats pour voir le nouveau solde
+      const s = await api.get('/prestataires/stats/');
+      setStats(s.data);
+    } catch (err) {
+      showToast(err.response?.data?.detail || 'Erreur lors du retrait.');
+    } finally {
+      setRetraitLoading(false);
+    }
+  };
+
   if (loading) return (
     <div style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
       <style>{`.pd-spinner{width:44px;height:44px;border-radius:50%;border:4px solid #e0f2fe;border-top-color:#0284c7;animation:pd-spin .8s linear infinite}@keyframes pd-spin{to{transform:rotate(360deg)}}`}</style>
@@ -398,7 +437,7 @@ export default function PrestataireDashboard() {
   ];
 
   const METRICS = [
-    { lbl: 'Revenus totaux',    val: `${(stats.total_revenue || 0).toLocaleString()} F`, icon: 'currency-exchange', bg: '#f0fdf4', ic: '#22c55e', trend: '+12.5%',            trendClass: 'up' },
+    { lbl: 'Solde disponible', val: `${(stats.solde || 0).toLocaleString()} F`, icon: 'wallet2', bg: '#f0fdf4', ic: '#22c55e', trend: 'Demander retrait', trendClass: 'up', action: () => setShowRetrait(true) },
     { lbl: 'Taux acceptation',  val: `${(stats.acceptance_rate || 0).toFixed(1)}%`,       icon: 'graph-up-arrow',    bg: '#e0f2fe', ic: '#0284c7', trend: '+4.2%',            trendClass: 'up' },
     { lbl: 'Note moyenne',      val: stats.avg_note ? `${stats.avg_note.toFixed(1)} ★` : '—', icon: 'star-fill', bg: '#fef3c7', ic: '#d97706', trend: `(${stats.nb_notes || 0} avis)`, trendClass: 'neutral' },
     { lbl: 'Points fidélité',   val: `${points} pts`,                                    icon: 'gem',               bg: '#ede9fe', ic: '#6366f1', trend: `Niveau ${badge.level}`, trendClass: 'neutral' },
@@ -479,11 +518,57 @@ export default function PrestataireDashboard() {
               <div>
                 <div className="pd-metric-lbl">{m.lbl}</div>
                 <div className="pd-metric-val">{m.val}</div>
-                <div className={`pd-metric-trend ${m.trendClass}`}>{m.trend}</div>
+                <div 
+                  className={`pd-metric-trend ${m.trendClass}`} 
+                  onClick={m.action} 
+                  style={{ cursor: m.action ? 'pointer' : 'default', textDecoration: m.action ? 'underline' : 'none' }}
+                >
+                  {m.trend}
+                </div>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Modal Retrait */}
+        {showRetrait && (
+          <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+            <div style={{ background:'white', borderRadius:20, padding:24, maxWidth:400, width:'100%', boxShadow:'0 20px 40px rgba(0,0,0,0.2)' }}>
+              <h2 style={{ fontSize:'1.2rem', fontWeight:800, color:'#0c2340', marginBottom:6 }}>Demander un retrait</h2>
+              <p style={{ fontSize:'.85rem', color:'#64748b', marginBottom:20 }}>Votre solde actuel est de <strong>{(stats?.solde || 0).toLocaleString()} F</strong></p>
+              
+              <form onSubmit={handleRetrait}>
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ display:'block', fontSize:'.8rem', fontWeight:600, color:'#64748b', marginBottom:4 }}>Montant (FCFA)</label>
+                  <input type="number" required value={retraitAmount} onChange={e => setRetraitAmount(e.target.value)} 
+                         style={{ width:'100%', padding:12, borderRadius:10, border:'1.5px solid #e0f2fe', outline:'none' }} placeholder="Ex: 5000" />
+                </div>
+                
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ display:'block', fontSize:'.8rem', fontWeight:600, color:'#64748b', marginBottom:4 }}>Méthode de paiement</label>
+                  <select value={retraitMethode} onChange={e => setRetraitMethode(e.target.value)}
+                          style={{ width:'100%', padding:12, borderRadius:10, border:'1.5px solid #e0f2fe', outline:'none' }}>
+                    <option value="flooz">Flooz</option>
+                    <option value="tmoney">T-Money / Mix</option>
+                  </select>
+                </div>
+
+                <div style={{ marginBottom:20 }}>
+                  <label style={{ display:'block', fontSize:'.8rem', fontWeight:600, color:'#64748b', marginBottom:4 }}>Numéro de paiement</label>
+                  <input type="text" required value={retraitNumero} onChange={e => setRetraitNumero(e.target.value)} 
+                         style={{ width:'100%', padding:12, borderRadius:10, border:'1.5px solid #e0f2fe', outline:'none' }} placeholder="Ex: 97430290" />
+                </div>
+
+                <div style={{ display:'flex', gap:10 }}>
+                  <button type="button" onClick={() => setShowRetrait(false)} style={{ flex:1, padding:12, borderRadius:10, border:'none', background:'#f1f5f9', color:'#64748b', fontWeight:700 }}>Annuler</button>
+                  <button type="submit" disabled={retraitLoading} style={{ flex:1, padding:12, borderRadius:10, border:'none', background:'#0284c7', color:'white', fontWeight:700 }}>
+                    {retraitLoading ? 'Envoi...' : 'Confirmer'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* ── Charts ── */}
         <div className="pd-charts">

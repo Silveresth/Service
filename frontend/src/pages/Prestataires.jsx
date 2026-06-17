@@ -60,7 +60,17 @@ export default function Prestataires() {
         .prest-chip{flex-shrink:0;padding:7px 18px;border-radius:50px;border:1.5px solid #bae6fd;background:#fff;color:#0369a1;font-weight:600;font-size:.82rem;cursor:pointer;transition:all .2s;white-space:nowrap}
         .prest-chip.active,.prest-chip:hover{background:#0284c7;color:#fff;border-color:#0284c7}
         .prest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:20px;max-width:1200px;margin:28px auto 0;padding:0 16px 56px}
-        @media(max-width:480px){.prest-grid{grid-template-columns:1fr}}
+        @media(max-width:640px){
+          .prest-grid{grid-template-columns:repeat(2,1fr);gap:10px;padding:0 10px 40px}
+          .prest-card-top{padding:16px 10px 10px}
+          .prest-avatar{width:60px;height:60px;font-size:1.4rem}
+          .prest-name{font-size:0.9rem;margin:8px 0 2px}
+          .prest-username{font-size:0.75rem}
+          .prest-fidel-badge{font-size:0.6rem;padding:2px 6px;top:8px;right:8px}
+          .prest-card-body{padding:10px;gap:6px}
+          .prest-bio, .prest-stats{display:none}
+          .prest-verified{font-size:0.65rem;padding:2px 8px}
+        }
         .prest-card{background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(2,132,199,.07);border:1.5px solid #e0f2fe;overflow:hidden;display:flex;flex-direction:column;transition:transform .22s,box-shadow .22s}
         .prest-card:hover{transform:translateY(-5px);box-shadow:0 12px 35px rgba(2,132,199,.18);border-color:#7dd3fc}
         .prest-card-top{background:linear-gradient(135deg,#e0f2fe,#f0f9ff);padding:28px 20px 20px;display:flex;flex-direction:column;align-items:center;position:relative}
@@ -137,57 +147,35 @@ export default function Prestataires() {
           const nom = `${p.user?.first_name||''} ${p.user?.last_name||''}`.trim() || p.user?.username;
           return (
             <div key={p.user?.id} className="prest-card">
-              <div className="prest-card-top">
-                <div className="prest-fidel-badge" style={{background:badge.bg,color:badge.color}}>
-                  <i className={`bi ${badge.icon}`}></i> {badge.label}
-                </div>
-                <div className="prest-avatar">
+              <div className="prest-card-top" style={{ padding: '16px 12px' }}>
+                <div className="prest-avatar" style={{ width: 64, height: 64, fontSize: '1.5rem' }}>
                   {p.photo
                     ? <img src={p.photo} alt={nom}/>
                     : <span>{(p.user?.username?.[0]||'?').toUpperCase()}</span>
                   }
-                  <div className="prest-online"></div>
                 </div>
-                <div className="prest-name">{nom}</div>
-                <div className="prest-username">@{p.user?.username}</div>
-                <span className="prest-verified">
-                  <i className="bi bi-patch-check-fill" style={{color:'#22c55e'}}></i>
-                  Prestataire vérifié
-                </span>
+                <div className="prest-name" style={{ fontSize: '0.9rem', marginTop: 10 }}>{nom}</div>
+                <div className="prest-username" style={{ fontSize: '0.75rem', marginBottom: 5 }}>@{p.user?.username}</div>
+                <div className="prest-fidel-badge" style={{ background:badge.bg, color:badge.color, fontSize: '0.6rem', padding: '2px 8px', position: 'static', marginTop: 4 }}>
+                  <i className={`bi ${badge.icon}`}></i> {badge.label}
+                </div>
               </div>
-              <div className="prest-card-body">
+              <div className="prest-card-body" style={{ padding: '12px', textAlign: 'center' }}>
                 {p.specialite && (
-                  <div><span className="prest-spec"><i className="bi bi-tools"></i>{p.specialite}</span></div>
+                  <div style={{ marginBottom: 8 }}><span className="prest-spec" style={{ fontSize: '0.7rem', padding: '2px 10px' }}><i className="bi bi-tools"></i> {p.specialite}</span></div>
                 )}
-                <p className="prest-bio">
-                  {p.bio || `Professionnel en ${p.specialite||'services'} avec expérience confirmée.`}
-                </p>
-                <div className="prest-stats">
-                  {/*
-                    Backend (PrestataireViewSet.stats) renvoie:
-                    - services_count
-                    - avg_note
-                    - nb_notes
-                    (pas toujours reservations_count)
-                  */}
-                  <div className="prest-stat">
-                    <span className="prest-stat-val">{typeof p.services_count === 'number' ? p.services_count : 0}</span>
-                    <span className="prest-stat-lbl">Services</span>
+                
+                {/* On cache la bio et les stats sur mobile via CSS, mais on peut aussi simplifier ici */}
+                <div className="prest-stats-compact" style={{ display: 'flex', justifyContent: 'center', gap: 10, borderTop: '1px solid #f1f5f9', paddingTop: 8, marginTop: 'auto' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#0c2340' }}>{p.services_count || 0}</div>
+                    <div style={{ fontSize: '0.55rem', color: '#94a3b8', textTransform: 'uppercase' }}>Services</div>
                   </div>
-                  <div className="prest-stat">
-                    <span className="prest-stat-val">{typeof p.avg_note === 'number' ? `${Number(p.avg_note).toFixed(1)}★` : '—'}</span>
-                    <span className="prest-stat-lbl">Note</span>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#0c2340' }}>{typeof p.avg_note === 'number' ? `${Number(p.avg_note).toFixed(1)}` : '—'}</div>
+                    <div style={{ fontSize: '0.55rem', color: '#94a3b8', textTransform: 'uppercase' }}>Note</div>
                   </div>
-                  <div className="prest-stat">
-                    <span className="prest-stat-val">{typeof p.nb_notes === 'number' ? p.nb_notes : 0}</span>
-                    <span className="prest-stat-lbl">Missions</span>
-                  </div>
-
                 </div>
-
-              </div>
-              <div className="prest-card-footer">
-
               </div>
             </div>
           );

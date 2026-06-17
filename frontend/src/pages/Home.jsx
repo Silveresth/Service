@@ -47,7 +47,7 @@ export default function Home() {
       <style>{ANIM}</style>
 
       {/* ── HERO ── */}
-      <section style={{ background:'linear-gradient(135deg,#0c2340 0%,#0a3060 55%,#0284c7 100%)', padding:'80px 0 110px', position:'relative', overflow:'hidden' }}>
+      <section style={{ background:'linear-gradient(135deg,#0c2340 0%,#0a3060 55%,#0284c7 100%)', padding:'clamp(40px,6vw,80px) 0 clamp(60px,8vw,110px)', position:'relative', overflow:'hidden' }}>
         <div style={{ position:'absolute', top:-100, right:-100, width:500, height:500, borderRadius:'50%', background:'rgba(2,132,199,.1)', pointerEvents:'none' }} />
         <div style={{ position:'absolute', bottom:-80, left:-60, width:300, height:300, borderRadius:'50%', background:'rgba(255,255,255,.03)', pointerEvents:'none' }} />
 
@@ -65,32 +65,13 @@ export default function Home() {
             Des professionnels qualifiés près de chez vous. Qualité garantie, paiement sécurisé, réponse sous 24h.
           </p>
 
-          {/* Recherche */}
-          <form onSubmit={e => { e.preventDefault(); navigate(`/services${search ? `?q=${encodeURIComponent(search)}` : ''}`); }}
-            style={{ maxWidth:580 }}>
-            <div style={{ display:'flex', background:'#fff', borderRadius:16, overflow:'hidden', boxShadow: focused ? '0 0 0 4px rgba(2,132,199,.35),0 8px 32px rgba(0,0,0,.2)' : '0 8px 32px rgba(0,0,0,.2)', transition:'box-shadow .2s' }}>
-              <div style={{ padding:'0 14px', display:'flex', alignItems:'center', flexShrink:0 }}>
-                <i className="bi bi-search" style={{ color:'#94a3b8', fontSize:'1.1rem' }} />
-              </div>
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-                placeholder="plomberie, électricité, ménage..."
-                style={{ flex:1, padding:'15px 8px', border:'none', outline:'none', fontSize:'0.95rem', color:'#0c2340' }} />
-              <button type="submit" style={{ padding:'12px 24px', background:'linear-gradient(135deg,#0c2340,#0284c7)', border:'none', color:'#fff', fontWeight:800, fontSize:'0.9rem', cursor:'pointer', margin:6, borderRadius:10 }}>
-                Rechercher
-              </button>
-            </div>
-          </form>
-
-          {/* Tags */}
-          <div style={{ display:'flex', gap:8, marginTop:16, flexWrap:'wrap' }}>
-            {['Plomberie','Électricité','Ménage','Peinture'].map(t => (
-              <button key={t} onClick={() => navigate(`/services?q=${t.toLowerCase()}`)} style={{ padding:'5px 14px', borderRadius:20, border:'1px solid rgba(255,255,255,.25)', background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.85)', fontSize:'0.8rem', cursor:'pointer', transition:'all .15s' }}
-                onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,.2)'}
-                onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,.1)'}>
-                {t}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: 16, marginTop: 20 }}>
+            <Link to="/services" className="btn-primary-custom" style={{ padding: '12px 28px', borderRadius: 12, fontWeight: 800 }}>
+              Voir les services
+            </Link>
+            <Link to="/ateliers" className="btn-outline-primary-custom" style={{ padding: '12px 28px', borderRadius: 12, fontWeight: 800, color: '#fff', borderColor: 'rgba(255,255,255,0.4)' }}>
+              Explorer la carte
+            </Link>
           </div>
 
           {/* Stats */}
