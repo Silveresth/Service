@@ -511,11 +511,7 @@ export default function Register() {
       // de se connecter avec les identifiants qu'il vient de saisir.
       if (!status || status >= 500) {
         setLoading(false);
-        navigate('/login', {
-          state: {
-            info: "Le serveur a mis du temps à répondre, mais votre compte a probablement été créé. Essayez de vous connecter avec les identifiants que vous venez de saisir.",
-          },
-        });
+        navigate('/login');
         return;
       }
 
@@ -528,11 +524,7 @@ export default function Register() {
         const text = JSON.stringify(data).toLowerCase();
         if (text.includes('déjà pris') || text.includes('déjà') || text.includes('existe déjà')) {
           setLoading(false);
-          navigate('/login', {
-            state: {
-              info: "Il semble que ce compte existe déjà. Essayez de vous connecter avec les identifiants que vous venez de saisir.",
-            },
-          });
+          navigate('/login');
           return;
         }
       }
