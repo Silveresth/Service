@@ -127,10 +127,23 @@ class ServiceViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
-        qs = Service.objects.select_related('categorie').all()
+        qs = Service.objects.select_related('categorie', 'prestataire__user').all()
+        
+        # Filtrer par prestataire si le paramètre est fourni
+        prestataire_id = self.request.query_params.get('prestataire')
+        if prestataire_id:
+            qs = qs.filter(prestataire_id=prestataire_id)
+            
+        # Filtrer par catégorie si le paramètre est fourni
+        categorie_id = self.request.query_params.get('categorie')
+        if categorie_id:
+            qs = qs.filter(categorie_id=categorie_id)
+            
+        # Recherche textuelle
         q = self.request.query_params.get('search')
         if q:
             qs = qs.filter(nom__icontains=q) | qs.filter(description__icontains=q)
+            
         return qs
 
 
@@ -202,9 +215,12 @@ class ServiceViewSet(viewsets.ModelViewSet):
 
 # ── Prestataire ──────────────────────────────────────────────────
 class PrestataireViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Prestataire.objects.all()
     serializer_class = PrestataireSerializer
     permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        # Exclure les administrateurs (is_staff = True) de la liste publique des prestataires
+        return Prestataire.objects.select_related('user').filter(user__is_staff=False)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def stats(self, request):
