@@ -757,6 +757,7 @@
   border-radius: 20px;
   overflow: hidden;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .sv-match-card:hover {
