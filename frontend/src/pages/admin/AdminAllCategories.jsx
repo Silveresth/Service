@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import api from '../api/axios';
-import ConfirmModal from '../components/ConfirmModal';
+import api from '../../api/axios';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const ICONE_SUGGESTIONS = [
   'bi-lightbulb', 'bi-tools', 'bi-house', 'bi-car-front', 'bi-camera',

@@ -42,6 +42,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not message.strip():
             return
 
+        # Vérifier si le chat est actif (uniquement en statut confirme) pour envoyer un message
+        if not await self.can_send_messages(self.room_name):
+            return
+
         # Sauvegarder le message en base
         msg = await self.save_message(self.room_name, self.user.id, message)
 
@@ -128,9 +132,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def can_access_chat(self, reservation_id):
         try:
             reservation = Reservation.objects.select_related('client__user', 'service__prestataire__user').get(id=reservation_id)
-            # Chat accessible uniquement si la réservation est confirmée
-            if reservation.statut != 'confirmee':
-                logger.warning(f"[ChatConsumer] Réservation {reservation_id} statut='{reservation.statut}' — chat refusé (doit être 'confirmee')")
+            # Chat accessible si la réservation est confirmée, terminée ou annulée (pour l'historique)
+            if reservation.statut not in ['confirmee', 'terminee', 'annulee']:
+                logger.warning(f"[ChatConsumer] Réservation {reservation_id} statut='{reservation.statut}' — chat refusé")
                 return False
             is_client = reservation.client.user_id == self.user.id
             is_prestataire = reservation.service.prestataire.user_id == self.user.id
@@ -139,6 +143,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return is_client or is_prestataire
         except Reservation.DoesNotExist:
             logger.error(f"[ChatConsumer] Réservation {reservation_id} introuvable")
+            return False
+
+    @database_sync_to_async
+    def can_send_messages(self, reservation_id):
+        try:
+            reservation = Reservation.objects.get(id=reservation_id)
+            return reservation.statut == 'confirmee'
+        except Reservation.DoesNotExist:
             return False
 
     @database_sync_to_async

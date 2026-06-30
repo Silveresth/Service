@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import api from '../api/axios';
-import ConfirmModal from '../components/ConfirmModal';
+import api from '../../api/axios';
+import ConfirmModal from '../../components/ConfirmModal';
 
 export default function AdminEvaluations() {
   const [evaluations, setEvaluations] = useState([]);

@@ -1,0 +1,16 @@
+PATCH PLAN
+
+1) In service_market/service/views.py, locate the last occurrence of chatbot_view (the one that currently calls Groq).
+2) Replace only the section from "# 2. Appeler l'API Groq" up to "return Response({'reply': bot_reply})" with an Ollama call.
+
+Ollama endpoint: {OLLAMA_BASE_URL}/api/chat (default http://localhost:11434)
+Model: {OLLAMA_MODEL} default mistral
+
+Payload (recommended for Ollama):
+- model
+- messages: system + user
+- stream: false
+- options: temperature
+
+Extract response: response.json().get('message', {}).get('content', '')
+

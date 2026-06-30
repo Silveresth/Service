@@ -120,7 +120,18 @@ WSGI_APPLICATION = 'service_market.wsgi.application'
 
 DATABASE_URL = config('DATABASE_URL', default='')
 
-if DATABASE_URL:
+# Astuce dev: si DATABASE_URL n'est pas pris en compte dans certains shells,
+# on peut forcer SQLite via USE_SQLITE_FOR_DEV=1.
+USE_SQLITE_FOR_DEV = config('USE_SQLITE_FOR_DEV', default='0')
+
+if USE_SQLITE_FOR_DEV == '1':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'sm_db.sqlite3',
+        }
+    }
+elif DATABASE_URL:
     import dj_database_url
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
@@ -137,6 +148,7 @@ else:
         }
     }
 
+
 # Internationalization
 LANGUAGE_CODE = 'fr-fr'
 TIME_ZONE = 'Africa/Lome'
@@ -146,7 +158,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Le stockage des fichiers statiques est géré dans le dictionnaire STORAGES en bas du fichier
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -235,10 +247,20 @@ SIMPLE_JWT = {
 }
 
 # ─── CLOUDINARY STORAGE ───────────────────────────────────────────────────────
+# ─── Cloudinary ────────────────────────────────────────────────────────────────
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME', default=''),
-    'API_KEY': config('CLOUDINARY_API_KEY', default=''),
+    'API_KEY':    config('CLOUDINARY_API_KEY',    default=''),
     'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
 }
 
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage"
+        if CLOUDINARY_STORAGE['CLOUD_NAME'] and CLOUDINARY_STORAGE['API_KEY']
+        else "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}

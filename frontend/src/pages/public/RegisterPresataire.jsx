@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../api/axios';
+import api from '../../api/axios';
 
 /* ─── InputField hors du parent ─── */
 function InputField({ label, name, type = 'text', placeholder, icon, value, onChange, error }) {
@@ -18,34 +18,71 @@ function InputField({ label, name, type = 'text', placeholder, icon, value, onCh
 }
 
 const RP_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;800&display=swap');
+
+  @keyframes rp-glowMove {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(50px, -50px) scale(1.2); }
+  }
+
+  @keyframes rp-glowMove2 {
+    0%, 100% { transform: translate(0, 0) scale(1.2); }
+    50% { transform: translate(-50px, 50px) scale(0.9); }
+  }
 
   .rp-page {
+    font-family: 'Plus Jakarta Sans', sans-serif;
     min-height: 100vh;
-    background: linear-gradient(145deg, #064e3b 0%, #065f46 40%, #059669 100%);
-    display: flex; align-items: center; justify-content: center;
-    padding: 40px 16px; position: relative; overflow: hidden;
+    background: #040d12;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    padding: 60px 16px; 
+    position: relative; 
+    overflow: hidden;
   }
-  .rp-page::before {
-    content: ''; position: absolute;
-    width: 500px; height: 500px; border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.05);
-    top: -200px; right: -150px;
+
+  .rp-glow-1 {
+    position: absolute;
+    top: -10%;
+    right: -10%;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+    filter: blur(80px);
+    animation: rp-glowMove 15s ease-in-out infinite;
+    pointer-events: none;
   }
-  .rp-page::after {
-    content: ''; position: absolute;
-    width: 350px; height: 350px; border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.06);
-    bottom: -120px; left: -100px;
+
+  .rp-glow-2 {
+    position: absolute;
+    bottom: -10%;
+    left: -10%;
+    width: 550px;
+    height: 550px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(5, 150, 105, 0.12) 0%, transparent 70%);
+    filter: blur(90px);
+    animation: rp-glowMove2 18s ease-in-out infinite;
+    pointer-events: none;
   }
 
   .rp-card {
-    background: white; border-radius: 24px;
-    box-shadow: 0 28px 70px rgba(0,0,0,0.28);
-    width: 100%; max-width: 580px;
-    overflow: hidden; position: relative; z-index: 1;
-    animation: rp-in 0.4s cubic-bezier(0.22,1,0.36,1) both;
+    background: rgba(255, 255, 255, 0.02); 
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 32px;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+    width: 100%; 
+    max-width: 580px;
+    overflow: hidden; 
+    position: relative; 
+    z-index: 1;
+    animation: rp-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
+
   @keyframes rp-in {
     from { opacity: 0; transform: translateY(24px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -53,98 +90,203 @@ const RP_STYLES = `
 
   /* Header */
   .rp-header {
-    background: linear-gradient(135deg, #064e3b, #059669);
-    padding: 32px 36px 28px; color: white; text-align: center;
-    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, rgba(4, 13, 18, 0.85), rgba(5, 150, 105, 0.35));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 36px 40px 28px; 
+    color: white; 
+    text-align: center;
+    position: relative; 
   }
-  .rp-header::after {
-    content: ''; position: absolute;
-    width: 180px; height: 180px; border-radius: 50%;
-    background: rgba(255,255,255,0.05);
-    bottom: -60px; right: -40px;
-  }
+
   .rp-header-icon {
-    width: 72px; height: 72px; border-radius: 50%;
-    background: rgba(255,255,255,0.12);
-    border: 2px solid rgba(255,255,255,0.22);
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 16px; font-size: 2rem; position: relative; z-index: 1;
+    width: 68px; 
+    height: 68px; 
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    margin: 0 auto 16px; 
+    font-size: 1.8rem;
+    color: #34d399;
   }
+
   .rp-header h2 {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.5rem; font-weight: 800; margin: 0 0 6px;
-    position: relative; z-index: 1;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.6rem; 
+    font-weight: 800; 
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
   }
-  .rp-header p { margin: 0; opacity: 0.78; font-size: 0.88rem; position: relative; z-index: 1; }
+
+  .rp-header p { 
+    margin: 0; 
+    color: #94a3b8; 
+    font-size: 0.88rem; 
+  }
 
   /* Type tabs */
-  .rp-type-tabs { display: flex; border-bottom: 1.5px solid #e2e8f0; background: #f8fafc; }
+  .rp-type-tabs { 
+    display: flex; 
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
   .rp-type-tab {
-    flex: 1; padding: 14px 12px; text-align: center;
-    font-weight: 700; font-size: 0.85rem; cursor: pointer;
-    border: none; background: none; color: #64748b;
-    transition: all 0.2s; text-decoration: none;
-    display: flex; align-items: center; justify-content: center; gap: 7px;
+    flex: 1; 
+    padding: 16px 12px; 
+    text-align: center;
+    font-weight: 700; 
+    font-size: 0.85rem; 
+    cursor: pointer;
+    border: none; 
+    background: none; 
+    color: #475569;
+    transition: all 0.25s; 
+    text-decoration: none;
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px;
     font-family: inherit;
   }
-  .rp-type-tab.active { color: #059669; background: white; border-bottom: 3px solid #059669; }
-  .rp-type-tab:hover:not(.active) { background: #f1f5f9; color: #374151; }
+
+  .rp-type-tab.active { 
+    color: #34d399; 
+    background: rgba(255, 255, 255, 0.02); 
+    border-bottom: 3px solid #10b981; 
+  }
+
+  .rp-type-tab:hover:not(.active) { 
+    background: rgba(255, 255, 255, 0.04); 
+    color: #94a3b8; 
+  }
 
   /* Progress */
-  .rp-progress { padding: 20px 36px 0; }
-  .rp-progress-steps { display: flex; gap: 4px; margin-bottom: 8px; }
+  .rp-progress { padding: 24px 40px 0; }
+  
+  .rp-progress-steps { display: flex; gap: 6px; margin-bottom: 8px; }
+  
   .rp-progress-seg {
-    flex: 1; height: 4px; border-radius: 2px;
-    background: #e2e8f0; transition: background 0.35s;
+    flex: 1; 
+    height: 6px; 
+    border-radius: 3px;
+    background: #1e293b; 
+    transition: background 0.35s ease;
   }
-  .rp-progress-seg.done { background: #059669; }
-  .rp-progress-seg.active { background: linear-gradient(90deg, #059669, #34d399); }
-  .rp-progress-label { font-size: 0.72rem; color: #94a3b8; font-weight: 600; text-align: right; }
+
+  .rp-progress-seg.done { background: #10b981; }
+  
+  .rp-progress-seg.active { 
+    background: linear-gradient(90deg, #10b981, #34d399); 
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  }
+
+  .rp-progress-label { 
+    font-size: 0.75rem; 
+    color: #64748b; 
+    font-weight: 700; 
+    text-align: right; 
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
 
   /* Body */
-  .rp-body { padding: 24px 36px 32px; }
+  .rp-body { padding: 24px 40px 36px; }
 
   .rp-step-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 1rem; font-weight: 800; color: #065f46;
-    margin: 0 0 20px; display: flex; align-items: center; gap: 10px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.05rem; 
+    font-weight: 700; 
+    color: #fff;
+    margin: 0 0 24px; 
+    display: flex; 
+    align-items: center; 
+    gap: 10px;
   }
-  .rp-step-title i { color: #059669; font-size: 1.1rem; }
+
+  .rp-step-title i { 
+    color: #34d399; 
+    font-size: 1.2rem; 
+  }
 
   /* Fields */
-  .rp-field { margin-bottom: 16px; }
+  .rp-field { margin-bottom: 20px; }
+  
   .rp-label {
-    display: block; font-size: 0.8rem; font-weight: 700;
-    color: #374151; margin-bottom: 7px; letter-spacing: 0.02em;
+    display: block; 
+    font-size: 0.75rem; 
+    font-weight: 700;
+    color: #94a3b8; 
+    margin-bottom: 8px; 
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
+
   .rp-input-wrap {
-    display: flex; align-items: center;
-    border: 1.5px solid #e2e8f0; border-radius: 12px;
-    background: #fafbfc; transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    display: flex; 
+    align-items: center;
+    border: 1.5px solid #1e293b; 
+    border-radius: 16px;
+    background: #0b1219; 
+    transition: all 0.25s ease;
   }
+
   .rp-input-wrap:focus-within {
-    border-color: #059669;
-    box-shadow: 0 0 0 4px rgba(5,150,105,0.10);
-    background: white;
+    border-color: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+    background: #0f1c16;
   }
-  .rp-input-wrap.error { border-color: #f87171; }
-  .rp-icon { padding: 0 0 0 14px; color: #94a3b8; font-size: 0.95rem; flex-shrink: 0; transition: color 0.2s; }
-  .rp-input-wrap:focus-within .rp-icon { color: #059669; }
+
+  .rp-input-wrap.error { border-color: #ef4444; }
+  .rp-input-wrap.error:focus-within { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15); }
+
+  .rp-icon { 
+    padding: 0 0 0 16px; 
+    color: #475569; 
+    font-size: 1.05rem; 
+    flex-shrink: 0; 
+    transition: color 0.25s; 
+  }
+
+  .rp-input-wrap:focus-within .rp-icon { color: #34d399; }
+
   .rp-input {
-    flex: 1; border: none; background: transparent;
-    padding: 12px 14px; font-size: 0.9rem; color: #0c2340;
-    outline: none; min-width: 0; font-family: inherit;
+    flex: 1; 
+    border: none; 
+    background: transparent;
+    padding: 14px 16px; 
+    font-size: 0.95rem; 
+    color: #f1f5f9;
+    outline: none; 
+    min-width: 0; 
+    font-family: inherit;
   }
-  .rp-input::placeholder { color: #9ca3af; }
+
+  .rp-input::placeholder { color: #475569; }
+
   .rp-eye {
-    background: none; border: none; cursor: pointer;
-    padding: 0 14px; color: #94a3b8; font-size: 0.9rem;
-    transition: color 0.2s; flex-shrink: 0;
+    background: none; 
+    border: none; 
+    cursor: pointer;
+    padding: 0 16px; 
+    color: #475569; 
+    font-size: 1.05rem;
+    transition: color 0.2s; 
+    flex-shrink: 0;
   }
-  .rp-eye:hover { color: #059669; }
+
+  .rp-eye:hover { color: #34d399; }
+
   .rp-err {
-    display: flex; align-items: center; gap: 5px;
-    color: #dc2626; font-size: 0.75rem; margin-top: 5px; font-weight: 600;
+    display: flex; 
+    align-items: center; 
+    gap: 6px;
+    color: #fca5a5; 
+    font-size: 0.78rem; 
+    margin-top: 6px; 
+    font-weight: 600;
   }
 
   .rp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
@@ -152,88 +294,179 @@ const RP_STYLES = `
 
   /* Global error */
   .rp-global-error {
-    background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px;
-    padding: 12px 16px; color: #dc2626; font-size: 0.85rem;
-    display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+    background: rgba(239, 68, 68, 0.1); 
+    border: 1px solid rgba(239, 68, 68, 0.2); 
+    border-radius: 16px;
+    padding: 14px 18px; 
+    color: #fca5a5; 
+    font-size: 0.9rem;
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    margin-bottom: 24px;
+    animation: rp-shake 0.4s ease;
+  }
+
+  @keyframes rp-shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-4px); }
+    40%, 80% { transform: translateX(4px); }
   }
 
   /* Info box */
   .rp-info-box {
-    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;
-    padding: 12px 16px; font-size: 0.82rem; color: #166534;
-    display: flex; align-items: flex-start; gap: 9px; margin-bottom: 16px;
+    background: rgba(16, 185, 129, 0.08); 
+    border: 1px solid rgba(16, 185, 129, 0.2); 
+    border-radius: 16px;
+    padding: 14px 18px; 
+    font-size: 0.85rem; 
+    color: #a7f3d0;
+    display: flex; 
+    align-items: flex-start; 
+    gap: 10px; 
+    margin-bottom: 20px;
+    line-height: 1.5;
   }
-  .rp-info-box i { color: #16a34a; margin-top: 1px; flex-shrink: 0; }
+
+  .rp-info-box i { color: #34d399; margin-top: 1px; flex-shrink: 0; font-size: 1.1rem; }
 
   /* Payment selector */
-  .rp-pay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px; }
+  .rp-pay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 8px; }
+  
   .rp-pay-card {
-    border: 1.5px solid #e2e8f0; border-radius: 12px;
-    padding: 14px; text-align: center; cursor: pointer;
-    transition: all 0.2s; background: #fafbfc;
+    border: 1.5px solid #1e293b; 
+    border-radius: 16px;
+    padding: 18px 14px; 
+    text-align: center; 
+    background: rgba(255, 255, 255, 0.01);
+    transition: all 0.25s ease;
   }
-  .rp-pay-card:hover { border-color: #059669; background: #f0fdf4; }
-  .rp-pay-card i { font-size: 1.5rem; color: #94a3b8; display: block; margin-bottom: 6px; }
-  .rp-pay-card span { font-size: 0.8rem; font-weight: 700; color: #374151; }
+
+  .rp-pay-card.active-flooz {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.05);
+  }
+
+  .rp-pay-card.active-tmoney {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+  }
+
+  .rp-pay-card i { font-size: 1.8rem; display: block; margin-bottom: 8px; }
+  .rp-pay-card span { font-size: 0.85rem; font-weight: 700; color: #f1f5f9; }
 
   /* Terms */
   .rp-terms {
-    display: flex; align-items: flex-start; gap: 10px;
-    margin: 4px 0 14px; font-size: 0.84rem; color: #374151; line-height: 1.55;
+    display: flex; 
+    align-items: flex-start; 
+    gap: 12px;
+    margin: 8px 0 20px; 
+    font-size: 0.88rem; 
+    color: #94a3b8; 
+    line-height: 1.6;
   }
+
   .rp-terms input[type=checkbox] {
-    margin-top: 3px; width: 17px; height: 17px;
-    accent-color: #059669; cursor: pointer; flex-shrink: 0;
+    margin-top: 4px; 
+    width: 18px; 
+    height: 18px;
+    accent-color: #10b981; 
+    cursor: pointer; 
+    flex-shrink: 0;
   }
-  .rp-terms a { color: #059669; font-weight: 700; text-decoration: none; }
+
+  .rp-terms a { color: #34d399; font-weight: 700; text-decoration: none; }
   .rp-terms a:hover { text-decoration: underline; }
 
   /* Nav */
-  .rp-nav { display: flex; gap: 10px; margin-top: 6px; }
+  .rp-nav { display: flex; gap: 12px; margin-top: 12px; }
+  
   .rp-btn-back {
-    padding: 12px 20px; border-radius: 12px;
-    border: 1.5px solid #e2e8f0; background: white;
-    color: #64748b; font-weight: 700; font-size: 0.88rem;
-    cursor: pointer; font-family: inherit;
-    display: flex; align-items: center; gap: 7px; transition: all 0.2s;
+    padding: 14px 24px; 
+    border-radius: 16px;
+    border: 1.5px solid #1e293b; 
+    background: transparent;
+    color: #94a3b8; 
+    font-weight: 700; 
+    font-size: 0.95rem;
+    cursor: pointer; 
+    font-family: inherit;
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    transition: all 0.25s;
   }
-  .rp-btn-back:hover { border-color: #059669; color: #059669; background: #f0fdf4; }
+
+  .rp-btn-back:hover { 
+    border-color: #10b981; 
+    color: #34d399; 
+    background: rgba(16, 185, 129, 0.05); 
+  }
+
   .rp-btn-next {
-    flex: 1; padding: 13px 20px; border-radius: 12px;
-    background: linear-gradient(135deg, #059669, #047857);
-    color: white; border: none; font-weight: 700; font-size: 0.9rem;
-    cursor: pointer; font-family: inherit;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    box-shadow: 0 4px 16px rgba(5,150,105,0.28); transition: all 0.2s;
+    flex: 1; 
+    padding: 15px 24px; 
+    border-radius: 16px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white; 
+    border: none; 
+    font-weight: 700; 
+    font-size: 0.95rem;
+    cursor: pointer; 
+    font-family: inherit;
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px;
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.25); 
+    transition: all 0.25s;
   }
-  .rp-btn-next:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 7px 22px rgba(5,150,105,0.38); }
-  .rp-btn-next:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .rp-btn-next:hover:not(:disabled) { 
+    transform: translateY(-1.5px); 
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4); 
+  }
+
+  .rp-btn-next:disabled { 
+    opacity: 0.6; 
+    cursor: not-allowed; 
+    transform: none; 
+  }
 
   .rp-footer {
-    text-align: center; margin-top: 20px; padding-top: 18px;
-    border-top: 1px solid #f1f5f9; font-size: 0.84rem; color: #64748b;
+    text-align: center; 
+    margin-top: 24px; 
+    padding-top: 20px;
+    border-top: 1px solid #1e293b; 
+    font-size: 0.88rem; 
+    color: #64748b;
   }
-  .rp-footer a { color: #059669; font-weight: 700; text-decoration: none; }
+
+  .rp-footer a { color: #34d399; font-weight: 700; text-decoration: none; }
   .rp-footer a:hover { text-decoration: underline; }
 
   .rp-spinner {
-    width: 16px; height: 16px;
-    border: 2px solid rgba(255,255,255,0.35);
-    border-top-color: white; border-radius: 50%;
-    animation: rp-spin 0.7s linear infinite; display: inline-block;
+    width: 18px; 
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white; 
+    border-radius: 50%;
+    animation: rp-spin 0.7s linear infinite; 
+    display: inline-block;
   }
+
   @keyframes rp-spin { to { transform: rotate(360deg); } }
 
-  .rp-step { animation: rp-step-in 0.25s ease; }
+  .rp-step { animation: rp-step-in 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
   @keyframes rp-step-in {
-    from { opacity: 0; transform: translateX(12px); }
+    from { opacity: 0; transform: translateX(16px); }
     to   { opacity: 1; transform: translateX(0); }
   }
 
   @media (max-width: 560px) {
-    .rp-body { padding: 20px 20px 24px; }
-    .rp-header { padding: 24px 20px 20px; }
-    .rp-progress { padding: 16px 20px 0; }
+    .rp-body { padding: 20px 20px 28px; }
+    .rp-header { padding: 28px 20px 24px; }
+    .rp-progress { padding: 20px 20px 0; }
     .rp-pay-grid { grid-template-columns: 1fr; }
   }
 `;
@@ -317,26 +550,33 @@ export default function RegisterPrestataire() {
 
   const handleSubmit = async () => {
     setGlobalError(''); setLoading(true);
-
     try {
       const { password_confirm, ...payload } = form;
       await api.post('/auth/register/', { ...payload, type_compte: 'prestataire' });
       navigate('/login');
     } catch (err) {
       const data = err.response?.data || {};
-      if (data.non_field_errors) setGlobalError(Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors);
-      else if (typeof data === 'string') setGlobalError(data);
-      else setErrors(data);
+      if (data.non_field_errors) {
+        setGlobalError(Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors);
+      } else if (typeof data === 'string') {
+        setGlobalError(data);
+      } else {
+        setErrors(data);
+      }
       setStep(0);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <>
       <style>{RP_STYLES}</style>
       <div className="rp-page">
+        <div className="rp-glow-1"></div>
+        <div className="rp-glow-2"></div>
+        
         <div className="rp-card">
-
           {/* Header */}
           <div className="rp-header">
             <div className="rp-header-icon"><i className="bi bi-briefcase-fill"></i></div>
@@ -402,13 +642,17 @@ export default function RegisterPrestataire() {
                       className="rp-input"
                       value={form.specialite}
                       onChange={set('specialite')}
+                      style={{ background: 'transparent', color: '#f1f5f9' }}
                     >
-                      <option value="">{categoriesLoading ? 'Chargement...' : 'Choisir une spécialité...'}</option>
+                      <option value="" style={{ background: '#0b1219', color: '#475569' }}>
+                        {categoriesLoading ? 'Chargement...' : 'Choisir une spécialité...'}
+                      </option>
                       {(categories || []).map(c => (
-                        <option key={c.id ?? c.nom} value={c.nom}>{c.nom}</option>
+                        <option key={c.id ?? c.nom} value={c.nom} style={{ background: '#0b1219', color: '#f1f5f9' }}>
+                          {c.nom}
+                        </option>
                       ))}
-                      <option value="autre">Autre</option>
-
+                      <option value="autre" style={{ background: '#0b1219', color: '#f1f5f9' }}>Autre</option>
                     </select>
                   </div>
                   {errors.specialite && (
@@ -416,14 +660,37 @@ export default function RegisterPrestataire() {
                   )}
                 </div>
 
-
                 <div className="rp-field">
                   <label className="rp-label">Biographie (optionnel)</label>
-                  <textarea className="rp-input" style={{ border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '12px 14px', width: '100%', resize: 'vertical', background: '#fafbfc', fontFamily: 'inherit' }}
-                    rows={4} placeholder="Décrivez votre expérience, vos compétences, vos certifications..."
-                    value={form.bio} onChange={e => setForm(p => ({ ...p, bio: e.target.value }))}
-                    onFocus={e => { e.target.style.borderColor = '#059669'; e.target.style.boxShadow = '0 0 0 4px rgba(5,150,105,0.10)'; e.target.style.background = 'white'; }}
-                    onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; e.target.style.background = '#fafbfc'; }} />
+                  <textarea 
+                    className="rp-input" 
+                    style={{ 
+                      border: '1.5px solid #1e293b', 
+                      borderRadius: 16, 
+                      padding: '14px 16px', 
+                      width: '100%', 
+                      resize: 'vertical', 
+                      background: '#0b1219', 
+                      fontFamily: 'inherit',
+                      color: '#f1f5f9',
+                      outline: 'none',
+                      transition: 'all 0.25s ease'
+                    }}
+                    rows={4} 
+                    placeholder="Décrivez votre expérience, vos compétences, vos certifications..."
+                    value={form.bio} 
+                    onChange={e => setForm(p => ({ ...p, bio: e.target.value }))}
+                    onFocus={e => { 
+                      e.target.style.borderColor = '#10b981'; 
+                      e.target.style.boxShadow = '0 0 0 4px rgba(16, 185, 129, 0.15)'; 
+                      e.target.style.background = '#0f1c16'; 
+                    }}
+                    onBlur={e => { 
+                      e.target.style.borderColor = '#1e293b'; 
+                      e.target.style.boxShadow = 'none'; 
+                      e.target.style.background = '#0b1219'; 
+                    }} 
+                  />
                 </div>
 
                 <div className="rp-info-box">
@@ -443,17 +710,17 @@ export default function RegisterPrestataire() {
                 </div>
 
                 <div className="rp-pay-grid">
-                  <div className="rp-pay-card">
-                    <i className="bi bi-phone-fill" style={{ color: '#16a34a' }}></i>
+                  <div className={`rp-pay-card ${form.numero_flooz ? 'active-flooz' : ''}`}>
+                    <i className="bi bi-phone-fill" style={{ color: '#10b981' }}></i>
                     <span>Flooz (Moov)</span>
                   </div>
-                  <div className="rp-pay-card">
-                    <i className="bi bi-phone-fill" style={{ color: '#2563eb' }}></i>
+                  <div className={`rp-pay-card ${form.numero_mix ? 'active-tmoney' : ''}`}>
+                    <i className="bi bi-phone-fill" style={{ color: '#3b82f6' }}></i>
                     <span>TMoney (Togocel)</span>
                   </div>
                 </div>
 
-                <div style={{ marginTop: 14 }}>
+                <div style={{ marginTop: 18 }}>
                   <div className="rp-grid">
                     <InputField label="Numéro Flooz (Moov)" name="numero_flooz" type="tel" placeholder="+228 99 00 00 00" icon="phone" value={form.numero_flooz} onChange={set('numero_flooz')} error={errors.numero_flooz} />
                     <InputField label="Numéro TMoney (Togocel)" name="numero_mix" type="tel" placeholder="+228 90 00 00 00" icon="phone" value={form.numero_mix} onChange={set('numero_mix')} error={errors.numero_mix} />
@@ -518,7 +785,7 @@ export default function RegisterPrestataire() {
                   ? <><span className="rp-spinner"></span> Création…</>
                   : step < STEPS.length - 1
                     ? <>Continuer <i className="bi bi-arrow-right"></i></>
-                    : <><i className="bi bi-check-circle-fill"></i> Créer mon compte prestataire</>
+                    : <><i className="bi bi-check-circle-fill"></i> Créer mon compte pro</>
                 }
               </button>
             </div>

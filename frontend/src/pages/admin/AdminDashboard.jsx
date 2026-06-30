@@ -1,11 +1,12 @@
+import '../../styles/admindashboard.css';
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, BarChart, Bar
 } from 'recharts';
-import api from '../api/axios';
-import '../styles/admin.css';
+import api from '../../api/axios';
+import '../../styles/admin.css';
 import { jsPDF } from 'jspdf';
 
 const COLORS = ['#0284c7','#10b981','#f59e0b','#8b5cf6','#ef4444'];
@@ -52,6 +53,7 @@ export default function AdminDashboard() {
   const [annee, setAnnee]   = useState(new Date().getFullYear());
 
   const [retraits, setRetraits] = useState([]);
+  const [retraitFilter, setRetraitFilter] = useState('all');
 
   useEffect(() => { 
     fetchStats();
@@ -455,6 +457,73 @@ export default function AdminDashboard() {
         doc.text('Aucun service enregistré.', margin + contentW/2, curY + 6, { align: 'center' });
         curY += 12;
       }
+      curY += 10;
+
+      // ── Table retraits ──
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      setTextCol('#d97706');
+      doc.text('RETRAITS DE FONDS', margin, curY);
+      setStroke('#fef3c7'); doc.setLineWidth(0.3);
+      doc.line(margin + 42, curY - 1, W - margin, curY - 1);
+      curY += 5;
+
+      const th3 = ['#', 'Prestataire', 'Montant', 'Méthode', 'Numéro', 'Statut'];
+      const tw3 = [8, 48, 30, 24, 34, 30];
+      setFill('#fffbeb'); doc.roundedRect(margin, curY, contentW, 8, 1.5, 1.5, 'F');
+      setStroke('#fef3c7'); doc.roundedRect(margin, curY, contentW, 8, 1.5, 1.5, 'S');
+
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+      setTextCol('#b45309');
+      txX = margin + 3;
+      th3.forEach((h, i) => { doc.text(h, txX, curY + 5); txX += tw3[i]; });
+      curY += 9;
+
+      const monthRetraits = retraits.filter(r => {
+        if (!r.date_demande) return false;
+        const d = new Date(r.date_demande);
+        return (d.getMonth() + 1) === mois && d.getFullYear() === annee;
+      }).slice(0, 6);
+
+      monthRetraits.forEach((r, i) => {
+        const rowBg = i % 2 === 0 ? '#ffffff' : '#fffbeb';
+        setFill(rowBg); doc.rect(margin, curY, contentW, 7.5, 'F');
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+        setTextCol('#0c2340');
+        let rx = margin + 3;
+        const statusText = r.statut === 'validee' ? 'Validé' : r.statut === 'rejetee' ? 'Rejeté' : 'En attente';
+        const vals3 = [
+          String(i+1),
+          (r.prestataire_nom || '—').substring(0, 22),
+          Number(r.montant || 0).toLocaleString() + ' F',
+          r.methode.toUpperCase(),
+          r.numero_paiement,
+          statusText
+        ];
+        vals3.forEach((v, j) => {
+          if (j === 2) {
+            doc.setFont('helvetica', 'bold'); setTextCol('#0284c7');
+            doc.text(v, rx, curY + 5.5);
+            doc.setFont('helvetica', 'normal'); setTextCol('#0c2340');
+          } else if (j === 5) {
+            const sc = r.statut === 'validee' ? '#065f46' : r.statut === 'rejetee' ? '#991b1b' : '#b45309';
+            setTextCol(sc); doc.setFont('helvetica', 'bold');
+            doc.text(v, rx, curY + 5.5);
+            doc.setFont('helvetica', 'normal'); setTextCol('#0c2340');
+          } else {
+            doc.text(v, rx, curY + 5.5);
+          }
+          rx += tw3[j];
+        });
+        setStroke('#f1f5f9'); doc.setLineWidth(0.15);
+        doc.line(margin, curY + 7.5, margin + contentW, curY + 7.5);
+        curY += 7.5;
+      });
+      if (monthRetraits.length === 0) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+        setTextCol('#94a3b8');
+        doc.text('Aucun retrait pour cette période.', margin + contentW/2, curY + 6, { align: 'center' });
+        curY += 12;
+      }
 
       // ── Footer ────────────────────────────────────────────────
       [1, 2].forEach(pNum => {
@@ -508,142 +577,7 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <style>{`
-        @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
-        .adash-fade { animation: fadeUp .4s ease both; }
-        .adash-fade:nth-child(1){animation-delay:.05s} .adash-fade:nth-child(2){animation-delay:.1s}
-        .adash-fade:nth-child(3){animation-delay:.15s} .adash-fade:nth-child(4){animation-delay:.2s}
-
-        /* Hero */
-        .adash-hero {
-          background: linear-gradient(135deg, #0c2340 0%, #0e3a6e 60%, #0284c7 100%);
-          padding: 32px 24px 56px; color:#fff; position:relative; overflow:hidden;
-          margin-bottom:-32px;
-        }
-        .adash-hero::before {
-          content:''; position:absolute; top:-60px; right:-60px;
-          width:280px; height:280px; border-radius:50%;
-          background:rgba(255,255,255,.04); pointer-events:none;
-        }
-        .adash-hero::after {
-          content:''; position:absolute; bottom:-80px; left:-40px;
-          width:200px; height:200px; border-radius:50%;
-          background:rgba(255,255,255,.03); pointer-events:none;
-        }
-        .adash-hero-inner { max-width:1400px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; position:relative; z-index:1; }
-        .adash-hero h1 { font-size:clamp(1.4rem,3vw,2rem); font-weight:800; margin:0 0 4px; }
-        .adash-hero p  { font-size:.88rem; opacity:.75; margin:0; }
-        .adash-hero-btns { display:flex; gap:10px; flex-wrap:wrap; }
-        .adash-btn-white {
-          background:#fff; color:#0284c7; border:none; border-radius:12px;
-          padding:10px 18px; font-weight:700; font-size:.85rem;
-          cursor:pointer; display:flex; align-items:center; gap:7px;
-          text-decoration:none; transition:all .2s; white-space:nowrap;
-        }
-        .adash-btn-white:hover { background:#e0f2fe; color:#0284c7; transform:translateY(-1px); }
-
-        /* Stat cards */
-        .adash-stats {
-          display:grid; grid-template-columns:repeat(4,1fr);
-          gap:16px; max-width:1400px; margin:0 auto;
-          padding:0 24px; position:relative; z-index:2;
-        }
-        @media(max-width:900px){ .adash-stats{grid-template-columns:repeat(2,1fr)} }
-        @media(max-width:480px){ 
-          .adash-stats{grid-template-columns:repeat(2,1fr); padding:0 10px; gap:10px} 
-          .adash-stat { padding:12px 10px; gap:8px; border-radius:14px; }
-          .adash-stat-icon { width:36px; height:36px; border-radius:10px; font-size:1rem; }
-          .adash-stat-val { font-size:1.1rem; }
-          .adash-stat-lbl { font-size:0.68rem; margin-top:1px; }
-          .adash-stat-trend { font-size:0.62rem; margin-top:2px; }
-        }
-        .adash-stat:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(2,132,199,.18); border-color:#7dd3fc; }
-        .adash-stat-icon { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0; }
-        .adash-stat-val  { font-size:1.6rem; font-weight:800; color:#0c2340; line-height:1; }
-        .adash-stat-lbl  { font-size:.78rem; color:#64748b; margin-top:3px; font-weight:500; }
-        .adash-stat-trend{ font-size:.72rem; font-weight:600; margin-top:4px; }
-
-        /* Section wrapper */
-        .adash-section { max-width:1400px; margin:24px auto 0; padding:0 24px; }
-        @media(max-width:480px){ .adash-section{padding:0 12px} }
-        .adash-section-title {
-          font-size:.7rem; font-weight:700; text-transform:uppercase;
-          letter-spacing:.1em; color:#0284c7; margin-bottom:14px;
-          display:flex; align-items:center; gap:8px;
-        }
-        .adash-section-title::after { content:''; flex:1; height:1px; background:#e0f2fe; }
-
-        /* Quick links */
-        .adash-quick {
-          display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr));
-          gap:12px;
-        }
-        .adash-quick-card {
-          background:#fff; border-radius:16px; border:1.5px solid #e0f2fe;
-          box-shadow:0 2px 12px rgba(2,132,199,.06);
-          padding:16px; text-decoration:none; color:inherit;
-          display:flex; flex-direction:column; align-items:center; gap:10px;
-          text-align:center; transition:all .22s;
-        }
-        .adash-quick-card:hover { transform:translateY(-4px); box-shadow:0 10px 28px rgba(2,132,199,.16); border-color:#7dd3fc; color:inherit; }
-        .adash-quick-icon { width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; }
-        .adash-quick-label { font-weight:700; font-size:.85rem; color:#0c2340; }
-        .adash-quick-desc  { font-size:.72rem; color:#94a3b8; margin-top:-4px; }
-
-        /* Charts grid */
-        .adash-charts { display:grid; grid-template-columns:2fr 1fr; gap:16px; }
-        @media(max-width:768px){ .adash-charts{grid-template-columns:1fr} }
-
-        .adash-chart-card {
-          background:#fff; border-radius:16px; border:1.5px solid #e0f2fe;
-          box-shadow:0 4px 20px rgba(2,132,199,.07); overflow:hidden;
-        }
-        .adash-chart-header {
-          padding:14px 18px; border-bottom:1px solid #f1f5f9;
-          font-weight:700; font-size:.9rem; color:#0c2340;
-          display:flex; align-items:center; gap:8px;
-        }
-
-        /* PDF card */
-        .adash-pdf {
-          background: linear-gradient(135deg, #0c2340, #0284c7);
-          border-radius:20px; padding:24px; color:#fff;
-          display:flex; align-items:center; gap:20px; flex-wrap:wrap;
-        }
-        .adash-pdf-icon { font-size:2.5rem; flex-shrink:0; }
-        .adash-pdf-title { font-weight:800; font-size:1.05rem; margin-bottom:4px; }
-        .adash-pdf-sub   { font-size:.8rem; opacity:.8; }
-        .adash-pdf-controls { display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap; }
-        .adash-pdf-select {
-          background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25);
-          color:#fff; border-radius:10px; padding:7px 12px; font-size:.82rem;
-          outline:none; cursor:pointer;
-        }
-        .adash-pdf-select option { color:#0c2340; background:#fff; }
-        .adash-pdf-btn {
-          background:#fff; color:#0284c7; border:none; border-radius:10px;
-          padding:8px 18px; font-weight:700; font-size:.85rem;
-          cursor:pointer; display:flex; align-items:center; gap:7px;
-          transition:all .2s; white-space:nowrap;
-        }
-        .adash-pdf-btn:hover { background:#e0f2fe; }
-        .adash-pdf-btn:disabled { background:rgba(255,255,255,.4); cursor:not-allowed; }
-
-        /* Recent tables */
-        .adash-recent { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-        @media(max-width:768px){ .adash-recent{grid-template-columns:1fr} }
-        .adash-table-card { background:#fff; border-radius:16px; border:1.5px solid #e0f2fe; box-shadow:0 4px 20px rgba(2,132,199,.07); overflow:hidden; }
-        .adash-table-head { padding:14px 18px; border-bottom:1px solid #f1f5f9; font-weight:700; font-size:.9rem; color:#0c2340; display:flex; align-items:center; gap:8px; }
-        table.adash-tbl { width:100%; border-collapse:collapse; font-size:.83rem; }
-        table.adash-tbl th { padding:10px 16px; background:#f8fafc; color:#64748b; font-weight:600; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; text-align:left; }
-        table.adash-tbl td { padding:11px 16px; border-top:1px solid #f1f5f9; color:#0c2340; vertical-align:middle; }
-        table.adash-tbl tr:hover td { background:#f0f9ff; }
-
-        .adash-spinner { width:16px; height:16px; border:2px solid rgba(2,132,199,.2); border-top-color:#0284c7; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
-        @keyframes spin { to{transform:rotate(360deg)} }
-      `}</style>
+      
 
       <div className="admin-page" style={{ padding:0, paddingBottom:48 }}>
 
@@ -666,21 +600,51 @@ export default function AdminDashboard() {
         </div>
 
         {/* ── Stats cards ── */}
-        <div className="adash-stats" style={{ marginTop:32 }}>
+        <div className="adash-stats-container" style={{ 
+          display:'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+          gap:'16px', 
+          maxWidth:'1400px', 
+          margin:'32px auto 0', 
+          padding:'0 24px', 
+          position:'relative', 
+          zIndex:2 
+        }}>
           {[
             { label:'Utilisateurs',   value:stats.total_comptes,      icon:'people-fill',    bg:'#e0f2fe', ic:'#0284c7', trend:'+12%' },
             { label:'Services actifs',value:stats.total_services,     icon:'briefcase-fill', bg:'#d1fae5', ic:'#10b981', trend:'+8%' },
             { label:'Réservations',   value:stats.total_reservations, icon:'calendar-check-fill', bg:'#fef3c7', ic:'#d97706', trend:'+24%' },
             { label:'Prestataires',   value:stats.total_prestataires, icon:'person-badge-fill',   bg:'#ede9fe', ic:'#8b5cf6', trend:'+5%' },
           ].map((s,i) => (
-            <div key={i} className="adash-stat adash-fade">
-              <div className="adash-stat-icon" style={{ background:s.bg }}>
+            <div key={i} className="adash-stat adash-fade" style={{ 
+              display: 'flex', 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              gap: '16px',
+              padding: '20px',
+              borderRadius: '20px',
+              background: '#fff',
+              border: '1.5px solid #e0f2fe',
+              boxShadow: '0 4px 12px rgba(2,132,199,0.05)',
+              transition: 'all 0.2s ease',
+              animationDelay: `${i * 0.1}s`
+            }}>
+              <div className="adash-stat-icon" style={{ 
+                background: s.bg, 
+                width: '56px', 
+                height: '56px', 
+                borderRadius: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem',
+                flexShrink: 0
+              }}>
                 <i className={`bi bi-${s.icon}`} style={{ color:s.ic }}></i>
               </div>
-              <div>
-                <div className="adash-stat-val"><AnimatedNumber value={s.value} /></div>
-                <div className="adash-stat-lbl">{s.label}</div>
-                <div className="adash-stat-trend" style={{ color:'#22c55e' }}>{s.trend} ce mois</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="adash-stat-val" style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0c2340', lineHeight: 1.1 }}><AnimatedNumber value={s.value} /></div>
+                <div className="adash-stat-lbl" style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600, marginTop: 4 }}>{s.label}</div>
               </div>
             </div>
           ))}
@@ -804,12 +768,32 @@ export default function AdminDashboard() {
 
         {/* ── Demandes de retrait ── */}
         <div className="adash-section" style={{ marginTop:28 }}>
-          <div className="adash-section-title"><i className="bi bi-cash-stack"></i>Demandes de retrait</div>
+          <div className="adash-section-title"><i className="bi bi-cash-stack"></i>Demandes et historique de retrait</div>
           <div className="adash-table-card">
-            <div className="adash-table-head">
-              <i className="bi bi-clock-history" style={{ color:'#d97706' }}></i>
-              Demandes en attente
+            {/* Tabs Filter */}
+            <div style={{ display: 'flex', gap: 8, padding: '12px 20px', borderBottom: '1px solid #f1f5f9', background: '#fafbfc', flexWrap: 'wrap' }}>
+              {['all', 'en_attente', 'validee', 'rejetee'].map(f => {
+                const count = f === 'all' ? retraits.length : retraits.filter(r => r.statut === f).length;
+                const label = f === 'all' ? 'Tous' : f === 'en_attente' ? 'En attente' : f === 'validee' ? 'Validés' : 'Rejetés';
+                const isActive = retraitFilter === f;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setRetraitFilter(f)}
+                    style={{
+                      padding: '6px 14px', borderRadius: 20, border: 'none',
+                      background: isActive ? '#0284c7' : '#f1f5f9',
+                      color: isActive ? 'white' : '#64748b',
+                      fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                    }}
+                  >
+                    {label} <span style={{ opacity: 0.7, fontSize: '0.72rem', background: isActive ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.06)', padding: '2px 6px', borderRadius: 10 }}>{count}</span>
+                  </button>
+                );
+              })}
             </div>
+
             <div style={{ overflowX:'auto' }}>
               <table className="adash-tbl">
                 <thead>
@@ -819,31 +803,52 @@ export default function AdminDashboard() {
                     <th>Méthode</th>
                     <th>Numéro</th>
                     <th>Statut</th>
-                    <th>Actions</th>
+                    <th>Actions / Notes</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {retraits.filter(r => r.statut === 'en_attente').map(r => (
-                    <tr key={r.id}>
-                      <td style={{ fontWeight:700 }}>{r.prestataire_nom}</td>
-                      <td style={{ color:'#0284c7', fontWeight:800 }}>{Number(r.montant).toLocaleString()} F</td>
-                      <td style={{ textTransform:'uppercase', fontSize:'.75rem', fontWeight:600 }}>{r.methode}</td>
-                      <td style={{ fontStyle:'italic' }}>{r.numero_paiement}</td>
-                      <td>
-                        <span style={{ background:'#fef3c7', color:'#d97706', padding:'3px 10px', borderRadius:50, fontSize:'.72rem', fontWeight:700 }}>
-                          En attente
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display:'flex', gap:6 }}>
-                          <button onClick={() => validerRetrait(r.id)} style={{ padding:'4px 10px', background:'#d1fae5', color:'#065f46', border:'none', borderRadius:6, fontSize:'.75rem', fontWeight:700, cursor:'pointer' }}>Valider</button>
-                          <button onClick={() => rejeterRetrait(r.id)} style={{ padding:'4px 10px', background:'#fee2e2', color:'#991b1b', border:'none', borderRadius:6, fontSize:'.75rem', fontWeight:700, cursor:'pointer' }}>Rejeter</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {retraits.filter(r => r.statut === 'en_attente').length === 0 && (
-                    <tr><td colSpan={6} style={{ textAlign:'center', color:'#94a3b8', padding:24 }}>Aucune demande en attente</td></tr>
+                  {retraits
+                    .filter(r => retraitFilter === 'all' ? true : r.statut === retraitFilter)
+                    .map(r => {
+                      let statusBg = '#fef3c7';
+                      let statusColor = '#d97706';
+                      let statusText = 'En attente';
+                      if (r.statut === 'validee') {
+                        statusBg = '#d1fae5';
+                        statusColor = '#065f46';
+                        statusText = 'Validé';
+                      } else if (r.statut === 'rejetee') {
+                        statusBg = '#fee2e2';
+                        statusColor = '#991b1b';
+                        statusText = 'Rejeté';
+                      }
+
+                      return (
+                        <tr key={r.id}>
+                          <td style={{ fontWeight:700 }}>{r.prestataire_nom}</td>
+                          <td style={{ color:'#0284c7', fontWeight:800 }}>{Number(r.montant).toLocaleString()} F</td>
+                          <td style={{ textTransform:'uppercase', fontSize:'.75rem', fontWeight:600 }}>{r.methode}</td>
+                          <td style={{ fontStyle:'italic' }}>{r.numero_paiement}</td>
+                          <td>
+                            <span style={{ background: statusBg, color: statusColor, padding:'3px 10px', borderRadius:50, fontSize:'.72rem', fontWeight:700 }}>
+                              {statusText}
+                            </span>
+                          </td>
+                          <td>
+                            {r.statut === 'en_attente' ? (
+                              <div style={{ display:'flex', gap:6 }}>
+                                <button onClick={() => validerRetrait(r.id)} style={{ padding:'4px 10px', background:'#d1fae5', color:'#065f46', border:'none', borderRadius:6, fontSize:'.75rem', fontWeight:700, cursor:'pointer' }}>Valider</button>
+                                <button onClick={() => rejeterRetrait(r.id)} style={{ padding:'4px 10px', background:'#fee2e2', color:'#991b1b', border:'none', borderRadius:6, fontSize:'.75rem', fontWeight:700, cursor:'pointer' }}>Rejeter</button>
+                              </div>
+                            ) : (
+                              <span style={{ color:'#64748b', fontSize:'.78rem' }}>{r.notes_admin || '—'}</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {retraits.filter(r => retraitFilter === 'all' ? true : r.statut === retraitFilter).length === 0 && (
+                    <tr><td colSpan={6} style={{ textAlign:'center', color:'#94a3b8', padding:24 }}>Aucun retrait trouvé pour ce filtre</td></tr>
                   )}
                 </tbody>
               </table>

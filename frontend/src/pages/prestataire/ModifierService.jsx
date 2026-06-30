@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import api from '../api/axios';
+import api from '../../api/axios';
 
 export default function ModifierService() {
   const { id } = useParams();

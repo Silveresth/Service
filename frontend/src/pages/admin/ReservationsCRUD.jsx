@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import DataTable from '../components/DataTable';
-import SearchFilter from '../components/SearchFilter';
-import ConfirmModal from '../components/ConfirmModal';
-import crudService from '../utils/crudService';
+import DataTable from '../../components/DataTable';
+import SearchFilter from '../../components/SearchFilter';
+import ConfirmModal from '../../components/ConfirmModal';
+import crudService from '../../utils/crudService';
 
 export default function ReservationsCRUD() {
   const [items, setItems] = useState([]);

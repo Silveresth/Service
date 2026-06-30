@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import api from '../api/axios';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import api from '../../api/axios';
 
 const PAS_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap');
@@ -206,25 +206,100 @@ const PAS_STYLES = `
 
 export default function PrestataireAjouterService() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit') || id;
+
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({
     nom: '', description: '', prix: '', categorie: '', disponibilite: true,
   });
   const [imageFile, setImageFile]   = useState(null);
-  // Modèle 3D supprimé
   const [imagePreview, setImagePreview] = useState(null);
+  const [clearImage, setClearImage] = useState(false);
+
+  const [model3dFile, setModel3dFile] = useState(null);
+  const [model3dFileName, setModel3dFileName] = useState('');
+  const [model3dPreviewUrl, setModel3dPreviewUrl] = useState('');
+  const [clearModel3D, setClearModel3D] = useState(false);
+
+  const [galleryFiles, setGalleryFiles] = useState([]);
+  const [existingGallery, setExistingGallery] = useState([]);
+  const [deletedGalleryIds, setDeletedGalleryIds] = useState([]);
+
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState('');
+
 
   useEffect(() => {
     api.get('/categories/').then(r => setCategories(r.data)).catch(() => setError('Erreur chargement catégories.'));
   }, []);
 
+  useEffect(() => {
+    if (!editId) return;
+    api.get(`/services/${editId}/`).then(res => {
+      const s = res.data;
+      setForm({
+        nom: s.nom || '',
+        description: s.description || '',
+        prix: s.prix || '',
+        categorie: s.categorie?.id || '',
+        disponibilite: s.disponibilite !== false,
+      });
+
+      if (s.image_url) {
+        setImagePreview(s.image_url);
+      } else {
+        setImagePreview(null);
+      }
+
+      if (s.model_3d_url) {
+        setModel3dPreviewUrl(s.model_3d_url);
+      } else {
+        setModel3dPreviewUrl('');
+      }
+
+      if (s.images) {
+        setExistingGallery(s.images);
+      } else {
+        setExistingGallery([]);
+      }
+    }).catch(() => setError('Erreur lors du chargement du service à modifier.'));
+  }, [editId]);
+
+
   const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }));
 
   const handleImage = e => {
     const file = e.target.files[0];
-    if (file) { setImageFile(file); setImagePreview(URL.createObjectURL(file)); }
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+      setClearImage(false);
+    }
+  };
+
+  const handleModel3D = e => {
+    const file = e.target.files[0];
+    if (file) {
+      setModel3dFile(file);
+      setModel3dFileName(file.name);
+      setClearModel3D(false);
+    }
+  };
+
+  const handleMultipleImages = e => {
+    const files = Array.from(e.target.files);
+    setGalleryFiles(prev => [...prev, ...files]);
+  };
+
+  const removeGalleryFile = idx => {
+    setGalleryFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const removeExistingGalleryImage = id => {
+    setDeletedGalleryIds(prev => [...prev, id]);
+    setExistingGallery(prev => prev.filter(item => item.id !== id));
   };
 
 
@@ -232,17 +307,56 @@ export default function PrestataireAjouterService() {
     e.preventDefault();
     if (!form.nom.trim() || !form.prix || !form.categorie) { setError('Nom, prix et catégorie sont obligatoires.'); return; }
     setLoading(true); setError('');
+
+    // If there are deleted images, call API to delete them
+    if (editId) {
+      for (const imgId of deletedGalleryIds) {
+        try {
+          await api.post(`/services/${editId}/supprimer_image/`, { image_id: imgId });
+        } catch (err) {
+          console.error("Error deleting image from gallery:", err);
+        }
+      }
+    }
+
     const data = new FormData();
-    Object.entries(form).forEach(([k, v]) => data.append(k, v));
-    if (imageFile) data.append('image', imageFile);
-    // Suppression du modèle 3D : ne plus envoyer model_3d
+    Object.entries(form).forEach(([k, v]) => {
+      if (k === 'categorie') {
+        data.append('categorie_id', v);
+      } else {
+        data.append(k, v);
+      }
+    });
+
+    if (clearImage) {
+      data.append('image', '');
+    } else if (imageFile) {
+      data.append('image', imageFile);
+    }
+
+    if (clearModel3D) {
+      data.append('model_3d', '');
+    } else if (model3dFile) {
+      data.append('model_3d', model3dFile);
+    }
+
+    // Append new gallery images
+    galleryFiles.forEach(file => {
+      data.append('uploaded_images', file);
+    });
+
     try {
-      await api.post('/services/', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (editId) {
+        await api.patch(`/services/${editId}/`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
+      } else {
+        await api.post('/services/', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+      }
       navigate('/prestataire-mes-services');
     } catch (err) {
       setError(err.response?.data?.detail || JSON.stringify(err.response?.data) || 'Erreur lors de la publication.');
     } finally { setLoading(false); }
   };
+
 
   return (
     <>
@@ -256,7 +370,7 @@ export default function PrestataireAjouterService() {
             <div className="pas-hero-top">
               <div className="pas-hero-icon"><i className="bi bi-plus-circle-fill"></i></div>
               <div>
-                <h1 className="pas-hero-title">Créer un nouveau service</h1>
+                <h1 className="pas-hero-title">{editId ? 'Modifier le service' : 'Créer un nouveau service'}</h1>
                 <p className="pas-hero-sub"><i className="bi bi-lightning-charge-fill me-1"></i>Mode Prestataire · Remplissez les informations ci-dessous</p>
               </div>
             </div>
@@ -342,14 +456,87 @@ export default function PrestataireAjouterService() {
                       }
                     </div>
                     {imagePreview && (
-                      <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); }}
-                        style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+                      <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); setClearImage(true); }}
+                        style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center', width: '100%' }}>
                         <i className="bi bi-x-circle"></i> Supprimer
                       </button>
                     )}
                   </div>
 
+                  {/* Modèle 3D */}
+                  <div>
+                    <label className="pas-label" style={{ textAlign: 'center' }}>Modèle 3D (AR Preview)</label>
+                    <div className="pas-upload-zone" onClick={() => document.getElementById('pas-model3d').click()} style={{ alignItems: 'center' }}>
+                      <input type="file" id="pas-model3d" hidden accept=".gltf,.glb" onChange={handleModel3D} />
+                      {model3dFileName || model3dPreviewUrl
+                        ? <div style={{ textAlign: 'center' }}>
+                            <i className="bi bi-box-seam-fill pas-upload-icon" style={{ color: '#a855f7' }}></i>
+                            <span className="pas-upload-label" style={{ display: 'block', fontSize: '0.8rem', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {model3dFileName || "Modèle 3D existant"}
+                            </span>
+                          </div>
+                        : <>
+                          <i className="bi bi-box-seam pas-upload-icon" style={{ color: '#c084fc' }}></i>
+                          <span className="pas-upload-label">Ajouter modèle 3D</span>
+                          <span className="pas-upload-hint">GLTF, GLB (Optionnel)</span>
+                        </>
+                      }
+                    </div>
+                    {(model3dFileName || model3dPreviewUrl) && (
+                      <button type="button" onClick={() => { setModel3dFile(null); setModel3dFileName(''); setModel3dPreviewUrl(''); setClearModel3D(true); }}
+                        style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center', width: '100%' }}>
+                        <i className="bi bi-x-circle"></i> Supprimer
+                      </button>
+                    )}
+                  </div>
+                </div>
 
+                <div style={{ marginTop: 24, borderTop: '1px solid #f1f5f9', paddingTop: 18 }}>
+                  <label className="pas-label" style={{ fontWeight: 700 }}>Galerie de photos du service (Optionnel)</label>
+                  <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '4px 0 12px' }}>
+                    Ajoutez d'autres photos sous différents angles pour mieux présenter votre réalisation.
+                  </p>
+                  
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {/* Add button */}
+                    <div onClick={() => document.getElementById('pas-gallery-input').click()} style={{
+                      width: 80, height: 80, border: '2px dashed #cbd5e1', borderRadius: 12,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', color: '#64748b'
+                    }}>
+                      <input type="file" id="pas-gallery-input" hidden multiple accept="image/*" onChange={handleMultipleImages} />
+                      <i className="bi bi-plus-lg" style={{ fontSize: '1.4rem' }} />
+                      <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Ajouter</span>
+                    </div>
+
+                    {/* Existing uploaded gallery images */}
+                    {existingGallery.map(img => (
+                      <div key={img.id} style={{ position: 'relative', width: 80, height: 80, borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                        <img src={img.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <button type="button" onClick={() => removeExistingGalleryImage(img.id)} style={{
+                          position: 'absolute', top: 4, right: 4, width: 18, height: 18, borderRadius: '50%',
+                          background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.7rem'
+                        }}>
+                          <i className="bi bi-x" />
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* New selected files */}
+                    {galleryFiles.map((file, idx) => (
+                      <div key={idx} style={{ position: 'relative', width: 80, height: 80, borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                        <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <button type="button" onClick={() => removeGalleryFile(idx)} style={{
+                          position: 'absolute', top: 4, right: 4, width: 18, height: 18, borderRadius: '50%',
+                          background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.7rem'
+                        }}>
+                          <i className="bi bi-x" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div style={{ marginTop: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', fontSize: '0.8rem', color: '#166534', display: 'flex', alignItems: 'flex-start', gap: 8 }}>

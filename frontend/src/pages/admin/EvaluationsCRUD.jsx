@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import DataTable from '../components/DataTable';
-import SearchFilter from '../components/SearchFilter';
-import crudService from '../utils/crudService';
+import DataTable from '../../components/DataTable';
+import SearchFilter from '../../components/SearchFilter';
+import crudService from '../../utils/crudService';
 
 export default function EvaluationsCRUD() {
   const [items, setItems] = useState([]);

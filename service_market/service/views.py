@@ -23,6 +23,8 @@ import uuid
 import json
 import requests
 from django.conf import settings
+import logging
+logger = logging.getLogger(__name__)
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
@@ -91,7 +93,11 @@ class CompteViewSet(viewsets.ModelViewSet):
     def get_object(self):
         pk = self.kwargs.get('pk')
         if pk == 'me':
-            return self.request.user
+            user = self.request.user
+            if not user or user.is_anonymous:
+                from rest_framework.exceptions import NotAuthenticated
+                raise NotAuthenticated("Vous devez être authentifié pour accéder à votre profil.")
+            return user
         return super().get_object()
 
     def get_permissions(self):
@@ -133,19 +139,56 @@ class ServiceViewSet(viewsets.ModelViewSet):
         prestataire, created = Prestataire.objects.get_or_create(user=self.request.user)
         if created:
             logger.info(f"Created missing Prestataire profile for user {self.request.user.username}")
-        serializer.save(prestataire=prestataire)
+        service = serializer.save(prestataire=prestataire)
+        
+        # Enregistrer les images additionnelles
+        from .models import ServiceImage
+        images_data = self.request.FILES.getlist('uploaded_images')
+        for img in images_data:
+            ServiceImage.objects.create(service=service, image=img)
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         if instance.prestataire.user != request.user and not request.user.is_staff:
             return Response({'error': 'Vous ne pouvez modifier que vos propres services'}, status=403)
-        return super().update(request, *args, **kwargs)
+            
+        response = super().update(request, *args, **kwargs)
+        
+        # Gérer les images additionnelles
+        from .models import ServiceImage
+        if request.data.get('clear_gallery') == 'true' or request.data.get('clear_gallery') is True:
+            instance.images.all().delete()
+            
+        images_data = request.FILES.getlist('uploaded_images')
+        for img in images_data:
+            ServiceImage.objects.create(service=instance, image=img)
+            
+        return response
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         if instance.prestataire.user != request.user and not request.user.is_staff:
             return Response({'error': 'Vous ne pouvez supprimer que vos propres services'}, status=403)
         return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def supprimer_image(self, request, pk=None):
+        """Supprime une image spécifique de la galerie du service"""
+        service = self.get_object()
+        if service.prestataire.user != request.user and not request.user.is_staff:
+            return Response({'error': 'Non autorisé'}, status=403)
+            
+        image_id = request.data.get('image_id')
+        if not image_id:
+            return Response({'error': "Veuillez fournir image_id"}, status=400)
+            
+        from .models import ServiceImage
+        try:
+            img = service.images.get(id=image_id)
+            img.delete()
+            return Response({'message': 'Image supprimée avec succès'}, status=200)
+        except ServiceImage.DoesNotExist:
+            return Response({'error': 'Image non trouvée'}, status=404)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def mes_services(self, request):
@@ -217,12 +260,6 @@ class PrestataireViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Monthly revenue (last 6 months) — toujours 6 mois glissants avec labels
         from datetime import date as _date
-        try:
-            from dateutil.relativedelta import relativedelta as _rd
-        except ImportError:
-            import subprocess, sys
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'python-dateutil', '--break-system-packages', '-q'])
-            from dateutil.relativedelta import relativedelta as _rd
 
         _today = _date.today()
         _MOIS_FR = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc']
@@ -242,10 +279,24 @@ class PrestataireViewSet(viewsets.ReadOnlyModelViewSet):
 
         revenue_monthly = []
         monthly_labels = []
-        for _i in range(5, -1, -1):
-            _d = _today - _rd(months=_i)
-            revenue_monthly.append(_map.get((_d.year, _d.month), 0.0))
-            monthly_labels.append(_MOIS_FR[_d.month - 1])
+        
+        curr_year = _today.year
+        curr_month = _today.month
+        
+        months_list = []
+        for _i in range(6):
+            months_list.append((curr_year, curr_month))
+            curr_month -= 1
+            if curr_month == 0:
+                curr_month = 12
+                curr_year -= 1
+                
+        # Chronological order: oldest to newest
+        months_list.reverse()
+
+        for _year, _month in months_list:
+            revenue_monthly.append(_map.get((_year, _month), 0.0))
+            monthly_labels.append(_MOIS_FR[_month - 1])
 
         # Top 3 services — calcul du CA par service
         # Modèle:
@@ -274,16 +325,107 @@ class PrestataireViewSet(viewsets.ReadOnlyModelViewSet):
             'category_avg_revenue': category_avg_revenue,
             'revenue_monthly': revenue_monthly,
             'monthly_labels': monthly_labels,
-            'top_services': top_services
+            'top_services': top_services,
+            'solde': float(prestataire.solde or 0),
+            'statut_activite': prestataire.statut_activite,
         }
+
         
         try:
             serializer = PrestataireStatsSerializer(data)
             serializer.is_valid(raise_exception=True)
             return Response(serializer.data)
         except Exception as e:
-            logger.error(f"Stats serializer error: {e}")
-            return Response(data, status=200)  # Return raw data if serializer fails
+            logger.exception(f"Stats serializer error: {e}")
+            # Return raw data for debugging, but keep status 200 so frontend can render fallback.
+            return Response(data, status=200)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def modifier_statut(self, request):
+        """Met à jour le statut d'activité en temps réel du prestataire"""
+        try:
+            prestataire = Prestataire.objects.get(user=request.user)
+        except Prestataire.DoesNotExist:
+            return Response({'error': "Vous n'êtes pas prestataire"}, status=403)
+            
+        nouveau_statut = request.data.get('statut_activite')
+        if nouveau_statut not in ['disponible', 'occupe', 'hors_ligne']:
+            return Response({'error': "Statut d'activité invalide."}, status=400)
+            
+        prestataire.statut_activite = nouveau_statut
+        prestataire.save()
+        return Response({
+            'message': "Statut d'activité mis à jour",
+            'statut_activite': prestataire.statut_activite
+        }, status=200)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def ajouter_portfolio(self, request):
+        """Ajoute des images de réalisations au portfolio du prestataire"""
+        try:
+            prestataire = Prestataire.objects.get(user=request.user)
+        except Prestataire.DoesNotExist:
+            return Response({'error': "Vous n'êtes pas prestataire"}, status=403)
+            
+        from .models import PrestatairePortfolio
+        images_data = request.FILES.getlist('uploaded_portfolio')
+        description = request.data.get('description', '')
+        
+        portfolio_items = []
+        for img in images_data:
+            item = PrestatairePortfolio.objects.create(prestataire=prestataire, image=img, description=description)
+            portfolio_items.append(item)
+            
+        from .serializers import PrestatairePortfolioSerializer
+        return Response({
+            'message': 'Images ajoutées au portfolio',
+            'portfolio': PrestatairePortfolioSerializer(portfolio_items, many=True, context={'request': request}).data
+        }, status=201)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def supprimer_portfolio(self, request):
+        """Supprime une image du portfolio du prestataire"""
+        try:
+            prestataire = Prestataire.objects.get(user=request.user)
+        except Prestataire.DoesNotExist:
+            return Response({'error': "Vous n'êtes pas prestataire"}, status=403)
+            
+        portfolio_id = request.data.get('portfolio_id')
+        if not portfolio_id:
+            return Response({'error': "Veuillez fournir portfolio_id"}, status=400)
+            
+        from .models import PrestatairePortfolio
+        try:
+            item = prestataire.portfolio.get(id=portfolio_id)
+            item.delete()
+            return Response({'message': 'Réalisation supprimée du portfolio'}, status=200)
+        except PrestatairePortfolio.DoesNotExist:
+            return Response({'error': 'Réalisation non trouvée'}, status=404)
+
+
+
+
+def liberer_fonds_escrow(reservation):
+    """Crédite le solde du prestataire une fois la prestation validée/terminée (système séquestre)."""
+    from django.db import transaction
+    from django.db.models import F
+    from .models import Prestataire, Paiement
+    
+    try:
+        paiement = reservation.paiement
+        if paiement and paiement.statut == 'confirme' and not getattr(paiement, 'fonds_liberes', False):
+            with transaction.atomic():
+                paiement = Paiement.objects.select_for_update().get(pk=paiement.pk)
+                if not paiement.fonds_liberes:
+                    prestataire = Prestataire.objects.select_for_update().get(id=reservation.service.prestataire_id)
+                    prestataire.solde = F('solde') + paiement.montant_prestataire
+                    prestataire.save()
+                    
+                    paiement.fonds_liberes = True
+                    paiement.save()
+                    logger.info(f"Séquestre libéré : {paiement.montant_prestataire} FCFA versés au prestataire {prestataire.user.username} pour résa #{reservation.id}")
+    except Exception as e:
+        logger.error(f"Erreur lors de la libération des fonds pour la réservation {reservation.id} : {e}", exc_info=True)
 
 
 # ── Reservation ──────────────────────────────────────────────────
@@ -362,9 +504,10 @@ class ReservationViewSet(viewsets.ModelViewSet):
                 elif instance.statut == 'confirmee' and new_statut == 'terminee':
                     instance.statut = 'terminee'
                     instance.save()
+                    liberer_fonds_escrow(instance)
                     create_notification(
                         instance.service.prestataire.user,
-                        f"Le client {user.username} a marqué la réservation '{instance.service.nom}' comme terminée.",
+                        f"Le client {user.username} a marqué la réservation '{instance.service.nom}' comme terminée. Les fonds ont été crédités sur votre solde.",
                         'reservation'
                     )
                     return Response(ReservationSerializer(instance).data)
@@ -515,6 +658,7 @@ class ReservationViewSet(viewsets.ModelViewSet):
         reservation.evaluation = evaluation
         reservation.statut = 'terminee'
         reservation.save()
+        liberer_fonds_escrow(reservation)
         return Response({
             'message': 'Évaluation créée', 
             'note': int(note),
@@ -610,7 +754,7 @@ class EvaluationViewSet(viewsets.ModelViewSet):
         GET /evaluations/ → toutes les évaluations publiques (avec filtre optionnel ?service=<id>)
         Auth: comportement identique, mais on peut aussi filtrer les propres évaluations
         """
-        qs = Evaluation.objects.all()
+        qs = Evaluation.objects.all().order_by('-date_eval')
 
         # Filtre optionnel par service
         service_id = self.request.query_params.get('service')
@@ -656,7 +800,7 @@ class EvaluationViewSet(viewsets.ModelViewSet):
             logger.info(f"Created missing Prestataire profile for {request.user.username} in service_evaluations")
         evaluations = Evaluation.objects.filter(
             reservation__service__prestataire=prestataire
-        ).prefetch_related('reservation__service')
+        ).prefetch_related('reservation__service').order_by('-date_eval')
         serializer = self.get_serializer(evaluations, many=True)
         return Response(serializer.data)
 
@@ -1072,7 +1216,7 @@ class AdminViewSet(viewsets.ViewSet):
         evaluations = Evaluation.objects.prefetch_related(
             'reservation__service__prestataire__user',
             'reservation__client__user',
-        ).all()
+        ).all().order_by('-date_eval')
         serializer = EvaluationSerializer(evaluations, many=True)
         return Response(serializer.data)
 
@@ -1183,75 +1327,119 @@ class DemandeRetraitViewSet(viewsets.ModelViewSet):
             return DemandeRetrait.objects.none()
 
     def perform_create(self, serializer):
+        from django.db import transaction
         try:
-            prestataire = Prestataire.objects.get(user=self.request.user)
-            montant = serializer.validated_data['montant']
+            with transaction.atomic():
+                prestataire = Prestataire.objects.select_for_update().get(user=self.request.user)
+                montant = serializer.validated_data['montant']
+                
+                if prestataire.solde < montant:
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError("Solde insuffisant pour ce retrait.")
+                
+                # Déduire du solde immédiatement (sécurité)
+                prestataire.solde = F('solde') - montant
+                prestataire.save()
+                
+                serializer.save(prestataire=prestataire)
             
-            if prestataire.solde < montant:
-                from rest_framework.exceptions import ValidationError
-                raise ValidationError("Solde insuffisant pour ce retrait.")
-            
-            # Déduire du solde immédiatement (sécurité)
-            prestataire.solde = F('solde') - montant
-            prestataire.save()
-            
-            serializer.save(prestataire=prestataire)
-            
-            # Notifier l'admin
+            # Notifier l'admin dans les logs
             logger.info(f"Nouvelle demande de retrait de {montant} par {self.request.user.username}")
+            
+            # Créer des notifications système pour tous les administrateurs
+            try:
+                from django.contrib.auth import get_user_model
+                from .utils_notifications import create_notification
+                
+                User = get_user_model()
+                admins = User.objects.filter(is_staff=True)
+                for admin in admins:
+                    create_notification(
+                        admin,
+                        f"Nouvelle demande de retrait de {montant} FCFA par le prestataire {self.request.user.get_full_name() or self.request.user.username}.",
+                        'systeme'
+                    )
+            except Exception as e:
+                logger.error(f"Erreur lors de la notification des administrateurs pour le retrait : {e}")
+                
         except Prestataire.DoesNotExist:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Seuls les prestataires peuvent demander un retrait.")
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
     def valider(self, request, pk=None):
+        from django.db import transaction
         retrait = self.get_object()
         if retrait.statut != 'en_attente':
             return Response({'error': 'Cette demande a déjà été traitée.'}, status=400)
-        
-        retrait.statut = 'validee'
-        retrait.date_validation = timezone.now()
-        retrait.notes_admin = request.data.get('notes_admin', '')
-        retrait.save()
-        
-        create_notification(
-            retrait.prestataire.user,
-            f"Votre demande de retrait de {retrait.montant} FCFA a été validée. L'argent a été envoyé sur votre numéro {retrait.numero_paiement}.",
-            'systeme'
-        )
+            
+        try:
+            with transaction.atomic():
+                retrait = DemandeRetrait.objects.select_for_update().get(pk=retrait.pk)
+                if retrait.statut != 'en_attente':
+                    return Response({'error': 'Cette demande a déjà été traitée.'}, status=400)
+                    
+                retrait.statut = 'validee'
+                retrait.date_validation = timezone.now()
+                retrait.notes_admin = request.data.get('notes_admin', '')
+                retrait.save()
+                
+                transaction.on_commit(lambda: create_notification(
+                    retrait.prestataire.user,
+                    f"Votre demande de retrait de {retrait.montant} FCFA a été validée. L'argent a été envoyé sur votre numéro {retrait.numero_paiement}.",
+                    'systeme'
+                ))
+        except Exception as e:
+            logger.error(f"[valider] Erreur validation : {str(e)}", exc_info=True)
+            return Response({'error': 'Erreur interne lors du traitement.'}, status=500)
+            
         return Response(DemandeRetraitSerializer(retrait).data)
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
     def rejeter(self, request, pk=None):
+        from django.db import transaction
         retrait = self.get_object()
         if retrait.statut != 'en_attente':
             return Response({'error': 'Cette demande a déjà été traitée.'}, status=400)
         
-        retrait.statut = 'rejetee'
-        retrait.notes_admin = request.data.get('notes_admin', "Refusé par l'admin.")
-        retrait.save()
-        
-        # Rendre l'argent au prestataire
-        prestataire = retrait.prestataire
-        prestataire.solde = F('solde') + retrait.montant
-        prestataire.save()
-        
-        create_notification(
-            retrait.prestataire.user,
-            f"Votre demande de retrait de {retrait.montant} FCFA a été rejetée. Motif : {retrait.notes_admin}",
-            'systeme'
-        )
+        try:
+            with transaction.atomic():
+                retrait = DemandeRetrait.objects.select_for_update().get(pk=retrait.pk)
+                if retrait.statut != 'en_attente':
+                    return Response({'error': 'Cette demande a déjà été traitée.'}, status=400)
+
+                retrait.statut = 'rejetee'
+                retrait.notes_admin = request.data.get('notes_admin', "Refusé par l'admin.")
+                retrait.save()
+                
+                # Rendre l'argent au prestataire sous lock
+                prestataire = Prestataire.objects.select_for_update().get(id=retrait.prestataire_id)
+                prestataire.solde = F('solde') + retrait.montant
+                prestataire.save()
+                
+                # Notification
+                transaction.on_commit(lambda: create_notification(
+                    retrait.prestataire.user,
+                    f"Votre demande de retrait de {retrait.montant} FCFA a été rejetée. Motif : {retrait.notes_admin}",
+                    'systeme'
+                ))
+        except Exception as e:
+            logger.error(f"[rejeter] Erreur rejet : {str(e)}", exc_info=True)
+            return Response({'error': 'Erreur interne lors du traitement.'}, status=500)
+            
         return Response(DemandeRetraitSerializer(retrait).data)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def initier_paiement(request):
+    from django.db import transaction
+    
     service_id      = request.data.get('service_id')
     reservation_id  = request.data.get('reservation_id')
     phone_number    = request.data.get('phone_number')
     network         = request.data.get('network')
-    montant         = request.data.get('montant')
+    # We ignore the client-submitted 'montant' to prevent price spoofing
     identifier      = f"SM{uuid.uuid4().hex[:12].upper()}"
 
     if not reservation_id:
@@ -1263,73 +1451,79 @@ def initier_paiement(request):
         return Response({"error": "Vous devez être un client pour payer"}, status=403)
 
     try:
-        reservation = Reservation.objects.select_related('service', 'client__user').get(id=reservation_id, client=client)
+        # We wrap the verification and setup in a transaction to avoid race conditions
+        with transaction.atomic():
+            reservation = Reservation.objects.select_for_update().select_related('service', 'client__user').get(id=reservation_id, client=client)
+            
+            if reservation.statut != 'en_attente_paiement':
+                return Response({"error": "Cette réservation n'est pas en attente de paiement"}, status=400)
+
+            # Prevent double-payment initiation
+            if Paiement.objects.filter(reservation=reservation, statut__in=['pending', 'confirme']).exists():
+                return Response({"error": "Un paiement est déjà en cours ou a été complété pour cette réservation."}, status=400)
+
+            service_obj = reservation.service
+            prix   = float(service_obj.prix)
+            # Les 3% sont déduits du montant fixé par le prestataire (pas ajoutés au client)
+            frais  = round(prix * 0.03, 2)
+            montant_prestataire = round(prix - frais, 2)
+            total  = int(prix)  # Le client paie exactement le prix fixé par le prestataire
+            
+            reservation.montant = total
+            reservation.save()
+
+            # ── MODE SIMULATION (DEBUG) ──────────────────────────────
+            if settings.DEBUG:
+                paiement = Paiement.objects.create(
+                    reservation=reservation,
+                    methode=network.lower() if network else 'flooz',
+                    montant_total=total,
+                    montant_prestataire=montant_prestataire,
+                    montant_frais=frais,
+                    telephone=phone_number or '',
+                    transaction_ref=identifier,
+                    tx_reference_paygate=f'SIM-{identifier}',
+                    statut='confirme'
+                )
+                reservation.paiement = paiement
+                reservation.statut = 'confirmee'
+                reservation.save()
+
+                # Système Séquestre : L'argent est conservé en séquestre et n'est pas crédité immédiatement
+                # Il sera libéré lorsque le client confirmera que le travail est terminé.
+
+                # Notifications
+                transaction.on_commit(lambda: create_notification(
+                    reservation.client.user,
+                    f"Votre paiement pour '{service_obj.nom}' a été confirmé. Le chat avec le prestataire est maintenant ouvert.",
+                    'paiement'
+                ))
+                transaction.on_commit(lambda: create_notification(
+                    service_obj.prestataire.user,
+                    f"Le client {client.user.username} a payé pour '{service_obj.nom}'. Le chat est ouvert.",
+                    'paiement'
+                ))
+
+                return Response({
+                    "tx_reference": f'SIM-{identifier}',
+                    "identifier":   identifier,
+                    "reservation_id": reservation.id,
+                    "simulation":   True,
+                    "message":      "Paiement simulé avec succès — réservation confirmée",
+                })
+            # ────────────────────────────────────────────────────────
     except Reservation.DoesNotExist:
         return Response({"error": "Réservation introuvable"}, status=404)
 
-    if reservation.statut != 'en_attente_paiement':
-        return Response({"error": "Cette réservation n'est pas en attente de paiement"}, status=400)
-
-    service_obj = reservation.service
-    prix   = float(service_obj.prix)
-    # Les 3% sont déduits du montant fixé par le prestataire (pas ajoutés au client)
-    frais  = round(prix * 0.03, 2)
-    montant_prestataire = round(prix - frais, 2)
-    total  = int(prix)  # Le client paie exactement le prix fixé par le prestataire
-    reservation.montant = total
-    reservation.save()
-
-    # ── MODE SIMULATION (DEBUG) ──────────────────────────────
-    if settings.DEBUG:
-        paiement = Paiement.objects.create(
-            reservation=reservation,
-            methode=network.lower() if network else 'flooz',
-            montant_total=total,
-            montant_prestataire=montant_prestataire,
-            montant_frais=frais,
-            telephone=phone_number or '',
-            transaction_ref=identifier,
-            tx_reference_paygate=f'SIM-{identifier}',
-            statut='confirme'
-        )
-        reservation.paiement = paiement
-        reservation.statut = 'confirmee'
-        reservation.save()
-
-        # Créditer le solde du prestataire
-        prestataire = service_obj.prestataire
-        prestataire.solde = F('solde') + montant_prestataire
-        prestataire.save()
-
-        # Notifications
-        create_notification(
-            reservation.client.user,
-            f"Votre paiement pour '{service_obj.nom}' a été confirmé. Le chat avec le prestataire est maintenant ouvert.",
-            'paiement'
-        )
-        create_notification(
-            service_obj.prestataire.user,
-            f"Le client {client.user.username} a payé pour '{service_obj.nom}'. Le chat is ouvert.",
-            'paiement'
-        )
-
-        return Response({
-            "tx_reference": f'SIM-{identifier}',
-            "identifier":   identifier,
-            "reservation_id": reservation.id,
-            "simulation":   True,
-            "message":      "Paiement simulé avec succès — réservation confirmée",
-        })
-    # ────────────────────────────────────────────────────────
-
-    # Appel PayGate
+    # --- PRODUCTION MODE ---
+    # Call PayGate API
     try:
         pg_response = requests.post(
             "https://paygateglobal.com/api/v1/pay",
             json={
                 "token":        settings.PAYGATE_TOKEN,
                 "phone_number": phone_number,
-                "amount":       int(montant),
+                "amount":       total,  # SECURE: Charge the actual service price, not the client-provided amount
                 "network":      network,
                 "identifier":   identifier,
                 "description":  f"Réservation service #{service_id}",
@@ -1344,19 +1538,29 @@ def initier_paiement(request):
     if pg_data.get('status') not in [0, '0']:
         return Response({"error": pg_data.get('message', 'Erreur PayGate')}, status=400)
 
-    paiement = Paiement.objects.create(
-        reservation=reservation,
-        methode=network.lower(),
-        montant_total=total,
-        montant_prestataire=montant_prestataire,
-        montant_frais=frais,
-        telephone=phone_number,
-        transaction_ref=identifier,
-        tx_reference_paygate=pg_data.get('tx_reference', ''),
-        statut='pending'
-    )
-    reservation.paiement = paiement
-    reservation.save()
+    # Save the pending payment in a transaction
+    try:
+        with transaction.atomic():
+            reservation = Reservation.objects.select_for_update().get(id=reservation_id)
+            if Paiement.objects.filter(reservation=reservation, statut__in=['pending', 'confirme']).exists():
+                return Response({"error": "Un paiement est déjà en cours ou a été complété pour cette réservation."}, status=400)
+
+            paiement = Paiement.objects.create(
+                reservation=reservation,
+                methode=network.lower(),
+                montant_total=total,
+                montant_prestataire=montant_prestataire,
+                montant_frais=frais,
+                telephone=phone_number,
+                transaction_ref=identifier,
+                tx_reference_paygate=pg_data.get('tx_reference', ''),
+                statut='pending'
+            )
+            reservation.paiement = paiement
+            reservation.save()
+    except Exception as e:
+        logger.error(f"Erreur lors de la création du paiement pending: {str(e)}", exc_info=True)
+        return Response({"error": "Erreur interne lors de l'enregistrement du paiement."}, status=500)
 
     return Response({
         "tx_reference": pg_data.get('tx_reference'),
@@ -1367,6 +1571,8 @@ def initier_paiement(request):
 
 @csrf_exempt
 def paygate_callback(request):
+    from django.db import transaction
+    
     if request.method != 'POST':
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
@@ -1378,40 +1584,54 @@ def paygate_callback(request):
     identifier = data.get('identifier')
     statut_pg  = data.get('status')
 
+    if not identifier:
+        return JsonResponse({"error": "Identifier manquant"}, status=400)
+
     try:
-        paiement = Paiement.objects.select_related('reservation__client__user', 'reservation__service__prestataire__user').get(
-            transaction_ref=identifier
-        )
+        with transaction.atomic():
+            # Lock the payment row using select_for_update
+            paiement = Paiement.objects.select_for_update().select_related(
+                'reservation__client__user', 
+                'reservation__service__prestataire__user'
+            ).get(transaction_ref=identifier)
+            
+            # Idempotency check: if already confirmed, do not credit again
+            if paiement.statut == 'confirme':
+                return JsonResponse({"ok": True, "message": "Paiement déjà confirmé."})
+
+            reservation = paiement.reservation
+
+            if statut_pg in [0, '0', 'success', 'SUCCESS']:
+                paiement.statut = 'confirme'
+                paiement.save()
+
+                reservation.statut = 'confirmee'
+                reservation.save()
+
+                # Système Séquestre : L'argent est conservé en séquestre et n'est pas crédité immédiatement
+                # Il sera libéré lorsque le client confirmera que le travail est terminé.
+
+                # Send notifications on commit
+                transaction.on_commit(lambda: create_notification(
+                    reservation.client.user,
+                    f"Votre paiement pour '{reservation.service.nom}' a été confirmé. Le chat avec le prestataire est maintenant ouvert.",
+                    'paiement'
+                ))
+                transaction.on_commit(lambda: create_notification(
+                    reservation.service.prestataire.user,
+                    f"Le client {reservation.client.user.username} a payé pour '{reservation.service.nom}'. Le chat est ouvert.",
+                    'paiement'
+                ))
+            else:
+                paiement.statut = 'echoue'
+                paiement.save()
+                
     except Paiement.DoesNotExist:
         return JsonResponse({"error": "Paiement inconnu"}, status=404)
+    except Exception as e:
+        logger.error(f"Erreur dans paygate_callback: {str(e)}", exc_info=True)
+        return JsonResponse({"error": "Erreur interne de traitement"}, status=500)
 
-    reservation = paiement.reservation
-
-    if statut_pg in [0, '0', 'success', 'SUCCESS']:
-        paiement.statut = 'confirme'
-        reservation.statut = 'confirmee'
-        reservation.save()
-
-        # Créditer le solde du prestataire
-        prestataire = reservation.service.prestataire
-        prestataire.solde = F('solde') + paiement.montant_prestataire
-        prestataire.save()
-
-        # Notifications
-        create_notification(
-            reservation.client.user,
-            f"Votre paiement pour '{reservation.service.nom}' a été confirmé. Le chat avec le prestataire est maintenant ouvert.",
-            'paiement'
-        )
-        create_notification(
-            reservation.service.prestataire.user,
-            f"Le client {reservation.client.user.username} a payé pour '{reservation.service.nom}'. Le chat est ouvert.",
-            'paiement'
-        )
-    else:
-        paiement.statut = 'echoue'
-
-    paiement.save()
     return JsonResponse({"ok": True})
 
 
@@ -1482,7 +1702,7 @@ import datetime
 @permission_classes([IsAuthenticated])
 def rapport_pdf_admin(request):
     """Génère un rapport PDF mensuel pour l'admin — design moderne."""
-    from .models import Reservation, Service, Prestataire, Paiement
+    from .models import Reservation, Service, Prestataire, Paiement, DemandeRetrait
     from django.utils import timezone
 
     if not (request.user.is_staff or hasattr(request.user, 'admin_profile')):
@@ -1509,6 +1729,12 @@ def rapport_pdf_admin(request):
 
     nb_services = Service.objects.count()
     nb_prestataires = Prestataire.objects.count()
+
+    # Retraits
+    retraits_qs = DemandeRetrait.objects.filter(date_demande__month=mois, date_demande__year=annee)
+    nb_retraits = retraits_qs.count()
+    nb_retraits_valides = retraits_qs.filter(statut='validee').count()
+    total_retraits_valides = sum((r.montant or 0) for r in retraits_qs.filter(statut='validee'))
 
     mois_nom = [
         '', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -1570,6 +1796,8 @@ def rapport_pdf_admin(request):
             ['Revenus encaissés', f"{total_revenus:,.0f} FCFA"],
             ['Services actifs', str(nb_services)],
             ['Prestataires inscrits', str(nb_prestataires)],
+            ['Retraits demandés', str(nb_retraits)],
+            ['Retraits validés', f"{nb_retraits_valides} ({total_retraits_valides:,.0f} FCFA)"],
         ]
         t = Table(summary_data, colWidths=[10 * cm, 6 * cm])
         t.setStyle(TableStyle([
@@ -1733,6 +1961,42 @@ def rapport_pdf_admin(request):
             content.append(tpays)
             content.append(Spacer(1, 14))
 
+        # ── Retraits de fonds (détails limités) ──
+        retraits_limited = (
+            retraits_qs
+            .select_related('prestataire__user')
+            .order_by('-date_demande')[:20]
+        )
+
+        if retraits_limited:
+            content.append(Paragraph("Retraits de fonds du mois (détails) — limités", h2_style))
+            ret_data = [['ID', 'Prestataire', 'Montant', 'Méthode', 'Numéro', 'Statut', 'Date']]
+            for r in retraits_limited:
+                ret_data.append([
+                    str(r.id),
+                    r.prestataire.user.get_full_name() or r.prestataire.user.username,
+                    f"{(r.montant or 0):,.0f} F",
+                    r.methode.upper(),
+                    r.numero_paiement,
+                    r.get_statut_display(),
+                    r.date_demande.strftime('%d/%m/%Y'),
+                ])
+
+            t_ret = Table(ret_data, colWidths=[1.0 * cm, 4.2 * cm, 2.5 * cm, 2.0 * cm, 2.8 * cm, 2.5 * cm, 2.2 * cm])
+            t_ret.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), PRIMARY),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'DejaVuSans'),
+                ('FONTSIZE', (0, 0), (-1, -1), 8.4),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f1f5f9')]),
+                ('GRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#94a3b8')),
+                ('PADDING', (0, 0), (-1, -1), 4),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (2, 1), (2, -1), 'RIGHT'),
+            ]))
+            content.append(t_ret)
+            content.append(Spacer(1, 14))
+
         content.append(Paragraph(
             "© Service Market Togo · Rapport confidentiel",
             ParagraphStyle('footer', fontSize=8, textColor=colors.HexColor('#94a3b8'), fontName='DejaVuSans')
@@ -1783,49 +2047,36 @@ def rapport_pdf_admin(request):
 @permission_classes([permissions.AllowAny])
 def chatbot_view(request):
     """
-    Chatbot IA (Groq) qui a accès aux données des prestataires et services 
-    pour aider les clients à trouver les meilleures options.
+    Chatbot IA (Ollama / Groq) qui a accès aux données des prestataires et services 
+    pour aider les clients à trouver les meilleures options, avec un fallback de simulation.
     """
     user_message = request.data.get('message')
     if not user_message:
         return Response({'error': 'Message requis'}, status=400)
 
-    # 1. Collecter les données de la plateforme (contexte pour l'IA)
+    # 1. Collecter les données de la plateforme de manière optimisée (contexte pour l'IA)
     try:
-        prestataires = Prestataire.objects.select_related('user').all()
+        from django.db.models import Avg
+        
+        # Évite le problème N+1 en annotant la note moyenne directement dans la requête principale
+        prestataires = Prestataire.objects.select_related('user').annotate(
+            avg_note=Avg('services__reservations__evaluation__note')
+        )
         services = Service.objects.select_related('prestataire__user', 'categorie').all()
 
         context_data = "Voici les prestataires et services actuellement disponibles sur Service Market Togo :\n\n"
 
-        from django.db.models import Avg
         for p in prestataires:
             p_services = [s for s in services if s.prestataire_id == p.id]
-            # Utilisation correcte de aggregate avec un nom explicite pour la clé
-            avg_result = Evaluation.objects.filter(reservation__service__prestataire=p).aggregate(avg=Avg('note'))
-            avg_note = avg_result['avg']
+            avg_note = p.avg_note
 
-            context_data += f"PRESTATAIRE: {p.user.get_full_name() or p.user.username}\n"
+            context_data += f"PRESTATAIRE: {p.user.get_full_name() or p.user.username} (ID prestataire: {p.id})\n"
             context_data += f"- Spécialité: {p.specialite}\n"
             context_data += f"- Note moyenne: {round(avg_note, 1) if avg_note is not None else 'Nouveau (pas encore de notes)'}/5\n"
             context_data += f"- Services proposés:\n"
             for s in p_services:
-                context_data += f"  * {s.nom} : {s.prix} FCFA (Description: {s.description[:50]}...)\n"
+                context_data += f"  * {s.nom} (ID service: {s.id}) : {s.prix} FCFA (Description: {s.description[:50]}...)\n"
             context_data += "\n"
-
-        # 2. Appeler l'API Groq
-        import os
-        GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-        if not GROQ_API_KEY:
-            logger.error("GROQ_API_KEY non configurée dans les variables d'environnement.")
-            return Response({'error': "Le chatbot n'est pas configuré (clé API manquante)."}, status=500)
-
-        base_url = "https://api.groq.com/openai/v1"
-        url = f"{base_url}/chat/completions"
-
-        headers = {
-            "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "application/json"
-        }
 
         # System Prompt
         system_prompt = (
@@ -1834,33 +2085,167 @@ def chatbot_view(request):
             "Tu as accès en temps réel aux données de la plateforme ci-dessous. "
             "Sois poli, professionnel et réponds en français de manière concise. "
             "Si un utilisateur demande qui est le meilleur, regarde les notes moyennes. "
-            "Donne toujours les prix des services et suggère de réserver directement sur la plateforme."
+            "Donne toujours les prix des services et suggère de réserver directement sur la plateforme. "
+            "IMPORTANT: Utilise des liens au format Markdown pour guider l'utilisateur vers des éléments de la plateforme. "
+            "Exemples de format de lien valides à utiliser :\n"
+            "- Pour un service spécifique: [Nom du service](/services/ID)\n"
+            "- Pour le profil d'un prestataire: [Nom du prestataire](/prestataire/ID)\n"
+            "- Pour voir la carte des ateliers: [Carte des ateliers](/ateliers)\n"
+            "- Pour une catégorie générale de recherche: [Nom catégorie](/services?q=nom_categorie)\n"
+            "N'invente pas d'IDs, utilise uniquement les IDs fournis dans les données de contexte."
         )
 
-        payload = {
-            "model": "llama3-70b-8192",  # Modèle plus standard
-            "messages": [
-                {"role": "system", "content": f"{system_prompt}\n\nDONNÉES DE LA PLATEFORME :\n{context_data[:5000]}"},
-                {"role": "user", "content": user_message}
-            ],
-            "temperature": 0.6,
-            "max_tokens": 1024
-        }
+        bot_reply = None
         
-        logger.info(f"Appel Groq pour message: {user_message[:50]}...")
-        response = requests.post(url, headers=headers, json=payload, timeout=25)
-        
-        if response.status_code != 200:
-            logger.error(f"Groq API Error {response.status_code}: {response.text}")
-            return Response({'error': "L'IA est temporairement indisponible."}, status=500)
+        # 2. Déterminer quel LLM appeler (Ollama ou Groq)
+        import os
+        GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+        USE_OLLAMA = os.getenv("USE_OLLAMA", "0") == "1" or not GROQ_API_KEY
 
-        bot_reply = response.json()['choices'][0]['message']['content']
+        # A. Tentative avec Ollama (local)
+        if USE_OLLAMA:
+            ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+            ollama_model = os.getenv("OLLAMA_MODEL", "mistral")
+            
+            logger.info(f"Tentative d'appel Ollama ({ollama_model}) sur {ollama_base_url}...")
+            try:
+                response = requests.post(
+                    f"{ollama_base_url}/api/chat",
+                    json={
+                        "model": ollama_model,
+                        "messages": [
+                            {"role": "system", "content": f"{system_prompt}\n\nDONNÉES DE LA PLATEFORME :\n{context_data[:5000]}"},
+                            {"role": "user", "content": user_message}
+                        ],
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.6
+                        }
+                    },
+                    timeout=15
+                )
+                if response.status_code == 200:
+                    bot_reply = response.json().get('message', {}).get('content', '')
+                else:
+                    logger.warning(f"Ollama a retourné une erreur {response.status_code}: {response.text}")
+            except Exception as e:
+                logger.warning(f"Impossible de joindre Ollama: {str(e)}")
+
+        # B. Tentative avec Groq (cloud) si Ollama n'a pas répondu ou n'est pas configuré
+        if not bot_reply and GROQ_API_KEY:
+            base_url = "https://api.groq.com/openai/v1"
+            url = f"{base_url}/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "llama3-70b-8192",
+                "messages": [
+                    {"role": "system", "content": f"{system_prompt}\n\nDONNÉES DE LA PLATEFORME :\n{context_data[:5000]}"},
+                    {"role": "user", "content": user_message}
+                ],
+                "temperature": 0.6,
+                "max_tokens": 1024
+            }
+            
+            logger.info(f"Appel Groq pour message: {user_message[:50]}...")
+            try:
+                response = requests.post(url, headers=headers, json=payload, timeout=15)
+                if response.status_code == 200:
+                    bot_reply = response.json()['choices'][0]['message']['content']
+                else:
+                    logger.error(f"Groq API Error {response.status_code}: {response.text}")
+            except Exception as e:
+                logger.error(f"Erreur d'appel Groq: {str(e)}")
+
+        # C. Fallback Simulation (si aucun LLM n'est opérationnel ou disponible)
+        if not bot_reply:
+            logger.info("Utilisation du mode simulation (fallback local)")
+            user_msg_lower = user_message.lower()
+            
+            # 1. Check if greeting or generic request
+            is_greeting = any(w in user_msg_lower for w in ["bonjour", "salut", "hello", "coucou", "hi", "bonsoir"])
+            
+            # 2. Match categories
+            from service.models import Categorie
+            categories_list = Categorie.objects.all()
+            matching_categories = []
+            for c in categories_list:
+                if c.nom.lower() in user_msg_lower:
+                    matching_categories.append(c)
+
+            # 3. Match services
+            matching_services = []
+            for s in services:
+                if s.nom.lower() in user_msg_lower or (s.categorie and s.categorie.nom.lower() in user_msg_lower):
+                    matching_services.append(s)
+
+            # 4. Match prestataires
+            matching_prestataires = []
+            for p in prestataires:
+                p_name = (p.user.get_full_name() or p.user.username).lower()
+                if p_name in user_msg_lower or (p.specialite and p.specialite.lower() in user_msg_lower):
+                    matching_prestataires.append(p)
+
+            # 5. Match ateliers
+            matching_ateliers = []
+            if any(w in user_msg_lower for w in ["atelier", "carte", "map", "géoloc", "adresse", "localisation", "situer"]):
+                from service.models import Atelier
+                matching_ateliers = list(Atelier.objects.select_related('prestataire__user').all())
+
+            # Generate reply
+            reply = ""
+            if is_greeting:
+                reply += "Bonjour ! Comment puis-je vous aider aujourd'hui ? 🤖\n\n"
+            
+            if matching_services:
+                reply += "J'ai trouvé ces **services** sur la plateforme correspondant à votre demande :\n"
+                for s in matching_services[:3]:
+                    p_name = s.prestataire.user.get_full_name() or s.prestataire.user.username
+                    reply += f"- **[{s.nom}](/services/{s.id})** proposé par *[{p_name}](/prestataire/{s.prestataire.id})* à **{int(s.prix)} FCFA**\n"
+                reply += "\n"
+
+            if matching_prestataires:
+                reply += "Voici les **prestataires** correspondants à votre recherche :\n"
+                for p in matching_prestataires[:3]:
+                    p_name = p.user.get_full_name() or p.user.username
+                    note_str = f"★ {round(p.avg_note, 1)}/5" if p.avg_note is not None else "nouveau"
+                    reply += f"- **[{p_name}](/prestataire/{p.id})** ({p.specialite or 'Prestataire'}) - Note: {note_str}\n"
+                reply += "\n"
+
+            if matching_ateliers:
+                reply += "Vous pouvez localiser nos professionnels sur la **[Carte des ateliers](/ateliers)**.\n"
+                reply += "Voici quelques ateliers proches de chez vous :\n"
+                for a in matching_ateliers[:2]:
+                    p_name = a.prestataire.user.get_full_name() or a.prestataire.user.username
+                    reply += f"- **{a.nom}** (Adresse: {a.adresse}) par *[{p_name}](/prestataire/{a.prestataire.id})*\n"
+                reply += "\n"
+
+            if matching_categories and not matching_services:
+                reply += "Découvrez nos offres dans ces catégories :\n"
+                for c in matching_categories[:3]:
+                    reply += f"- **[{c.nom}](/services?q={c.nom.lower()})**\n"
+                reply += "\n"
+
+            # If no matches found or it was just a generic greeting
+            if not reply or (is_greeting and not matching_services and not matching_prestataires and not matching_ateliers):
+                if not reply:
+                    reply += "Je suis **SM-Assistant**, à votre écoute ! 🤖\n\n"
+                reply += (
+                    "Pour vous orienter sur la plateforme :\n"
+                    "- 🛠️ Parcourir tous les **[Services](/services)**\n"
+                    "- 📍 Situer les artisans sur la **[Carte des ateliers](/ateliers)**\n"
+                    "- 🤝 Découvrir la liste des **[Prestataires](/prestataires)**\n\n"
+                    "Quelques recherches populaires :\n"
+                    "- **[Plomberie](/services?q=plomberie)** | **[Électricité](/services?q=électricité)** | **[Ménage](/services?q=ménage)**"
+                )
+
+            bot_reply = reply.strip()
+
         return Response({'reply': bot_reply})
 
-    except requests.exceptions.HTTPError as e:
-        logger.error(f"Groq API Error: {e.response.text if hasattr(e, 'response') else str(e)}")
-        return Response({'error': "Erreur de communication avec l'IA."}, status=500)
     except Exception as e:
         logger.error(f"Chatbot Exception: {str(e)}", exc_info=True)
-        return Response({'error': "Désolé, je rencontre une petite difficulté technique."}, status=500)
+        return Response({'reply': "Désolé, je rencontre une petite difficulté technique. N'hésitez pas à réécrire dans quelques instants !"})
 

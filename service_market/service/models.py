@@ -28,6 +28,17 @@ class Prestataire(models.Model):
     numero_mix = models.CharField(max_length=15, blank=True, default='', help_text="Numéro Mix by Yas (ex: 93354922)")
     photo = models.ImageField(upload_to='prestataires/', blank=True, null=True, help_text="Photo de profil du prestataire")
     solde = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Solde disponible pour retrait (FCFA)")
+    STATUT_ACTIVITE_CHOICES = (
+        ('disponible', 'Disponible'),
+        ('occupe', 'Occupé / En intervention'),
+        ('hors_ligne', 'Hors ligne'),
+    )
+    statut_activite = models.CharField(
+        max_length=20, 
+        choices=STATUT_ACTIVITE_CHOICES, 
+        default='disponible',
+        help_text="Statut d'activité en temps réel"
+    )
     
     def __str__(self):
         return f"Prestataire: {self.user.username}"
@@ -177,6 +188,7 @@ class Paiement(models.Model):
         ],
         default='pending'
     )
+    fonds_liberes = models.BooleanField(default=False, help_text="Les fonds ont-ils été libérés au prestataire ?")
 
     class Meta:
         verbose_name = "Paiement"
@@ -256,14 +268,12 @@ class Notification(models.Model):
         return f"Notif {self.id} - {self.user.username}"
 
 
-from django.db.models.signals import pre_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
-@receiver(pre_save, sender=Compte)
-def create_profile(sender, instance, **kwargs):
-    if instance.pk is None:  # Only for new instances
-        return
+@receiver(post_save, sender=Compte)
+def create_profile(sender, instance, created, **kwargs):
     try:
         if instance.type_compte == 'client':
             Client.objects.get_or_create(user=instance)
@@ -273,3 +283,30 @@ def create_profile(sender, instance, **kwargs):
             Administrateur.objects.get_or_create(user=instance)
     except Exception:
         pass  # Avoid signal errors
+
+
+class ServiceImage(models.Model):
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='images', verbose_name="Service lié")
+    image = models.ImageField(upload_to='services/gallery/', verbose_name="Photo additionnelle")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Image de service"
+        verbose_name_plural = "Images de services"
+
+    def __str__(self):
+        return f"Image #{self.id} pour {self.service.nom}"
+
+
+class PrestatairePortfolio(models.Model):
+    prestataire = models.ForeignKey(Prestataire, on_delete=models.CASCADE, related_name='portfolio', verbose_name="Prestataire lié")
+    image = models.ImageField(upload_to='prestataires/portfolio/', verbose_name="Photo de réalisation")
+    description = models.CharField(max_length=200, blank=True, help_text="Ex: Rénovation salon de coiffure")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Réalisation du portfolio"
+        verbose_name_plural = "Portfolio du prestataire"
+
+    def __str__(self):
+        return f"Portfolio #{self.id} de {self.prestataire.user.username}"

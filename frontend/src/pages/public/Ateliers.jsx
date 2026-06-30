@@ -1,11 +1,519 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Geolocation } from '@capacitor/geolocation';
-import api from '../api/axios';
-import GoogleMapAtelierPicker from '../components/GoogleMapAtelierPicker';
-import LeafletGPSInterne from '../components/LeafletGPSInterne';
+import api from '../../api/axios';
+import GoogleMapAtelierPicker from '../../components/GoogleMapAtelierPicker';
+import LeafletGPSInterne from '../../components/LeafletGPSInterne';
 
-// ─── CarteAteliers ────────────────────────────────────────────
+const STYLES = `
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap');
+
+@keyframes at-up   { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@keyframes at-fade { from { opacity:0; } to { opacity:1; } }
+@keyframes at-shimmer {
+  0%   { background-position:-200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes at-spin { to { transform: rotate(360deg); } }
+
+.at-page {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: #f8fafc;
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+/* ── HERO ── */
+.at-hero {
+  background: linear-gradient(135deg, #0c2340 0%, #0a3060 50%, #0369a1 100%);
+  padding: 60px 0 50px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: -44px;
+}
+
+.at-hero::before {
+  content: '';
+  position: absolute;
+  top: -100px; right: -80px;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56,189,248,0.15) 0%, transparent 70%);
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.at-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; left: 20%;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%);
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.at-hero-inner {
+  position: relative;
+  z-index: 2;
+  animation: at-up 0.6s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.at-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 30px;
+  padding: 6px 16px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.at-hero-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  margin: 0 0 10px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.at-hero-sub {
+  color: rgba(255,255,255,0.7);
+  font-size: 0.95rem;
+  margin: 0 0 24px;
+  max-width: 480px;
+  line-height: 1.6;
+}
+
+.at-hero-kpis {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.at-hero-kpi {
+  display: flex;
+  flex-direction: column;
+}
+
+.at-hero-kpi-val {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 1.4rem;
+  color: #38bdf8;
+  line-height: 1;
+}
+
+.at-hero-kpi-lbl {
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
+/* ── FILTER CARD ── */
+.at-filter-card {
+  background: white;
+  border-radius: 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 40px rgba(12,35,64,0.06);
+  padding: 22px;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 5;
+  animation: at-up 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+}
+
+.at-search-wrap {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.at-search-icon {
+  position: absolute;
+  left: 18px; top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8; font-size: 1rem;
+  pointer-events: none;
+}
+
+.at-search-input {
+  width: 100%;
+  padding: 14px 44px 14px 48px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  font-size: 0.92rem;
+  background: #f8fafc;
+  outline: none;
+  transition: all 0.2s;
+  color: #0c2340;
+  font-family: inherit;
+}
+
+.at-search-input:focus {
+  border-color: #0284c7;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(2,132,199,0.1);
+}
+
+.at-search-clear {
+  position: absolute;
+  right: 14px; top: 50%;
+  transform: translateY(-50%);
+  background: #e2e8f0; border: none;
+  border-radius: 8px; width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #64748b; font-size: 0.8rem;
+  transition: all 0.15s;
+}
+
+.at-search-clear:hover { background: #cbd5e1; color: #0c2340; }
+
+/* chips */
+.at-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 16px;
+  scrollbar-width: none;
+}
+.at-chips::-webkit-scrollbar { display: none; }
+
+.at-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 30px;
+  border: 1.5px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.at-chip:hover { border-color: #0284c7; color: #0284c7; transform: translateY(-1px); }
+
+.at-chip.active {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  border-color: #0284c7;
+  color: white;
+  box-shadow: 0 6px 16px rgba(2,132,199,0.25);
+}
+
+/* secondary filters row */
+.at-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.at-select {
+  padding: 8px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.83rem;
+  background: #f8fafc;
+  color: #374151;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  font-weight: 600;
+  transition: border-color 0.15s;
+}
+
+.at-select:focus { border-color: #0284c7; }
+
+.at-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.83rem;
+  color: #374151;
+  font-weight: 600;
+}
+
+.at-toggle-track {
+  width: 44px; height: 24px;
+  border-radius: 12px;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.at-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: left 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.at-btn-locate {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border: 1.5px solid #bae6fd;
+  background: #f0f9ff;
+  color: #0284c7;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.83rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.at-btn-locate:hover {
+  background: #e0f2fe;
+  border-color: #0284c7;
+  box-shadow: 0 4px 12px rgba(2,132,199,0.12);
+}
+
+.at-btn-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  background: none; border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.15s;
+}
+.at-btn-reset:hover { color: #ef4444; background: #fef2f2; }
+
+.at-count-badge {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+/* ── MAP + LIST LAYOUT ── */
+.at-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  animation: at-up 0.55s cubic-bezier(0.22,1,0.36,1) 0.15s both;
+}
+
+@media (max-width: 768px) {
+  .at-layout { flex-direction: column; }
+  .at-map-wrap { width: 100% !important; flex: none !important; }
+  .at-list-wrap { width: 100% !important; max-width: 100% !important; max-height: 320px !important; }
+}
+
+.at-map-wrap {
+  flex: 2;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  height: min(460px, 52vh);
+  position: sticky;
+  top: 80px;
+}
+
+.at-list-wrap {
+  flex: 1;
+  min-width: 280px;
+  max-width: 340px;
+  max-height: min(560px, 56vh);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #e2e8f0 transparent;
+}
+
+.at-list-wrap::-webkit-scrollbar { width: 4px; }
+.at-list-wrap::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
+
+/* ── ATELIER LIST CARD ── */
+.at-item {
+  background: white;
+  border-radius: 16px;
+  padding: 14px;
+  cursor: pointer;
+  border: 2px solid #e2e8f0;
+  transition: all 0.2s;
+}
+
+.at-item:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 6px 20px rgba(2,132,199,0.08);
+}
+
+.at-item.selected {
+  border-color: #0284c7;
+  box-shadow: 0 6px 20px rgba(2,132,199,0.12);
+  background: #f0f9ff;
+}
+
+.at-item-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.at-item-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 1rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 8px rgba(2,132,199,0.2);
+}
+
+.at-item-icon.inactive {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+  box-shadow: none;
+}
+
+.at-item-info { flex: 1; min-width: 0; }
+
+.at-item-name {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: #0c2340;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.at-item-addr {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.at-item-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.at-item-status.active { background: #ecfdf5; color: #047857; }
+.at-item-status.inactive { background: #fef2f2; color: #b91c1c; }
+
+.at-item-desc {
+  font-size: 0.77rem;
+  color: #94a3b8;
+  margin-bottom: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.at-item-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.at-btn-call {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #16a34a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid rgba(22,163,74,0.15);
+  transition: all 0.15s;
+}
+
+.at-btn-call:hover { background: #dcfce7; color: #15803d; }
+
+.at-btn-gps {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  margin-left: auto;
+  transition: all 0.15s;
+  font-family: inherit;
+  box-shadow: 0 2px 6px rgba(2,132,199,0.2);
+}
+
+.at-btn-gps:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(2,132,199,0.3); }
+
+/* ── EMPTY STATE ── */
+.at-empty {
+  text-align: center;
+  padding: 40px 20px;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+/* ── LOADING ── */
+.at-spinner {
+  width: 44px; height: 44px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #0284c7;
+  border-radius: 50%;
+  animation: at-spin 0.8s linear infinite;
+}
+
+/* ── RESPONSIVE HERO ── */
+@media (max-width: 640px) {
+  .at-hero { padding: 40px 0 36px; }
+  .at-hero-kpis { gap: 16px; }
+  .at-filter-card { padding: 16px; border-radius: 20px; }
+}
+`;
+
+// ─── CarteAteliers ─────────────────────────────────────────────
 export function CarteAteliers() {
   const [ateliers, setAteliers] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -23,7 +531,7 @@ export function CarteAteliers() {
   useEffect(() => {
     Promise.all([
       api.get('/ateliers/'),
-      api.get('/categories/')
+      api.get('/categories/'),
     ]).then(([aRes, cRes]) => {
       setAteliers(aRes.data);
       setCategories(cRes.data);
@@ -38,28 +546,30 @@ export function CarteAteliers() {
     [ateliers]
   );
 
-  const ateliersFiltres = useMemo(() => ateliers.filter(a => {
-    const q = search.toLowerCase();
-    const matchSearch = !q ||
-      a.nom?.toLowerCase().includes(q) ||
-      a.adresse?.toLowerCase().includes(q) ||
-      a.prestataire?.user?.username?.toLowerCase().includes(q) ||
-      a.description?.toLowerCase().includes(q);
-    
-    // Match par catégorie (ID ou Nom)
-    const matchCat = catFiltre === 'all' || 
-      String(a.prestataire?.specialite?.toLowerCase()).includes(catFiltre.toLowerCase()) ||
-      String(a.description?.toLowerCase()).includes(catFiltre.toLowerCase()) ||
-      categories.find(c => String(c.id) === catFiltre)?.nom?.toLowerCase() === a.prestataire?.specialite?.toLowerCase();
-      
-    const matchVille = filtreVille === 'all' || a.adresse?.toLowerCase().includes(filtreVille.toLowerCase());
-    const matchActif = !filtreActif || a.est_actif;
-    return matchSearch && matchCat && matchVille && matchActif;
-  }).sort((a, b) => {
-    if (sortBy === 'nom') return a.nom.localeCompare(b.nom);
-    if (sortBy === 'recents') return new Date(b.date_creation) - new Date(a.date_creation);
-    return 0;
-  }), [ateliers, search, catFiltre, filtreVille, filtreActif, sortBy, categories]);
+  const ateliersFiltres = useMemo(() =>
+    ateliers.filter(a => {
+      const q = search.toLowerCase();
+      const matchSearch = !q ||
+        a.nom?.toLowerCase().includes(q) ||
+        a.adresse?.toLowerCase().includes(q) ||
+        a.prestataire?.user?.username?.toLowerCase().includes(q) ||
+        a.description?.toLowerCase().includes(q);
+
+      const matchCat = catFiltre === 'all' ||
+        String(a.prestataire?.specialite?.toLowerCase()).includes(catFiltre.toLowerCase()) ||
+        String(a.description?.toLowerCase()).includes(catFiltre.toLowerCase()) ||
+        categories.find(c => String(c.id) === catFiltre)?.nom?.toLowerCase() === a.prestataire?.specialite?.toLowerCase();
+
+      const matchVille = filtreVille === 'all' || a.adresse?.toLowerCase().includes(filtreVille.toLowerCase());
+      const matchActif = !filtreActif || a.est_actif;
+      return matchSearch && matchCat && matchVille && matchActif;
+    }).sort((a, b) => {
+      if (sortBy === 'nom') return a.nom.localeCompare(b.nom);
+      if (sortBy === 'recents') return new Date(b.date_creation) - new Date(a.date_creation);
+      return 0;
+    }),
+    [ateliers, search, catFiltre, filtreVille, filtreActif, sortBy, categories]
+  );
 
   const zoomToAtelier = useCallback((a) => {
     setSelectedAtelier(a);
@@ -71,22 +581,16 @@ export function CarteAteliers() {
 
   const locateMe = async () => {
     try {
-      // Tenter d'utiliser Capacitor (natif mobile)
       const coordinates = await Geolocation.getCurrentPosition();
       setCenter({ lat: coordinates.coords.latitude, lng: coordinates.coords.longitude });
       setGoogleZoom(13);
       setSelectedAtelier(null);
-    } catch (e) {
-      console.warn('Capacitor Geolocation error, falling back to Web API:', e);
-      // Fallback Web API
+    } catch {
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          setGoogleZoom(13);
-          setSelectedAtelier(null);
-        }, err => {
-          alert("Erreur de localisation : " + err.message);
-        });
+        navigator.geolocation.getCurrentPosition(
+          pos => { setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGoogleZoom(13); setSelectedAtelier(null); },
+          err => alert('Erreur de localisation : ' + err.message)
+        );
       }
     }
   };
@@ -96,241 +600,418 @@ export function CarteAteliers() {
     setFiltreActif(true); setSortBy('nom');
   };
 
+  const hasFilters = search || catFiltre !== 'all' || filtreVille !== 'all' || !filtreActif;
+
   if (loading) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 320, gap: 16 }}>
-      <div style={{
-        width: 52, height: 52, borderRadius: '50%',
-        border: '4px solid #e2e8f0', borderTopColor: '#0284c7',
-        animation: 'spin 0.8s linear infinite',
-      }} />
-      <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Chargement des ateliers…</span>
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-    </div>
+    <>
+      <style>{STYLES}</style>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 360, gap: 16 }}>
+        <div className="at-spinner" />
+        <p style={{ color: '#94a3b8', fontSize: '0.9rem', fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 600 }}>
+          Chargement des ateliers…
+        </p>
+      </div>
+    </>
   );
 
   return (
-    <div style={{ padding: '32px 0 48px' }}>
-      {gpsAtelier && <LeafletGPSInterne atelier={gpsAtelier} onClose={() => setGpsAtelier(null)} />}
+    <>
+      <style>{STYLES}</style>
+      <div className="at-page">
 
-      <div className="container">
-
-        {/* ── En-tête de page ── */}
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 6 }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: 12,
-              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(2,132,199,0.2)',
-            }}>
-              <i className="bi bi-geo-alt-fill" style={{ fontSize: '1.2rem', color: 'white' }} />
+        {/* ── HERO ── */}
+        <div className="at-hero">
+          <div className="container at-hero-inner">
+            <div className="at-hero-eyebrow">
+              <i className="bi bi-geo-alt-fill" style={{ color: '#38bdf8' }} />
+              Carte interactive
             </div>
-            <div>
-              <h2 style={{ margin: 0, fontWeight: 800, fontSize: '1.4rem', color: '#0c2340' }}>
-                Carte des Ateliers
-              </h2>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>
-                Trouvez les experts à proximité
-              </p>
+            <h1 className="at-hero-title">Ateliers & Experts<br />près de chez vous</h1>
+            <p className="at-hero-sub">
+              Localisez les ateliers de vos artisans, obtenez leur itinéraire GPS
+              et contactez-les directement.
+            </p>
+            <div className="at-hero-kpis">
+              <div className="at-hero-kpi">
+                <span className="at-hero-kpi-val">{ateliers.filter(a => a.est_actif).length}</span>
+                <span className="at-hero-kpi-lbl">Ateliers actifs</span>
+              </div>
+              <div className="at-hero-kpi">
+                <span className="at-hero-kpi-val">{villes.length - 1}</span>
+                <span className="at-hero-kpi-lbl">Villes couvertes</span>
+              </div>
+              <div className="at-hero-kpi">
+                <span className="at-hero-kpi-val">{categories.length}</span>
+                <span className="at-hero-kpi-lbl">Catégories</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* ── Filtres (Style Services) ── */}
-        <div style={{
-          background: 'white', borderRadius: 16,
-          padding: '16px 20px', marginBottom: 20,
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-        }}>
-          {/* Barre de recherche */}
-          <div style={{ position: 'relative', marginBottom: 14 }}>
-            <i className="bi bi-search" style={{
-              position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
-              color: '#94a3b8', fontSize: '0.95rem', pointerEvents: 'none',
-            }} />
-            <input
-              type="text"
-              placeholder="Rechercher un atelier, adresse, prestataire…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{
-                width: '100%', padding: '10px 40px',
-                border: '1.5px solid #e2e8f0', borderRadius: 12,
-                fontSize: '0.9rem', background: '#f8fafc',
-                outline: 'none', transition: 'border-color 0.15s',
-              }}
-            />
-            {search && (
-              <button onClick={() => setSearch('')} style={{
-                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                background: '#e2e8f0', border: 'none', borderRadius: 6,
-                width: 22, height: 22, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', cursor: 'pointer', color: '#64748b', fontSize: '0.75rem',
-              }}>
-                <i className="bi bi-x" />
-              </button>
-            )}
-          </div>
+        {gpsAtelier && <LeafletGPSInterne atelier={gpsAtelier} onClose={() => setGpsAtelier(null)} />}
 
-          {/* Pills de Catégories (Sync avec Services) */}
-          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 10, marginBottom: 14, scrollbarWidth: 'none' }}>
-            <button
-              onClick={() => setCatFiltre('all')}
-              style={{
-                padding: '5px 14px', borderRadius: 20, border: '1.5px solid', cursor: 'pointer',
-                fontSize: '0.8rem', fontWeight: catFiltre === 'all' ? 700 : 500, whiteSpace: 'nowrap',
-                borderColor: catFiltre === 'all' ? '#0284c7' : '#e2e8f0',
-                background: catFiltre === 'all' ? '#0284c7' : 'white',
-                color: catFiltre === 'all' ? 'white' : '#64748b',
-              }}
-            >
-              Tous
-            </button>
-            {categories.map(c => (
-              <button
-                key={c.id}
-                onClick={() => setCatFiltre(String(c.id))}
-                style={{
-                  padding: '5px 12px', borderRadius: 20, border: '1.5px solid', cursor: 'pointer',
-                  fontSize: '0.8rem', fontWeight: catFiltre === String(c.id) ? 700 : 500,
-                  whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5,
-                  borderColor: catFiltre === String(c.id) ? '#0284c7' : '#e2e8f0',
-                  background: catFiltre === String(c.id) ? '#0284c7' : 'white',
-                  color: catFiltre === String(c.id) ? 'white' : '#64748b',
-                }}
-              >
-                {c.icone && <i className={`bi ${c.icone}`} style={{ fontSize: '0.8rem' }} />}
-                {c.nom}
-              </button>
-            ))}
-          </div>
+        <div className="container">
 
-          {/* Ligne de filtres secondaires */}
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            <select value={filtreVille} onChange={e => setFiltreVille(e.target.value)} style={{
-              padding: '7px 12px', border: '1.5px solid #e2e8f0',
-              borderRadius: 10, fontSize: '0.83rem', background: '#f8fafc',
-              color: '#374151', cursor: 'pointer', outline: 'none',
-            }}>
-              {villes.map(v => (
-                <option key={v} value={v}>{v === 'all' ? 'Toutes les villes' : v}</option>
-              ))}
-            </select>
-
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{
-              padding: '7px 12px', border: '1.5px solid #e2e8f0',
-              borderRadius: 10, fontSize: '0.83rem', background: '#f8fafc',
-              color: '#374151', cursor: 'pointer', outline: 'none',
-            }}>
-              <option value="nom">Nom A–Z</option>
-              <option value="recents">Plus récents</option>
-            </select>
-
-            <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', userSelect: 'none' }}>
-              <input type="checkbox" checked={filtreActif} onChange={e => setFiltreActif(e.target.checked)}
-                style={{ accentColor: '#0284c7', width: 16, height: 16 }} />
-              <span style={{ fontSize: '0.83rem', color: '#64748b', fontWeight: 500 }}>Actifs</span>
-            </label>
-
-            <button onClick={locateMe} style={{
-              padding: '7px 14px', borderRadius: 10,
-              border: '1.5px solid #bae6fd', background: '#f0f9ff',
-              color: '#0284c7', fontWeight: 600, fontSize: '0.83rem',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-            }}>
-              <i className="bi bi-crosshair2" /> Ma position
-            </button>
-
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-              {(search || catFiltre !== 'all' || filtreVille !== 'all' || !filtreActif) && (
-                <button onClick={resetFilters} style={{
-                  fontSize: '0.8rem', color: '#94a3b8',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 4,
-                }}>
-                  <i className="bi bi-x-circle" /> Reset
+          {/* ── FILTER CARD ── */}
+          <div className="at-filter-card">
+            {/* Search */}
+            <div className="at-search-wrap">
+              <i className="bi bi-search at-search-icon" />
+              <input
+                type="text"
+                placeholder="Rechercher un atelier, une adresse, un artisan…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="at-search-input"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="at-search-clear">
+                  <i className="bi bi-x" />
                 </button>
               )}
-              <span style={{
-                background: '#f0f9ff', color: '#0284c7',
-                fontWeight: 700, fontSize: '0.8rem',
-                padding: '4px 10px', borderRadius: 20,
-              }}>
-                {ateliersFiltres.length}
-              </span>
+            </div>
+
+            {/* Category chips */}
+            <div className="at-chips">
+              <button
+                onClick={() => setCatFiltre('all')}
+                className={`at-chip ${catFiltre === 'all' ? 'active' : ''}`}
+              >
+                ✦ Toutes catégories
+              </button>
+              {categories.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => setCatFiltre(String(c.id))}
+                  className={`at-chip ${catFiltre === String(c.id) ? 'active' : ''}`}
+                >
+                  {c.icone && <i className={`bi ${c.icone}`} />}
+                  {c.nom}
+                </button>
+              ))}
+            </div>
+
+            {/* Secondary filters */}
+            <div className="at-filters-row">
+              <select
+                value={filtreVille}
+                onChange={e => setFiltreVille(e.target.value)}
+                className="at-select"
+              >
+                {villes.map(v => (
+                  <option key={v} value={v}>{v === 'all' ? 'Toutes les villes' : v}</option>
+                ))}
+              </select>
+
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="at-select">
+                <option value="nom">Nom A–Z</option>
+                <option value="recents">Plus récents</option>
+              </select>
+
+              <label className="at-toggle-label">
+                <div
+                  className="at-toggle-track"
+                  onClick={() => setFiltreActif(v => !v)}
+                  style={{ background: filtreActif ? '#0284c7' : '#cbd5e1', cursor: 'pointer' }}
+                >
+                  <div
+                    className="at-toggle-thumb"
+                    style={{ left: filtreActif ? 22 : 3 }}
+                  />
+                </div>
+                Actifs uniquement
+              </label>
+
+              <button onClick={locateMe} className="at-btn-locate">
+                <i className="bi bi-crosshair2" /> Ma position
+              </button>
+
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                {hasFilters && (
+                  <button onClick={resetFilters} className="at-btn-reset">
+                    <i className="bi bi-x-circle" /> Reset
+                  </button>
+                )}
+                <span className="at-count-badge">{ateliersFiltres.length}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* ── Carte + Liste ── */}
-        <div className="ateliers-grid-wrap" style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-          {/* Carte */}
-          <div className="ateliers-map-container" style={{
-            flex: 2, borderRadius: 16, overflow: 'hidden',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-          }}>
-            <GoogleMapAtelierPicker
-              ateliers={ateliersFiltres}
-              selectedAtelier={selectedAtelier}
-              onSelectAtelier={zoomToAtelier}
-              zoom={googleZoom}
-              searchLatLng={center}
-              mapHeight={'min(420px, 50vh)'}
-            />
-          </div>
+          {/* ── MAP + LIST ── */}
+          <div className="at-layout">
 
-          {/* Liste */}
-          <div className="ateliers-list-container" style={{
-            flex: 1, minWidth: 270, maxWidth: 340,
-            maxHeight: 'min(520px, 52vh)',
-            overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8,
-          }}>
-            {ateliersFiltres.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>Aucun atelier</div>
-            ) : (
-              ateliersFiltres.map(a => {
+            {/* MAP */}
+            <div className="at-map-wrap">
+              <GoogleMapAtelierPicker
+                ateliers={ateliersFiltres}
+                selectedAtelier={selectedAtelier}
+                onSelectAtelier={zoomToAtelier}
+                zoom={googleZoom}
+                searchLatLng={center}
+                mapHeight="100%"
+              />
+            </div>
+
+            {/* LIST */}
+            <div className="at-list-wrap">
+              {ateliersFiltres.length === 0 ? (
+                <div className="at-empty">
+                  <div style={{ fontSize: '2rem', marginBottom: 10 }}>📍</div>
+                  <p style={{ fontWeight: 700, color: '#0c2340', fontSize: '0.9rem', margin: '0 0 6px', fontFamily: "'Outfit',sans-serif" }}>
+                    Aucun atelier trouvé
+                  </p>
+                  <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: 0 }}>
+                    Essayez de modifier vos filtres.
+                  </p>
+                </div>
+              ) : ateliersFiltres.map((a, idx) => {
                 const isSelected = selectedAtelier?.id === a.id;
                 return (
                   <div
                     key={a.id}
                     onClick={() => zoomToAtelier(a)}
-                    style={{
-                      background: 'white', borderRadius: 14, padding: '12px',
-                      cursor: 'pointer', border: `2px solid ${isSelected ? '#0284c7' : '#e2e8f0'}`,
-                      boxShadow: isSelected ? '0 4px 12px rgba(2,132,199,0.1)' : 'none',
-                    }}
+                    className={`at-item ${isSelected ? 'selected' : ''}`}
+                    style={{ animationDelay: `${idx * 0.03}s`, animation: 'at-up 0.4s cubic-bezier(0.22,1,0.36,1) both' }}
                   >
-                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0c2340', marginBottom: 2 }}>{a.nom}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.adresse}</div>
-                    
-                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                      <a href={`tel:${a.telephone}`} onClick={e => e.stopPropagation()} style={{ padding: '4px 8px', borderRadius: 6, background: '#f0fdf4', color: '#16a34a', fontSize: '0.7rem', fontWeight: 600, textDecoration: 'none' }}>
-                        Appeler
-                      </a>
-                      <button onClick={e => { e.stopPropagation(); setGpsAtelier(a); }} style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 6, background: '#0284c7', border: 'none', color: 'white', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
-                        GPS
+                    <div className="at-item-header">
+                      <div className={`at-item-icon ${!a.est_actif ? 'inactive' : ''}`}>
+                        <i className="bi bi-shop" />
+                      </div>
+                      <div className="at-item-info">
+                        <div className="at-item-name">{a.nom}</div>
+                        <div className="at-item-addr">{a.adresse}</div>
+                      </div>
+                      <span className={`at-item-status ${a.est_actif ? 'active' : 'inactive'}`}>
+                        <i className={`bi bi-circle-fill`} style={{ fontSize: '0.5rem' }} />
+                        {a.est_actif ? 'Ouvert' : 'Fermé'}
+                      </span>
+                    </div>
+
+                    {a.description && (
+                      <div className="at-item-desc">{a.description}</div>
+                    )}
+
+                    <div className="at-item-actions">
+                      {a.telephone && (
+                        <a
+                          href={`tel:${a.telephone}`}
+                          onClick={e => e.stopPropagation()}
+                          className="at-btn-call"
+                        >
+                          <i className="bi bi-telephone-fill" /> Appeler
+                        </a>
+                      )}
+                      <button
+                        onClick={e => { e.stopPropagation(); setGpsAtelier(a); }}
+                        className="at-btn-gps"
+                      >
+                        <i className="bi bi-navigation-fill" /> GPS
                       </button>
                     </div>
                   </div>
                 );
-              })
-            )}
+              })}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
 // ─── AjouterAtelier ────────────────────────────────────────────
+const FORM_STYLES = `
+.atf-page {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: #f8fafc;
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+.atf-hero {
+  background: linear-gradient(135deg, #0c2340 0%, #0369a1 100%);
+  padding: 40px 0 56px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: -36px;
+}
+
+.atf-hero::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -60px;
+  width: 360px; height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56,189,248,0.15) 0%, transparent 70%);
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.atf-hero-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  animation: at-up 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.atf-hero-icon {
+  width: 52px; height: 52px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.atf-hero-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 1.6rem;
+  margin: 0 0 4px;
+  color: white;
+  letter-spacing: -0.01em;
+}
+
+.atf-hero-sub {
+  color: rgba(255,255,255,0.65);
+  font-size: 0.87rem;
+  margin: 0;
+}
+
+.atf-form-card {
+  background: white;
+  border-radius: 24px;
+  border: 1px solid #e2e8f0;
+  padding: 28px;
+  box-shadow: 0 8px 30px rgba(12,35,64,0.06);
+  position: relative;
+  z-index: 5;
+  animation: at-up 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+}
+
+.atf-field-label {
+  font-weight: 700;
+  font-size: 0.83rem;
+  color: #374151;
+  margin-bottom: 6px;
+  display: block;
+  letter-spacing: 0.01em;
+}
+
+.atf-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  background: #f8fafc;
+  outline: none;
+  transition: all 0.2s;
+  color: #0c2340;
+  font-family: inherit;
+}
+
+.atf-input:focus {
+  border-color: #0284c7;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(2,132,199,0.1);
+}
+
+.atf-error {
+  color: #ef4444;
+  font-size: 0.78rem;
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.atf-info-card {
+  background: #f0f9ff;
+  border-radius: 20px;
+  border: 1px solid #bae6fd;
+  padding: 22px;
+  position: sticky;
+  top: 80px;
+  animation: at-up 0.5s cubic-bezier(0.22,1,0.36,1) 0.2s both;
+}
+
+.atf-info-title {
+  font-weight: 800;
+  color: #0c2340;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+}
+
+.atf-btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
+  color: #475569;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.atf-btn-back:hover { background: #e2e8f0; color: #0c2340; }
+
+.atf-btn-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 28px;
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: white;
+  border-radius: 14px;
+  border: none;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(2,132,199,0.25);
+  font-family: inherit;
+}
+
+.atf-btn-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(2,132,199,0.35);
+}
+
+.atf-btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .atf-wrap { flex-direction: column !important; }
+  .atf-info-card { position: static !important; }
+}
+`;
+
 export function AjouterAtelier() {
-  const [form, setForm] = useState({ nom: '', adresse: '', latitude: '', longitude: '', telephone: '', description: '', est_actif: true });
+  const [form, setForm] = useState({
+    nom: '', adresse: '', latitude: '', longitude: '',
+    telephone: '', description: '', est_actif: true,
+  });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const set = f => e => setForm(p => ({ ...p, [f]: e.type === 'checkbox' ? e.target.checked : e.target.value }));
+
+  const set = f => e =>
+    setForm(p => ({ ...p, [f]: e.type === 'checkbox' ? e.target.checked : e.target.value }));
 
   useEffect(() => {
     if (!window.L) return;
@@ -354,152 +1035,158 @@ export function AjouterAtelier() {
     finally { setLoading(false); }
   };
 
+  const VILLES = [
+    ['Lomé', '6.1256, 1.2325'],
+    ['Kpalimé', '6.9000, 0.6333'],
+    ['Sokodé', '8.5667, 0.9833'],
+    ['Kara', '9.5500, 1.1667'],
+    ['Dapaong', '10.7833, 0.0333'],
+  ];
+
   return (
-    <div style={{ padding: '32px 0 48px' }}>
-      <div className="container">
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 6 }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: 14,
-              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(2,132,199,0.3)',
-            }}>
-              <i className="bi bi-plus-circle-fill" style={{ fontSize: '1.4rem', color: 'white' }} />
-            </div>
-            <div>
-              <h2 style={{ margin: 0, fontWeight: 800, fontSize: '1.5rem', color: '#0c2340' }}>Ajouter un Atelier</h2>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '0.88rem' }}>Référencez votre atelier pour être visible des clients</p>
+    <>
+      <style>{STYLES}{FORM_STYLES}</style>
+      <div className="atf-page">
+
+        {/* HERO */}
+        <div className="at-hero atf-hero" style={{ padding: '40px 0 56px' }}>
+          <div className="container">
+            <div className="atf-hero-inner">
+              <div className="atf-hero-icon"><i className="bi bi-plus-circle-fill" /></div>
+              <div>
+                <h2 className="atf-hero-title">Ajouter un Atelier</h2>
+                <p className="atf-hero-sub">Référencez votre atelier pour être visible des clients</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="ateliers-add-wrap" style={{ display: 'flex', gap: 20 }}>
-          <style>{`
-            @media (max-width: 768px) {
-              .ateliers-add-wrap { flex-direction: column !important; }
-              .ateliers-add-form { width: 100% !important; flex: none !important; }
-              .ateliers-add-info { width: 100% !important; flex: none !important; position: static !important; }
-            }
-          `}</style>
-          <div className="ateliers-add-form" style={{ flex: 2 }}>
-            <div style={{ background: 'white', borderRadius: 16, padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-              <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontWeight: 600, fontSize: '0.85rem', color: '#374151', marginBottom: 6, display: 'block' }}>Nom de l'atelier *</label>
-                  <input type="text" className="form-control" value={form.nom} onChange={set('nom')} required />
-                  {errors.nom && <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: 4 }}>{errors.nom}</div>}
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontWeight: 600, fontSize: '0.85rem', color: '#374151', marginBottom: 6, display: 'block' }}>Adresse *</label>
-                  <textarea className="form-control" value={form.adresse} onChange={set('adresse')} required />
-                </div>
-                <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontWeight: 600, fontSize: '0.85rem', color: '#374151', marginBottom: 6, display: 'block' }}>Latitude</label>
-                    <input type="number" step="0.000001" className="form-control" value={form.latitude} onChange={set('latitude')} placeholder="6.125580" />
+        <div className="container" style={{ position: 'relative', zIndex: 5 }}>
+          <div className="atf-wrap" style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+
+            {/* FORM */}
+            <div style={{ flex: 2 }}>
+              <div className="atf-form-card">
+                <form onSubmit={handleSubmit}>
+                  {/* Nom */}
+                  <div style={{ marginBottom: 18 }}>
+                    <label className="atf-field-label">Nom de l'atelier *</label>
+                    <input type="text" value={form.nom} onChange={set('nom')} required className="atf-input" placeholder="Ex: Atelier Mensah Électricité" />
+                    {errors.nom && <div className="atf-error"><i className="bi bi-exclamation-circle" />{errors.nom}</div>}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontWeight: 600, fontSize: '0.85rem', color: '#374151', marginBottom: 6, display: 'block' }}>Longitude</label>
-                    <input type="number" step="0.000001" className="form-control" value={form.longitude} onChange={set('longitude')} placeholder="1.232456" />
+
+                  {/* Adresse */}
+                  <div style={{ marginBottom: 18 }}>
+                    <label className="atf-field-label">Adresse *</label>
+                    <textarea value={form.adresse} onChange={set('adresse')} required rows={2} className="atf-input" style={{ resize: 'vertical' }} placeholder="Ex: Quartier Bè, près du marché, Lomé" />
                   </div>
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontWeight: 600, fontSize: '0.85rem', color: '#374151', marginBottom: 6, display: 'block' }}>
-                    Cliquez sur la carte pour positionner l'atelier
-                  </label>
-                  <div id="map-ajouter" style={{ height: 280, borderRadius: 12, overflow: 'hidden', border: '1.5px solid #e2e8f0' }} />
-                  {(form.latitude && form.longitude) && (
-                    <div style={{ marginTop: 6, fontSize: '0.8rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <i className="bi bi-check-circle-fill" /> Position sélectionnée : {form.latitude}, {form.longitude}
+
+                  {/* Lat/Lng */}
+                  <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
+                    <div style={{ flex: 1 }}>
+                      <label className="atf-field-label">Latitude</label>
+                      <input type="number" step="0.000001" value={form.latitude} onChange={set('latitude')} className="atf-input" placeholder="6.125580" />
                     </div>
-                  )}
+                    <div style={{ flex: 1 }}>
+                      <label className="atf-field-label">Longitude</label>
+                      <input type="number" step="0.000001" value={form.longitude} onChange={set('longitude')} className="atf-input" placeholder="1.232456" />
+                    </div>
+                  </div>
+
+                  {/* Map */}
+                  <div style={{ marginBottom: 18 }}>
+                    <label className="atf-field-label">
+                      <i className="bi bi-map" style={{ color: '#0284c7' }} /> Cliquez sur la carte pour positionner l'atelier
+                    </label>
+                    <div id="map-ajouter" style={{ height: 280, borderRadius: 16, overflow: 'hidden', border: '1.5px solid #e2e8f0' }} />
+                    {form.latitude && form.longitude && (
+                      <div style={{ marginTop: 8, fontSize: '0.8rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                        <i className="bi bi-check-circle-fill" /> Position sélectionnée : {form.latitude}, {form.longitude}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Téléphone */}
+                  <div style={{ marginBottom: 18 }}>
+                    <label className="atf-field-label">Téléphone</label>
+                    <input type="text" value={form.telephone} onChange={set('telephone')} className="atf-input" placeholder="Ex: 90 00 00 00" />
+                  </div>
+
+                  {/* Description */}
+                  <div style={{ marginBottom: 20 }}>
+                    <label className="atf-field-label">Services proposés</label>
+                    <textarea value={form.description} onChange={set('description')} rows={3} className="atf-input" style={{ resize: 'vertical' }} placeholder="Ex: Plomberie, électricité, réparation générale…" />
+                  </div>
+
+                  {/* Toggle actif */}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 24, padding: '14px 16px', background: form.est_actif ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${form.est_actif ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: 14, transition: 'all 0.2s' }}>
+                    <div
+                      onClick={() => setForm(p => ({ ...p, est_actif: !p.est_actif }))}
+                      style={{ width: 44, height: 24, borderRadius: 12, background: form.est_actif ? '#16a34a' : '#cbd5e1', position: 'relative', flexShrink: 0, cursor: 'pointer', transition: 'background 0.2s' }}
+                    >
+                      <div style={{ position: 'absolute', top: 3, left: form.est_actif ? 22 : 3, width: 18, height: 18, borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: form.est_actif ? '#15803d' : '#374151' }}>
+                        {form.est_actif ? '✓ Atelier actif' : 'Atelier inactif'}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>
+                        {form.est_actif ? 'Visible par les clients sur la carte' : 'Masqué de la carte clients'}
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Buttons */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <button type="button" onClick={() => navigate('/mes-ateliers')} className="atf-btn-back">
+                      <i className="bi bi-arrow-left" /> Retour
+                    </button>
+                    <button type="submit" disabled={loading} className="atf-btn-submit">
+                      {loading
+                        ? <><i className="bi bi-hourglass-split" /> Enregistrement…</>
+                        : <><i className="bi bi-check-circle-fill" /> Enregistrer l'atelier</>
+                      }
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* INFO CARD */}
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div className="atf-info-card">
+                <div className="atf-info-title">
+                  <i className="bi bi-info-circle-fill" style={{ color: '#0284c7' }} />
+                  Trouver les coordonnées GPS
                 </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontWeight: 600, fontSize: '0.85rem', color: '#374151', marginBottom: 6, display: 'block' }}>Téléphone</label>
-                  <input type="text" className="form-control" value={form.telephone} onChange={set('telephone')} />
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontWeight: 600, fontSize: '0.85rem', color: '#374151', marginBottom: 6, display: 'block' }}>Services proposés</label>
-                  <textarea className="form-control" value={form.description} onChange={set('description')} placeholder="Ex: Plomberie, électricité, réparation générale…" />
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 20 }}>
+                <ol style={{ paddingLeft: 18, lineHeight: 2.1, fontSize: '0.84rem', color: '#475569', marginBottom: 20 }}>
+                  <li>Ouvrez <strong>Google Maps</strong></li>
+                  <li>Naviguez vers l'emplacement</li>
+                  <li>Appuyez longtemps sur le point</li>
+                  <li>Copiez les coordonnées</li>
+                </ol>
+                <div style={{ fontWeight: 800, color: '#0c2340', marginBottom: 12, fontSize: '0.88rem' }}>Villes principales du Togo</div>
+                {VILLES.map(([v, c]) => (
                   <div
-                    onClick={() => setForm(p => ({ ...p, est_actif: !p.est_actif }))}
-                    style={{
-                      width: 44, height: 24, borderRadius: 12, position: 'relative',
-                      background: form.est_actif ? '#0284c7' : '#cbd5e1',
-                      transition: 'background 0.2s', cursor: 'pointer', flexShrink: 0,
+                    key={v}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #e0f2fe' }}
+                    onClick={() => {
+                      const [lat, lng] = c.split(',').map(s => s.trim());
+                      setForm(p => ({ ...p, latitude: lat, longitude: lng }));
                     }}
                   >
-                    <div style={{
-                      position: 'absolute', top: 3,
-                      left: form.est_actif ? 22 : 3,
-                      width: 18, height: 18, borderRadius: '50%',
-                      background: 'white', transition: 'left 0.2s',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                    }} />
+                    <span style={{ fontWeight: 700, color: '#0c2340', fontSize: '0.84rem', cursor: 'pointer' }}>{v}</span>
+                    <span style={{ color: '#64748b', fontFamily: 'monospace', fontSize: '0.75rem' }}>{c}</span>
                   </div>
-                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#374151' }}>
-                    {form.est_actif ? 'Atelier actif (visible des clients)' : 'Atelier inactif (masqué)'}
-                  </span>
-                </label>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <button type="button" onClick={() => navigate('/mes-ateliers')} style={{
-                    padding: '10px 20px', borderRadius: 12,
-                    background: '#f1f5f9', border: '1.5px solid #e2e8f0',
-                    color: '#475569', fontWeight: 600, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem',
-                  }}>
-                    <i className="bi bi-arrow-left" /> Retour
-                  </button>
-                  <button type="submit" disabled={loading} style={{
-                    padding: '10px 24px', borderRadius: 12,
-                    background: loading ? '#94a3b8' : 'linear-gradient(135deg, #0284c7, #0369a1)',
-                    border: 'none', color: 'white', fontWeight: 700,
-                    cursor: loading ? 'not-allowed' : 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem',
-                    boxShadow: loading ? 'none' : '0 4px 12px rgba(2,132,199,0.3)',
-                  }}>
-                    {loading
-                      ? <><i className="bi bi-hourglass-split" /> Enregistrement…</>
-                      : <><i className="bi bi-check-circle-fill" /> Enregistrer l'atelier</>
-                    }
-                  </button>
+                ))}
+                <div style={{ marginTop: 12, fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                  Cliquez sur une ville pour préremplir les coordonnées.
                 </div>
-              </form>
-            </div>
-          </div>
-
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <div style={{
-              background: '#f0f9ff', borderRadius: 16, padding: '20px',
-              border: '1px solid #bae6fd', position: 'sticky', top: 80,
-            }}>
-              <div style={{ fontWeight: 700, color: '#0c2340', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <i className="bi bi-info-circle-fill" style={{ color: '#0284c7' }} />
-                Trouver les coordonnées
               </div>
-              <ol style={{ paddingLeft: 18, lineHeight: 2, fontSize: '0.85rem', color: '#475569', marginBottom: 16 }}>
-                <li>Ouvrez Google Maps</li>
-                <li>Allez à l'emplacement</li>
-                <li>Appuyez longtemps sur le point</li>
-                <li>Copiez les coordonnées affichées</li>
-              </ol>
-              <div style={{ fontWeight: 700, color: '#0c2340', marginBottom: 10, fontSize: '0.88rem' }}>Villes du Togo</div>
-              {[['Lomé', '6.1256, 1.2325'], ['Kpalimé', '6.9000, 0.6333'], ['Sokodé', '8.5667, 0.9833'], ['Kara', '9.5500, 1.1667'], ['Dapaong', '10.7833, 0.0333']].map(([v, c]) => (
-                <div key={v} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '6px 0', borderBottom: '1px solid #e0f2fe', fontSize: '0.83rem',
-                }}>
-                  <span style={{ fontWeight: 600, color: '#0c2340' }}>{v}</span>
-                  <span style={{ color: '#64748b', fontFamily: 'monospace', fontSize: '0.78rem' }}>{c}</span>
-                </div>
-              ))}
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

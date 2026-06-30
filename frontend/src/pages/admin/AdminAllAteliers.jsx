@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axios';
-import '../styles/admin.css';
-import DataTable from '../components/DataTable';
+import api from '../../api/axios';
+import '../../styles/admin.css';
+import DataTable from '../../components/DataTable';
 
 export default function AdminAllAteliers() {
   const [ateliers, setAteliers] = useState([]);

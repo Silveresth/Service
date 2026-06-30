@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import api from '../api/axios';
+import api from '../../api/axios';
 
 const LABELS     = ['', 'Très mauvais 😞', 'Mauvais 😕', 'Correct 😐', 'Bien 😊', 'Excellent 🌟'];
 const NOTE_COLORS = ['', '#dc2626', '#ea580c', '#ca8a04', '#16a34a', '#d97706'];

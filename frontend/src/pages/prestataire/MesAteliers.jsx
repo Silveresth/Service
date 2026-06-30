@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axios';
+import api from '../../api/axios';
 
-import GoogleMapAteliers from '../components/GoogleMapAteliers';
+import GoogleMapAteliers from '../../components/GoogleMapAteliers';
 
 export default function MesAteliers() {
   const [ateliers, setAteliers] = useState([]);

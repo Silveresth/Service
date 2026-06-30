@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import DemandeRetrait
-from .models import Compte, Client, Prestataire, Service, Reservation, Paiement, Evaluation, Categorie, Atelier, Message, Notification
+from .models import Compte, Client, Prestataire, Service, Reservation, Paiement, Evaluation, Categorie, Atelier, Message, Notification, ServiceImage, PrestatairePortfolio
 
 
 # ── Compte (custom user) ──────────────────────────────────────────
@@ -85,22 +85,62 @@ class CategorieSerializer(serializers.ModelSerializer):
         fields = ['id', 'nom', 'icone']
 
 
+class PrestatairePortfolioSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PrestatairePortfolio
+        fields = ['id', 'image', 'image_url', 'description']
+
+    def get_image_url(self, obj):
+        if obj.image:
+            url = obj.image.url
+            if url.startswith('http'):
+                return url
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(url)
+            return url
+        return None
+
+
 # ── Prestataire ──────────────────────────────────────────────────
 class PrestataireSerializer(serializers.ModelSerializer):
     user = CompteSerializer(read_only=True)
     photo_url = serializers.SerializerMethodField()
+    services_count = serializers.SerializerMethodField()
+    note_moyenne = serializers.SerializerMethodField()
+    reservations_count = serializers.SerializerMethodField()
+    portfolio = PrestatairePortfolioSerializer(many=True, read_only=True)
 
     class Meta:
         model = Prestataire
-        fields = ['id', 'user', 'specialite', 'numero_flooz', 'numero_mix', 'photo', 'photo_url', 'solde']
+        fields = ['id', 'user', 'specialite', 'numero_flooz', 'numero_mix', 'photo', 'photo_url', 'solde',
+                  'services_count', 'note_moyenne', 'reservations_count', 'statut_activite', 'portfolio']
 
     def get_photo_url(self, obj):
         if obj.photo:
+            url = obj.photo.url
+            if url.startswith('http'):
+                return url
             request = self.context.get('request')
             if request:
-                return request.build_absolute_uri(obj.photo.url)
-            return obj.photo.url
+                return request.build_absolute_uri(url)
+            return url
         return None
+
+    def get_services_count(self, obj):
+        return obj.services.count()
+
+    def get_note_moyenne(self, obj):
+        from django.db.models import Avg
+        from .models import Evaluation
+        res = Evaluation.objects.filter(reservation__service__prestataire=obj).aggregate(Avg('note'))
+        return res['note__avg'] if res['note__avg'] else None
+
+    def get_reservations_count(self, obj):
+        from .models import Reservation
+        return Reservation.objects.filter(service__prestataire=obj).count()
 
 
 class DemandeRetraitSerializer(serializers.ModelSerializer):
@@ -111,6 +151,13 @@ class DemandeRetraitSerializer(serializers.ModelSerializer):
         fields = ['id', 'prestataire', 'prestataire_nom', 'montant', 'methode', 'numero_paiement',
                   'statut', 'date_demande', 'date_validation', 'notes_admin']
         read_only_fields = ['id', 'prestataire', 'date_demande', 'date_validation', 'statut']
+
+    def validate_montant(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Le montant du retrait doit être strictement supérieur à 0.")
+        if value < 100:
+            raise serializers.ValidationError("Le montant minimum de retrait est de 100 FCFA.")
+        return value
 
     def get_prestataire_nom(self, obj):
         user = obj.prestataire.user
@@ -125,6 +172,25 @@ class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = ['user', 'username']
+
+
+class ServiceImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ServiceImage
+        fields = ['id', 'image', 'image_url']
+
+    def get_image_url(self, obj):
+        if obj.image:
+            url = obj.image.url
+            if url.startswith('http'):
+                return url
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(url)
+            return url
+        return None
 
 
 # ── Service ──────────────────────────────────────────────────────
@@ -147,6 +213,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     has_ar = serializers.SerializerMethodField()
     note_avg = serializers.SerializerMethodField()
     nb_notes = serializers.SerializerMethodField()
+    images = ServiceImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Service
@@ -156,7 +223,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             'prestataire_id', 'prestataire_nom',
             'categorie', 'categorie_id',
             'image', 'image_url', 'model_3d', 'model_3d_url', 'has_ar',
-            'note_avg', 'nb_notes',
+            'note_avg', 'nb_notes', 'images',
         ]
 
 
@@ -169,10 +236,13 @@ class ServiceSerializer(serializers.ModelSerializer):
 
     def get_model_3d_url(self, obj):
         if obj.model_3d:
+            url = obj.model_3d.url
+            if url.startswith('http'):
+                return url
             request = self.context.get('request')
             if request:
-                return request.build_absolute_uri(obj.model_3d.url)
-            return obj.model_3d.url
+                return request.build_absolute_uri(url)
+            return url
         return None
 
     def get_has_ar(self, obj):
@@ -180,10 +250,13 @@ class ServiceSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         if obj.image:
+            url = obj.image.url
+            if url.startswith('http'):
+                return url
             request = self.context.get('request')
             if request:
-                return request.build_absolute_uri(obj.image.url)
-            return obj.image.url
+                return request.build_absolute_uri(url)
+            return url
         return None
 
     def get_note_avg(self, obj):
@@ -405,3 +478,5 @@ class PrestataireStatsSerializer(serializers.Serializer):
     revenue_monthly = serializers.ListField(child=serializers.FloatField())
     monthly_labels = serializers.ListField(child=serializers.CharField())
     top_services = serializers.ListField(child=serializers.DictField())
+    solde = serializers.FloatField()
+    statut_activite = serializers.CharField()

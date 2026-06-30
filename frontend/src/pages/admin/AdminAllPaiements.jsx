@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api from '../api/axios';
+import api from '../../api/axios';
 
 const STATUT_COLOR = { confirme: '#16a34a', pending: '#d97706', echoue: '#dc2626' };
 const STATUT_BG    = { confirme: '#f0fdf4', pending: '#fffbeb', echoue: '#fef2f2' };

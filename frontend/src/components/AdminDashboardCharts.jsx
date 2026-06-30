@@ -37,6 +37,7 @@ export default function AdminDashboardCharts({ stats }) {
   return (
     <div style={{ marginTop: 24 }}>
       <div
+        className="adminChartsGrid"
         style={{
           display: 'grid',
           gridTemplateColumns: '2fr 1fr',

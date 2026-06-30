@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axios';
+import api from '../../api/axios';
 
 const PMS_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap');

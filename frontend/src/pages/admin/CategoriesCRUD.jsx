@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import DataTable from '../components/DataTable';
-import FormBuilder from '../components/FormBuilder';
-import SearchFilter from '../components/SearchFilter';
-import crudService from '../utils/crudService';
+import DataTable from '../../components/DataTable';
+import FormBuilder from '../../components/FormBuilder';
+import SearchFilter from '../../components/SearchFilter';
+import crudService from '../../utils/crudService';
 
 export default function CategoriesCRUD() {
   const [items, setItems] = useState([]);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axios';
-import { useAuth } from '../context/AuthContext';
+import api from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
 
 const STATUT = {
   en_attente:          { label:'En attente',  color:'#d97706', bg:'#fef3c7', border:'#fde68a', icon:'clock-fill' },
@@ -196,6 +196,20 @@ export default function MesReservations() {
                         </div>
                       ))}
                     </div>
+
+                    {r.statut === 'confirmee' && user?.type_compte === 'client' && (
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '10px 14px', fontSize: '0.8rem', color: '#166534', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                        <i className="bi bi-shield-fill-check" style={{ color: '#22c55e', fontSize: '1rem' }}></i>
+                        <span><strong>Tiers de confiance :</strong> Votre paiement de {Number(r.montant).toLocaleString()} F est bloqué en séquestre. Le prestataire ne sera crédité que lorsque vous cliquerez sur le bouton <strong>"Terminé"</strong>.</span>
+                      </div>
+                    )}
+
+                    {r.statut === 'confirmee' && user?.type_compte === 'prestataire' && (
+                      <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: 12, padding: '10px 14px', fontSize: '0.8rem', color: '#b45309', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                        <i className="bi bi-lock-fill" style={{ color: '#f59e0b', fontSize: '1rem' }}></i>
+                        <span><strong>Fonds en séquestre :</strong> Le paiement de {Number(r.montant).toLocaleString()} F est sécurisé par la plateforme. Il sera ajouté à votre solde dès que le client aura marqué la prestation comme <strong>"Terminée"</strong>.</span>
+                      </div>
+                    )}
 
                     {/* Actions */}
                     <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:4 }}>

@@ -6,41 +6,43 @@ import Footer from './components/Footer';
 import Chatbot from './components/Chatbot';
 import OfflineBanner from './components/OfflineBanner';
 import SplashScreen from './components/SplashScreen';
-import Home from './pages/Home';
-import Services from './pages/Services';
-import Servicedetail from './pages/Servicedetail';
-import { CarteAteliers, AjouterAtelier } from './pages/Ateliers';
-import Prestataires from './pages/Prestataires';
-import Dashboard from './pages/Dashboard';
-import MonCompte from './pages/MonCompte';
-import AdminDashboard from './pages/AdminDashboard';
-import MesReservations from './pages/MesReservations';
-import MesAteliers from './pages/MesAteliers';
-import ModifierService from './pages/ModifierService';
-import ModifierAtelier from './pages/ModifierAtelier';
-import Reserver from './pages/Reserver';
-import Evaluer from './pages/Evaluer';
-import ChatPage from './pages/ChatPage';
-import RegisterPrestataire from './pages/RegisterPresataire';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import PrestataireDashboard from './pages/PrestataireDashboard';
-import PrestataireAjouterService from './pages/PrestataireAjouterService';
-import PrestataireMesServices from './pages/PrestataireMesServices';
-import ServicesCRUD from './pages/ServicesCRUD';
-import CategoriesCRUD from './pages/CategoriesCRUD';
-import ReservationsCRUD from './pages/ReservationsCRUD';
-import EvaluationsCRUD from './pages/EvaluationsCRUD';
-import AteliersCRUD from './pages/AteliersCRUD';
-import PrestatairesCRUD from './pages/PrestatairesCRUD';
-import AdminAllAteliers from './pages/AdminAllAteliers';
-import AdminAllReservations from './pages/AdminAllReservations';
-import AdminAllComptes from './pages/AdminAllComptes';
-import AdminEvaluations from './pages/AdminEvaluations';
-import AdminAllPaiements from './pages/AdminAllPaiements';
-import AdminAllCategories from './pages/AdminAllCategories';
-import AdminAllServices from './pages/AdminAllServices';
+import Home from './pages/public/Home';
+import Services from './pages/public/Services';
+import Servicedetail from './pages/public/Servicedetail';
+import { CarteAteliers, AjouterAtelier } from './pages/public/Ateliers';
+import Prestataires from './pages/public/Prestataires';
+
+import MonCompte from './pages/shared/MonCompte';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import MesReservations from './pages/client/MesReservations';
+import MesAteliers from './pages/prestataire/MesAteliers';
+import ModifierService from './pages/prestataire/ModifierService';
+import ModifierAtelier from './pages/prestataire/ModifierAtelier';
+import Reserver from './pages/client/Reserver';
+import Evaluer from './pages/client/Evaluer';
+import ChatPage from './pages/shared/ChatPage';
+import RegisterPrestataire from './pages/public/RegisterPresataire';
+import Login from './pages/public/Login';
+import Register from './pages/public/Register';
+import PrestataireDashboard from './pages/prestataire/PrestataireDashboard';
+import PrestataireAjouterService from './pages/prestataire/PrestataireAjouterService';
+import PrestataireMesServices from './pages/prestataire/PrestataireMesServices';
+import ServicesCRUD from './pages/admin/ServicesCRUD';
+import CategoriesCRUD from './pages/admin/CategoriesCRUD';
+import ReservationsCRUD from './pages/admin/ReservationsCRUD';
+import EvaluationsCRUD from './pages/admin/EvaluationsCRUD';
+import AteliersCRUD from './pages/admin/AteliersCRUD';
+import PrestatairesCRUD from './pages/admin/PrestatairesCRUD';
+import AdminAllAteliers from './pages/admin/AdminAllAteliers';
+import AdminAllReservations from './pages/admin/AdminAllReservations';
+import AdminAllComptes from './pages/admin/AdminAllComptes';
+import AdminEvaluations from './pages/admin/AdminEvaluations';
+import AdminAllPaiements from './pages/admin/AdminAllPaiements';
+import AdminAllCategories from './pages/admin/AdminAllCategories';
+import AdminAllServices from './pages/admin/AdminAllServices';
 import PrivateRoute from './components/PrivateRoute';
+import PrestataireProfile from './pages/public/PrestataireProfile';
+
 
 import './App.css';
 import './styles/global.css';
@@ -86,13 +88,13 @@ function AppContent() {
           <Route path="/services/:id" element={<Servicedetail />} />
           <Route path="/ateliers" element={<CarteAteliers />} />
           <Route path="/prestataires" element={<Prestataires />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<PrestataireDashboard />} />
           <Route path="/mon-compte" element={<MonCompte />} />
           <Route path="/admin-dashboard" element={<PrivateRoute adminOnly><AdminDashboard /></PrivateRoute>} />
           <Route path="/admin/dashboard" element={<PrivateRoute adminOnly><AdminDashboard /></PrivateRoute>} />
           <Route path="/mes-reservations" element={<MesReservations />} />
           <Route path="/mes-ateliers" element={<MesAteliers />} />
-          <Route path="/modifier-service/:id" element={<ModifierService />} />
+          <Route path="/modifier-service/:id" element={<PrestataireAjouterService />} />
           <Route path="/modifier-atelier/:id" element={<ModifierAtelier />} />
           <Route path="/reserver/:id" element={<Reserver />} />
           <Route path="/evaluer/:id" element={<Evaluer />} />
@@ -102,6 +104,7 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/prestataire-dashboard" element={<PrestataireDashboard />} />
+          <Route path="/prestataire/:id" element={<PrestataireProfile />} />
           <Route path="/prestataire-ajouter-service" element={<PrestataireAjouterService />} />
           <Route path="/prestataire-mes-services" element={<PrestataireMesServices />} />
           <Route path="/admin/services" element={<PrivateRoute adminOnly><ServicesCRUD /></PrivateRoute>} />

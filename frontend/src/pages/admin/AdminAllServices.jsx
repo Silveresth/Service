@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axios';
-import '../styles/admin.css';
-import DataTable from '../components/DataTable';
-import ConfirmModal from '../components/ConfirmModal';
+import api from '../../api/axios';
+import '../../styles/admin.css';
+import DataTable from '../../components/DataTable';
+import ConfirmModal from '../../components/ConfirmModal';
 
 export default function AdminAllServices() {
   const [services, setServices] = useState([]);
