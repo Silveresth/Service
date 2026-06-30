@@ -76,7 +76,8 @@
 /* ─── CONTAINER ─── */
 .cb-container {
   width: 400px;
-  height: 580px;
+  height: 500px;
+  max-height: calc(100vh - 100px);
   background: white;
   border-radius: 28px;
   display: flex;
