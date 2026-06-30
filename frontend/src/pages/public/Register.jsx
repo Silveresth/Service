@@ -503,11 +503,19 @@ export default function Register() {
       const status = err.response?.status;
       const data = err.response?.data;
 
-      // Erreur serveur ou pas de réponse du tout : message générique fixe,
-      // on n'essaie jamais d'extraire un message du corps de la réponse.
+      // Erreur serveur ou timeout/pas de réponse : sur Render (plan gratuit),
+      // le cold start peut faire dépasser le délai côté client alors que la
+      // requête a fini de s'exécuter côté serveur (le compte est donc souvent
+      // bien créé). On ne bloque pas l'utilisateur sur le formulaire : on le
+      // redirige vers la connexion avec un message informatif, il lui suffit
+      // de se connecter avec les identifiants qu'il vient de saisir.
       if (!status || status >= 500) {
-        setGlobalError('Le serveur a rencontré un problème. Merci de réessayer dans quelques instants.');
         setLoading(false);
+        navigate('/login', {
+          state: {
+            info: "Le serveur a mis du temps à répondre, mais votre compte a probablement été créé. Essayez de vous connecter avec les identifiants que vous venez de saisir.",
+          },
+        });
         return;
       }
 

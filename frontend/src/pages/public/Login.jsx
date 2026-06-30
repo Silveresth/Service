@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import GoogleLoginButton from '../../components/GoogleLoginButton';
@@ -422,6 +422,8 @@ export default function Login() {
   const [showPw, setShowPw] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [info, setInfo] = useState(location.state?.info || '');
 
   const redirectAfterLogin = (data) => {
     login(data);
@@ -439,6 +441,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setInfo('');
     try {
       const res = await api.post('/auth/login/', form);
       redirectAfterLogin(res.data);
@@ -497,6 +500,26 @@ export default function Login() {
 
             <h3 className="login-right-title">Connexion</h3>
             <p className="login-right-desc">Heureux de vous revoir ! Entrez vos accès pour continuer.</p>
+
+            {/* Message d'information (ex: après inscription) */}
+            {info && (
+              <div style={{
+                background: 'rgba(56, 189, 248, 0.1)',
+                border: '1px solid rgba(56, 189, 248, 0.25)',
+                borderRadius: '16px',
+                padding: '14px 18px',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                color: '#7dd3fc',
+                fontSize: '0.9rem',
+                animation: 'login-fadeUp 0.3s ease'
+              }}>
+                <i className="bi bi-info-circle-fill" style={{ color: '#38bdf8', fontSize: '1.1rem' }} />
+                <span>{info}</span>
+              </div>
+            )}
 
             {/* Message d'erreur */}
             {error && (

@@ -1,5 +1,5 @@
 // ── Service Worker - Mode hors-ligne partiel ──
-const CACHE_NAME = 'servicemarket-v1';
+const CACHE_NAME = 'servicemarket-v2';
 const OFFLINE_URL = '/offline.html';
 
 const STATIC_ASSETS = [
@@ -70,10 +70,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Assets statiques → Cache first
+  // Assets statiques → Cache first (sauf index.html qui est en Network First pour éviter les écrans blancs lors de builds)
   if (event.request.method === 'GET') {
     event.respondWith(
       caches.match(event.request).then(cached => {
+        const isHTML = url.pathname === '/' || url.pathname === '/index.html';
+        if (isHTML) {
+          return fetch(event.request)
+            .then(response => {
+              if (response.ok) {
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+              }
+              return response;
+            })
+            .catch(() => cached || caches.match(OFFLINE_URL));
+        }
         if (cached) return cached;
         return fetch(event.request).catch(() => {
           if (event.request.headers.get('Accept')?.includes('text/html')) {
