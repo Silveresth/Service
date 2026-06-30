@@ -2167,7 +2167,37 @@ def chatbot_view(request):
             # 1. Check if greeting or generic request
             is_greeting = any(w in user_msg_lower for w in ["bonjour", "salut", "hello", "coucou", "hi", "bonsoir"])
             
-            # 2. Match categories
+            # 2. Check common small talk / helper patterns
+            small_talk_reply = ""
+            if any(w in user_msg_lower for w in ["qui es-tu", "ton nom", "tu es qui", "rôle", "assistant"]):
+                small_talk_reply = (
+                    "Je suis **SM-Assistant**, l'assistant virtuel officiel de *Service Market Togo* ! 🤖\n\n"
+                    "Mon rôle est de vous guider pour trouver des prestataires de confiance, localiser leurs ateliers ou vous aider à effectuer vos réservations."
+                )
+            elif any(w in user_msg_lower for w in ["ça va", "comment vas-tu", "tu vas bien", "comment ca va"]):
+                small_talk_reply = (
+                    "Je vais super bien, merci de demander ! 😊 Et vous, comment puis-je vous aider aujourd'hui sur la plateforme ?"
+                )
+            elif any(w in user_msg_lower for w in ["merci", "thanks", "génial", "parfait", "super", "cool", "ok"]):
+                small_talk_reply = (
+                    "Avec grand plaisir ! N'hésitez pas si vous avez besoin d'autres renseignements. 😊"
+                )
+            elif any(w in user_msg_lower for w in ["comment ça marche", "comment faire", "fonctionnement", "comment réserver", "comment ca marche"]):
+                small_talk_reply = (
+                    "C'est très simple ! Voici comment faire :\n"
+                    "1. Parcourez la liste des **[Services](/services)**.\n"
+                    "2. Sélectionnez le service de votre choix et cliquez sur **Réserver**.\n"
+                    "3. Choisissez le jour et l'heure souhaités.\n"
+                    "4. Validez en effectuant votre paiement sécurisé."
+                )
+            elif any(w in user_msg_lower for w in ["payer", "paiement", "flooz", "tmoney", "momo", "séquestre", "argent"]):
+                small_talk_reply = (
+                    "Sur Service Market Togo, tous les paiements s'effectuent via **T-Money** ou **Flooz** avec un système de **séquestre** 🔒 :\n"
+                    "- Les fonds sont conservés en sécurité par la plateforme lors de la réservation.\n"
+                    "- L'argent n'est libéré et versé au prestataire que lorsque vous confirmez la fin des travaux !"
+                )
+
+            # 3. Match categories
             from service.models import Categorie
             categories_list = Categorie.objects.all()
             matching_categories = []
@@ -2175,20 +2205,20 @@ def chatbot_view(request):
                 if c.nom.lower() in user_msg_lower:
                     matching_categories.append(c)
 
-            # 3. Match services
+            # 4. Match services
             matching_services = []
             for s in services:
                 if s.nom.lower() in user_msg_lower or (s.categorie and s.categorie.nom.lower() in user_msg_lower):
                     matching_services.append(s)
 
-            # 4. Match prestataires
+            # 5. Match prestataires
             matching_prestataires = []
             for p in prestataires:
                 p_name = (p.user.get_full_name() or p.user.username).lower()
                 if p_name in user_msg_lower or (p.specialite and p.specialite.lower() in user_msg_lower):
                     matching_prestataires.append(p)
 
-            # 5. Match ateliers
+            # 6. Match ateliers
             matching_ateliers = []
             if any(w in user_msg_lower for w in ["atelier", "carte", "map", "géoloc", "adresse", "localisation", "situer"]):
                 from service.models import Atelier
@@ -2196,7 +2226,9 @@ def chatbot_view(request):
 
             # Generate reply
             reply = ""
-            if is_greeting:
+            if small_talk_reply:
+                reply += small_talk_reply + "\n\n"
+            elif is_greeting:
                 reply += "Bonjour ! Comment puis-je vous aider aujourd'hui ? 🤖\n\n"
             
             if matching_services:
@@ -2228,8 +2260,8 @@ def chatbot_view(request):
                     reply += f"- **[{c.nom}](/services?q={c.nom.lower()})**\n"
                 reply += "\n"
 
-            # If no matches found or it was just a generic greeting
-            if not reply or (is_greeting and not matching_services and not matching_prestataires and not matching_ateliers):
+            # If no matches found or it was just a generic greeting/small talk
+            if not reply or (is_greeting and not matching_services and not matching_prestataires and not matching_ateliers and not small_talk_reply):
                 if not reply:
                     reply += "Je suis **SM-Assistant**, à votre écoute ! 🤖\n\n"
                 reply += (
