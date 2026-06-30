@@ -8,7 +8,7 @@ const BASE_URL = process.env.REACT_APP_API_URL
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 60000, // 60 secondes - pour le cold start Render
+  timeout: 90000, // 90 secondes - pour le cold start Render
 });
 
 api.interceptors.request.use(config => {
@@ -19,12 +19,22 @@ api.interceptors.request.use(config => {
   return config;
 });
 
+// Endpoints non-idempotents : on ne doit JAMAIS les rejouer automatiquement,
+// car une 1ère requête peut très bien avoir réussi côté serveur (cold start
+// lent) pendant que le client a abandonné ; la rejouer crée un doublon ou
+// une erreur "déjà existant" trompeuse (ex: inscription, connexion).
+const NO_RETRY_PATTERNS = [/\/auth\/register/, /\/auth\/login/, /\/auth\/google/];
+
 api.interceptors.response.use(
   response => response,
   async error => {
     const config = error.config;
-    // Retry automatique une fois si timeout ou erreur réseau (cold start)
-    if ((error.code === 'ECONNABORTED' || !error.response) && !config._retry) {
+    const url = config?.url || '';
+    const isNonIdempotent = NO_RETRY_PATTERNS.some(re => re.test(url));
+
+    // Retry automatique une fois si timeout ou erreur réseau (cold start),
+    // sauf pour les endpoints non-idempotents listés ci-dessus.
+    if ((error.code === 'ECONNABORTED' || !error.response) && !config._retry && !isNonIdempotent) {
       config._retry = true;
       config.timeout = 90000; // 90s pour le retry
       return api(config);
