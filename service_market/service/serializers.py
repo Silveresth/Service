@@ -480,3 +480,4 @@ class PrestataireStatsSerializer(serializers.Serializer):
     top_services = serializers.ListField(child=serializers.DictField())
     solde = serializers.FloatField()
     statut_activite = serializers.CharField()
+    portfolio = PrestatairePortfolioSerializer(many=True, required=False)

@@ -344,6 +344,7 @@ class PrestataireViewSet(viewsets.ReadOnlyModelViewSet):
             'top_services': top_services,
             'solde': float(prestataire.solde or 0),
             'statut_activite': prestataire.statut_activite,
+            'portfolio': prestataire.portfolio.all(),
         }
 
         
@@ -2175,27 +2176,37 @@ def chatbot_view(request):
         # C. Fallback Simulation (si aucun LLM n'est opérationnel ou disponible)
         if not bot_reply:
             logger.info("Utilisation du mode simulation (fallback local)")
-            user_msg_lower = user_message.lower()
+            
+            # Helper local pour normaliser les accents et ponctuations
+            def normalize_text(text):
+                import unicodedata
+                if not text:
+                    return ""
+                normalized = unicodedata.normalize('NFD', text)
+                stripped = "".join(c for c in normalized if unicodedata.category(c) != 'Mn')
+                return stripped.lower().replace('-', ' ').replace("'", ' ')
+
+            user_msg_norm = normalize_text(user_message)
             
             # 1. Check if greeting or generic request
-            is_greeting = any(w in user_msg_lower for w in ["bonjour", "salut", "hello", "coucou", "hi", "bonsoir"])
+            is_greeting = any(w in user_msg_norm for w in ["bonjour", "salut", "hello", "coucou", "hi", "bonsoir", "hey", "yo"])
             
             # 2. Check common small talk / helper patterns
             small_talk_reply = ""
-            if any(w in user_msg_lower for w in ["qui es-tu", "ton nom", "tu es qui", "rôle", "assistant"]):
+            if any(w in user_msg_norm for w in ["qui es tu", "ton nom", "tu es qui", "role", "assistant", "chatbot", "bot"]):
                 small_talk_reply = (
                     "Je suis **SM-Assistant**, l'assistant virtuel officiel de *Service Market Togo* ! 🤖\n\n"
                     "Mon rôle est de vous guider pour trouver des prestataires de confiance, localiser leurs ateliers ou vous aider à effectuer vos réservations."
                 )
-            elif any(w in user_msg_lower for w in ["ça va", "comment vas-tu", "tu vas bien", "comment ca va"]):
+            elif any(w in user_msg_norm for w in ["ca va", "comment vas tu", "tu vas bien", "comment ca va", "comment tu vas"]):
                 small_talk_reply = (
                     "Je vais super bien, merci de demander ! 😊 Et vous, comment puis-je vous aider aujourd'hui sur la plateforme ?"
                 )
-            elif any(w in user_msg_lower for w in ["merci", "thanks", "génial", "parfait", "super", "cool", "ok"]):
+            elif any(w in user_msg_norm for w in ["merci", "thanks", "genial", "parfait", "super", "cool", "ok", "top"]):
                 small_talk_reply = (
                     "Avec grand plaisir ! N'hésitez pas si vous avez besoin d'autres renseignements. 😊"
                 )
-            elif any(w in user_msg_lower for w in ["comment ça marche", "comment faire", "fonctionnement", "comment réserver", "comment ca marche"]):
+            elif any(w in user_msg_norm for w in ["comment ca marche", "comment faire", "fonctionnement", "comment reserver", "etape", "guide", "reserver un service"]):
                 small_talk_reply = (
                     "C'est très simple ! Voici comment faire :\n"
                     "1. Parcourez la liste des **[Services](/services)**.\n"
@@ -2203,7 +2214,7 @@ def chatbot_view(request):
                     "3. Choisissez le jour et l'heure souhaités.\n"
                     "4. Validez en effectuant votre paiement sécurisé."
                 )
-            elif any(w in user_msg_lower for w in ["payer", "paiement", "flooz", "tmoney", "momo", "séquestre", "argent"]):
+            elif any(w in user_msg_norm for w in ["payer", "paiement", "flooz", "tmoney", "momo", "sequestre", "argent", "tarif", "prix"]):
                 small_talk_reply = (
                     "Sur Service Market Togo, tous les paiements s'effectuent via **T-Money** ou **Flooz** avec un système de **séquestre** 🔒 :\n"
                     "- Les fonds sont conservés en sécurité par la plateforme lors de la réservation.\n"
@@ -2215,25 +2226,29 @@ def chatbot_view(request):
             categories_list = Categorie.objects.all()
             matching_categories = []
             for c in categories_list:
-                if c.nom.lower() in user_msg_lower:
+                c_nom_norm = normalize_text(c.nom)
+                if c_nom_norm in user_msg_norm or user_msg_norm in c_nom_norm:
                     matching_categories.append(c)
 
             # 4. Match services
             matching_services = []
             for s in services:
-                if s.nom.lower() in user_msg_lower or (s.categorie and s.categorie.nom.lower() in user_msg_lower):
+                s_nom_norm = normalize_text(s.nom)
+                s_cat_norm = normalize_text(s.categorie.nom if s.categorie else "")
+                if s_nom_norm in user_msg_norm or s_cat_norm in user_msg_norm:
                     matching_services.append(s)
 
             # 5. Match prestataires
             matching_prestataires = []
             for p in prestataires:
-                p_name = (p.user.get_full_name() or p.user.username).lower()
-                if p_name in user_msg_lower or (p.specialite and p.specialite.lower() in user_msg_lower):
+                p_name_norm = normalize_text(p.user.get_full_name() or p.user.username)
+                p_spec_norm = normalize_text(p.specialite or "")
+                if p_name_norm in user_msg_norm or (p_spec_norm and p_spec_norm in user_msg_norm):
                     matching_prestataires.append(p)
 
             # 6. Match ateliers
             matching_ateliers = []
-            if any(w in user_msg_lower for w in ["atelier", "carte", "map", "géoloc", "adresse", "localisation", "situer"]):
+            if any(w in user_msg_norm for w in ["atelier", "carte", "map", "geoloc", "adresse", "localisation", "situer"]):
                 from service.models import Atelier
                 matching_ateliers = list(Atelier.objects.select_related('prestataire__user').all())
 

@@ -46,6 +46,10 @@ export default function PrestataireDashboard() {
   const [stats, setStats]           = useState(null);
   const [reservations, setRes]      = useState([]);
   const [retraitHistory, setRetraitHistory] = useState([]);
+  const [portfolioItems, setPortfolioItems] = useState([]);
+  const [portfolioFiles, setPortfolioFiles] = useState([]);
+  const [portfolioDesc, setPortfolioDesc]   = useState('');
+  const [portfolioUploading, setPortfolioUploading] = useState(false);
   const [loading, setLoading]       = useState(true);
   const [toast, setToast]           = useState('');
   const [now, setNow]               = useState(new Date());
@@ -64,6 +68,7 @@ export default function PrestataireDashboard() {
       setStats(s.data);
       setRes((r.data || []).slice(0, 6));
       setRetraitHistory(rt.data || []);
+      setPortfolioItems(s.data.portfolio || []);
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
@@ -113,6 +118,44 @@ export default function PrestataireDashboard() {
       showToast(err.response?.data?.detail || 'Erreur lors du retrait.');
     } finally {
       setRetraitLoading(false);
+    }
+  };
+
+  const handlePortfolioAdd = async (e) => {
+    e.preventDefault();
+    if (portfolioFiles.length === 0) return showToast('Veuillez sélectionner au moins une image.');
+    setPortfolioUploading(true);
+    const data = new FormData();
+    portfolioFiles.forEach(file => {
+      data.append('uploaded_portfolio', file);
+    });
+    data.append('description', portfolioDesc);
+
+    try {
+      const res = await api.post('/prestataires/ajouter_portfolio/', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      showToast('Images ajoutées avec succès au portfolio !');
+      setPortfolioItems(prev => [...prev, ...(res.data.portfolio || [])]);
+      setPortfolioFiles([]);
+      setPortfolioDesc('');
+      // Reset input element
+      const fileInput = document.getElementById('portfolio-file-input');
+      if (fileInput) fileInput.value = '';
+    } catch {
+      showToast("Erreur lors de l'ajout au portfolio.");
+    } finally {
+      setPortfolioUploading(false);
+    }
+  };
+
+  const handlePortfolioDelete = async (id) => {
+    try {
+      await api.post('/prestataires/supprimer_portfolio/', { portfolio_id: id });
+      setPortfolioItems(prev => prev.filter(item => item.id !== id));
+      showToast('Réalisation supprimée du portfolio.');
+    } catch {
+      showToast('Erreur lors de la suppression.');
     }
   };
 
@@ -536,6 +579,64 @@ export default function PrestataireDashboard() {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* ── Gestion du Portfolio ── */}
+        <div className="pd-reservations" style={{ marginTop: 28 }}>
+          <div className="pd-res-card">
+            <div className="pd-res-head" style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}>
+              <h3><i className="bi bi-images"></i> Mon Portfolio de Réalisations</h3>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
+                {portfolioItems.length} photo{portfolioItems.length > 1 ? 's' : ''} publique{portfolioItems.length > 1 ? 's' : ''}
+              </span>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              {/* Formulaire d'ajout */}
+              <form onSubmit={handlePortfolioAdd} style={{ background: '#f8fafc', borderRadius: 16, padding: 18, border: '1px solid #e2e8f0', marginBottom: 20 }}>
+                <h4 style={{ margin: '0 0 12px', fontSize: '0.88rem', fontWeight: 700, color: '#0c2340' }}>Ajouter des réalisations au portfolio</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, alignItems: 'end' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>Sélectionner des images</label>
+                    <input type="file" id="portfolio-file-input" multiple accept="image/*" onChange={(e) => setPortfolioFiles(Array.from(e.target.files))} style={{ fontSize: '0.8rem', width: '100%' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>Description courte (optionnel)</label>
+                    <input type="text" placeholder="Ex: Pose de carrelage salon" value={portfolioDesc} onChange={(e) => setPortfolioDesc(e.target.value)} style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: '0.8rem', width: '100%', outline: 'none' }} />
+                  </div>
+                </div>
+                <button type="submit" disabled={portfolioUploading} style={{ marginTop: 14, padding: '8px 16px', background: 'linear-gradient(135deg,#0284c7,#0369a1)', color: 'white', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {portfolioUploading ? 'Téléversement...' : <><i className="bi bi-cloud-arrow-up-fill"></i> Ajouter au portfolio</>}
+                </button>
+              </form>
+
+              {/* Galerie actuelle */}
+              {portfolioItems.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '30px 10px', border: '2px dashed #cbd5e1', borderRadius: 16 }}>
+                  <i className="bi bi-camera" style={{ fontSize: '2rem', color: '#94a3b8', display: 'block', marginBottom: 8 }} />
+                  <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Votre portfolio est vide. Ajoutez vos premières photos de réalisations ci-dessus !</span>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 14 }}>
+                  {portfolioItems.map(item => (
+                    <div key={item.id} style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', background: 'white' }}>
+                      <div style={{ width: '100%', height: 110 }}>
+                        <img src={item.image_url} alt={item.description} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      {item.description && (
+                        <div style={{ padding: '6px 8px', fontSize: '0.68rem', fontWeight: 600, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.description}>
+                          {item.description}
+                        </div>
+                      )}
+                      <button type="button" onClick={() => handlePortfolioDelete(item.id)} style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(239, 68, 68, 0.95)', border: 'none', color: 'white', width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.75rem', boxShadow: '0 2px 6px rgba(0,0,0,0.15)', padding: 0 }}>
+                        <i className="bi bi-trash-fill" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
