@@ -7,11 +7,10 @@
 # alors l'ajout d'une contrainte UNIQUE échouerait au déploiement.
 #
 # Cette migration :
-#   1. Met à NULL tous les emails vides ('') — NULL est autorisé en
-#      plusieurs exemplaires sous une contrainte unique, contrairement à ''.
-#   2. Pour les emails non vides en double, garde l'email sur le compte le
-#      plus ancien (date_joined la plus ancienne) et met les autres à NULL,
-#      en loggant un avertissement pour qu'un admin puisse les recontacter.
+#   1. Génère un email unique factice pour tous les comptes dont l'email est vide ('').
+#   2. Pour les emails en double, garde l'email sur le compte le
+#      plus ancien (date_joined la plus ancienne) et génère un email factice unique
+#      pour les autres, en loggant un avertissement pour qu'un admin puisse les recontacter.
 
 from django.db import migrations
 import logging
@@ -22,11 +21,17 @@ logger = logging.getLogger(__name__)
 def fix_duplicate_and_blank_emails(apps, schema_editor):
     Compte = apps.get_model('service', 'Compte')
 
-    # 1. Emails vides → NULL
-    Compte.objects.filter(email='').update(email=None)
+    # 1. Emails vides ('') ou None (au cas où) → Génération d'un email unique factice
+    # On boucle un par un car chaque email généré doit être unique.
+    blank_comptes = Compte.objects.filter(email='')
+    for compte in blank_comptes:
+        placeholder_email = f"{compte.username}_{compte.id}@placeholder.service.market".lower()
+        logger.info(f"[fix_duplicate_emails] Email vide pour '{compte.username}' (id={compte.id}) -> Affectation de {placeholder_email}")
+        compte.email = placeholder_email
+        compte.save(update_fields=['email'])
 
     # 2. Emails non vides en double → on garde le plus ancien compte intact,
-    #    on vide l'email des autres.
+    #    on attribue un email factice aux autres.
     from django.db.models import Count
 
     duplicates = (
@@ -41,21 +46,22 @@ def fix_duplicate_and_blank_emails(apps, schema_editor):
     for entry in duplicates:
         email = entry['email']
         comptes = list(Compte.objects.filter(email=email).order_by('date_joined'))
-        # On garde le premier (le plus ancien), on vide les autres.
+        # On garde le premier (le plus ancien), on modifie les autres.
         for compte in comptes[1:]:
+            placeholder_email = f"{compte.username}_{compte.id}@placeholder.service.market".lower()
             logger.warning(
                 f"[fix_duplicate_emails] Email en double '{email}' : "
                 f"l'email du compte '{compte.username}' (id={compte.id}) a été "
-                f"vidé pour permettre la contrainte unique. "
-                f"Le compte '{comptes[0].username}' (id={comptes[0].id}) garde l'email."
+                f"remplacé par '{placeholder_email}' pour permettre la future contrainte unique. "
+                f"Le compte '{comptes[0].username}' (id={comptes[0].id}) garde l'email d'origine."
             )
-            compte.email = None
+            compte.email = placeholder_email
             compte.save(update_fields=['email'])
 
 
 def reverse_noop(apps, schema_editor):
     # Pas de retour en arrière possible (on ne peut pas deviner les emails
-    # d'origine qui ont été vidés) — migration de données non réversible.
+    # d'origine qui ont été modifiés) — migration de données non réversible.
     pass
 
 
