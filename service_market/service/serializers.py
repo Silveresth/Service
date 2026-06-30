@@ -17,6 +17,14 @@ class CompteUpdateSerializer(serializers.ModelSerializer):
         model = Compte
         fields = ['first_name', 'last_name', 'email', 'telephone', 'adresse']
 
+    def validate_email(self, value):
+        qs = Compte.objects.filter(email=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Un compte existe déjà avec cet email.")
+        return value
+
 
 # ── Auth ──────────────────────────────────────────────────────────
 class RegisterClientSerializer(serializers.Serializer):
@@ -31,6 +39,11 @@ class RegisterClientSerializer(serializers.Serializer):
     def validate_username(self, value):
         if Compte.objects.filter(username=value).exists():
             raise serializers.ValidationError("Ce nom d'utilisateur est déjà pris.")
+        return value
+
+    def validate_email(self, value):
+        if Compte.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Un compte existe déjà avec cet email.")
         return value
 
     def create(self, validated_data):
@@ -58,6 +71,11 @@ class RegisterPrestataireSerializer(serializers.Serializer):
     def validate_username(self, value):
         if Compte.objects.filter(username=value).exists():
             raise serializers.ValidationError("Ce nom d'utilisateur est déjà pris.")
+        return value
+
+    def validate_email(self, value):
+        if Compte.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Un compte existe déjà avec cet email.")
         return value
 
     def create(self, validated_data):

@@ -8,6 +8,7 @@ export default function FormField({
   name, 
   value, 
   onChange, 
+  onBlur,
   type = 'text', 
   placeholder = '', 
   required = false,
@@ -16,11 +17,14 @@ export default function FormField({
   options = [], // Pour les select
   rows = 5, // Pour les textarea
   pattern = null,
+  min = undefined,
+  max = undefined,
 }) {
   const inputProps = {
     name,
     value: value || '',
     onChange,
+    onBlur,
     required,
     disabled,
     placeholder,
@@ -46,6 +50,8 @@ export default function FormField({
       );
       break;
     case 'number':
+      input = <input {...inputProps} type="number" min={min} max={max} className="form-control-custom" />;
+      break;
     case 'email':
     case 'password':
     case 'date':

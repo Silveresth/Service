@@ -17,8 +17,10 @@ from .serializers import (
 )
 
 from math import radians, sin, cos, sqrt, atan2
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.permissions import IsAuthenticated
+from decouple import config
 import uuid
 import json
 import requests
@@ -32,9 +34,33 @@ from django.http import JsonResponse
 
 from .utils_notifications import create_notification, send_notification_ws
 
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
+
+
+class LoginRateThrottle(ScopedRateThrottle):
+    """Throttle dédié à login/register/google : scope='login' (voir settings.DEFAULT_THROTTLE_RATES)."""
+    scope = 'login'
+
+    def allow_request(self, request, view):
+        view.throttle_scope = self.scope
+        return super().allow_request(request, view)
+
+
+class ChatbotRateThrottle(ScopedRateThrottle):
+    """Throttle dédié au chatbot IA : scope='chatbot' (appel API externe payant)."""
+    scope = 'chatbot'
+
+    def allow_request(self, request, view):
+        view.throttle_scope = self.scope
+        return super().allow_request(request, view)
+
 # ── Auth ─────────────────────────────────────────────────────────
 class AuthViewSet(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
+    # Limite le débit sur login/register/google pour réduire le brute-force
+    # de mots de passe (voir DEFAULT_THROTTLE_RATES dans settings.py).
+    throttle_classes = [LoginRateThrottle]
 
     @action(detail=False, methods=['post'])
     def login(self, request):
@@ -78,12 +104,80 @@ class AuthViewSet(viewsets.ViewSet):
             return self.register_prestataire(request)
         return self.register_client(request)
 
+    @action(detail=False, methods=['post'])
+    def google(self, request):
+        """
+        Connexion / inscription via Google.
+        Le frontend envoie le `id_token` obtenu après la connexion Google.
+        On le vérifie auprès de Google, puis on connecte le compte existant
+        (retrouvé par email) ou on en crée un nouveau (type 'client' par défaut).
+        """
+        token = request.data.get('id_token') or request.data.get('credential')
+        if not token:
+            return Response({'error': "Token Google manquant."}, status=400)
+
+        if not settings.GOOGLE_CLIENT_ID:
+            logger.error("GOOGLE_CLIENT_ID n'est pas configuré côté serveur.")
+            return Response(
+                {'error': "La connexion Google n'est pas configurée sur le serveur."},
+                status=500
+            )
+
+        try:
+            idinfo = google_id_token.verify_oauth2_token(
+                token, google_requests.Request(), settings.GOOGLE_CLIENT_ID
+            )
+        except ValueError:
+            return Response({'error': "Token Google invalide ou expiré."}, status=400)
+
+        email = idinfo.get('email')
+        if not email:
+            return Response({'error': "Impossible de récupérer l'email Google."}, status=400)
+        if idinfo.get('email_verified') is False:
+            return Response({'error': "Cet email Google n'est pas vérifié."}, status=400)
+
+        type_compte_demande = request.data.get('type_compte', 'client')
+
+        compte = Compte.objects.filter(email=email).first()
+        if not compte:
+            # Génère un username unique à partir de l'email
+            base_username = email.split('@')[0]
+            username = base_username
+            suffix = 1
+            while Compte.objects.filter(username=username).exists():
+                username = f"{base_username}{suffix}"
+                suffix += 1
+
+            compte = Compte(
+                username=username,
+                email=email,
+                first_name=idinfo.get('given_name', ''),
+                last_name=idinfo.get('family_name', ''),
+                type_compte='prestataire' if type_compte_demande == 'prestataire' else 'client',
+                telephone='',
+                adresse='',
+            )
+            compte.set_unusable_password()  # pas de mot de passe, connexion Google uniquement
+            compte.save()
+
+            if compte.type_compte == 'prestataire':
+                Prestataire.objects.get_or_create(user=compte, defaults={'specialite': ''})
+            else:
+                Client.objects.get_or_create(user=compte)
+
+        refresh = RefreshToken.for_user(compte)
+        return Response({
+            'access':  str(refresh.access_token),
+            'refresh': str(refresh),
+            'user':    CompteSerializer(compte).data,
+        })
+
 
 # ── Compte ───────────────────────────────────────────────────────
 class CompteViewSet(viewsets.ModelViewSet):
     queryset = Compte.objects.all()
     serializer_class = CompteSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self):
         if self.action in ['update', 'partial_update']:
@@ -101,9 +195,39 @@ class CompteViewSet(viewsets.ModelViewSet):
         return super().get_object()
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [permissions.IsAuthenticatedOrReadOnly()]
+        # Lecture (list/retrieve) : avant, ouverte à tout le monde (AllowAny via
+        # IsAuthenticatedOrReadOnly), ce qui exposait publiquement l'email, le
+        # téléphone et l'adresse de tous les comptes. Le frontend n'utilise
+        # jamais cette liste complète en dehors de l'admin (/admin/all_comptes/),
+        # donc on la réserve aux admins. /comptes/me/ passe par get_object et
+        # reste donc accessible à tout utilisateur connecté pour son propre profil.
+        if self.action == 'list':
+            return [permissions.IsAdminUser()]
         return [permissions.IsAuthenticated()]
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance != request.user and not request.user.is_staff:
+            return Response({'error': "Vous ne pouvez consulter que votre propre compte."}, status=403)
+        return super().retrieve(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance != request.user and not request.user.is_staff:
+            return Response({'error': "Vous ne pouvez modifier que votre propre compte."}, status=403)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance != request.user and not request.user.is_staff:
+            return Response({'error': "Vous ne pouvez modifier que votre propre compte."}, status=403)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance != request.user and not request.user.is_staff:
+            return Response({'error': "Vous ne pouvez supprimer que votre propre compte."}, status=403)
+        return super().destroy(request, *args, **kwargs)
 
 
 # ── Categorie ────────────────────────────────────────────────────
@@ -473,7 +597,13 @@ class ReservationViewSet(viewsets.ModelViewSet):
         is_client_owner = hasattr(user, 'client_profile') and obj.client.user == user
         is_prestataire_owner = hasattr(user, 'prestataire_profile') and obj.service.prestataire.user == user
         if not (is_client_owner or is_prestataire_owner or user.is_staff):
-            return Response({'error': 'Accès refusé à cette réservation'}, status=403)
+            # IMPORTANT : get_object() doit renvoyer une instance de modèle ou
+            # lever une exception, jamais un objet Response. Avant, un
+            # Response était retourné ici, ce qui faisait planter en 500
+            # (au lieu d'un 403 propre) le code appelant (retrieve/update)
+            # qui essaie ensuite de sérialiser ce qu'il croit être l'objet.
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Accès refusé à cette réservation')
         return obj
 
 
@@ -806,7 +936,22 @@ class EvaluationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def mes_evaluations(self, request):
-        evaluations = self.get_queryset()
+        # Avant : retournait self.get_queryset(), c'est-à-dire TOUTES les
+        # évaluations de la plateforme, peu importe l'utilisateur connecté.
+        # On filtre maintenant réellement sur les évaluations qui concernent
+        # l'utilisateur courant (en tant que client qui a évalué, ou
+        # prestataire qui a été évalué).
+        user = request.user
+        if hasattr(user, 'prestataire_profile'):
+            evaluations = Evaluation.objects.filter(
+                reservation__service__prestataire=user.prestataire_profile
+            ).order_by('-date_eval')
+        elif hasattr(user, 'client_profile'):
+            evaluations = Evaluation.objects.filter(
+                reservation__client=user.client_profile
+            ).order_by('-date_eval')
+        else:
+            evaluations = Evaluation.objects.none()
         serializer = self.get_serializer(evaluations, many=True)
         return Response(serializer.data)
 
@@ -1599,9 +1744,26 @@ def initier_paiement(request):
 @csrf_exempt
 def paygate_callback(request):
     from django.db import transaction
-    
+
     if request.method != 'POST':
         return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    # Vérification de l'authenticité de l'appel : sans ça, n'importe qui
+    # connaissant (ou devinant) un "identifier" peut forger une confirmation
+    # de paiement en POSTant directement sur cet endpoint.
+    # Le secret doit être configuré côté PayGate dans l'URL de callback :
+    # https://.../api/paiement/callback/?secret=XXXX
+    expected_secret = settings.PAYGATE_CALLBACK_SECRET
+    if expected_secret:
+        provided_secret = request.GET.get('secret') or request.headers.get('X-Paygate-Secret')
+        if provided_secret != expected_secret:
+            logger.warning("paygate_callback: secret invalide ou manquant, requête rejetée.")
+            return JsonResponse({"error": "Non autorisé"}, status=403)
+    else:
+        logger.warning(
+            "paygate_callback: PAYGATE_CALLBACK_SECRET n'est pas configuré, "
+            "le webhook accepte des requêtes non vérifiées. À corriger en production."
+        )
 
     try:
         data = json.loads(request.body)
@@ -1621,7 +1783,13 @@ def paygate_callback(request):
                 'reservation__client__user', 
                 'reservation__service__prestataire__user'
             ).get(transaction_ref=identifier)
-            
+
+            # La réservation liée n'était jamais récupérée avant (bug) :
+            # le code utilisait une variable `reservation` non définie,
+            # ce qui provoquait un NameError et annulait toute la transaction
+            # (le paiement n'était donc jamais réellement confirmé).
+            reservation = paiement.reservation
+
             # Idempotency check: if already confirmed, do not credit again
             if paiement.statut == 'confirme':
                 return JsonResponse({"ok": True, "message": "Paiement déjà confirmé."})
@@ -2072,6 +2240,7 @@ def rapport_pdf_admin(request):
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([ChatbotRateThrottle])
 def chatbot_view(request):
     """
     Chatbot IA (Ollama / Groq) qui a accès aux données des prestataires et services 
@@ -2123,16 +2292,35 @@ def chatbot_view(request):
         )
 
         bot_reply = None
-        
-        # 2. Déterminer quel LLM appeler (Ollama ou Groq)
-        import os
-        GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-        USE_OLLAMA = os.getenv("USE_OLLAMA", "0") == "1" or not GROQ_API_KEY
 
-        # A. Tentative avec Ollama (local)
+        # 2. Déterminer quel LLM appeler (Ollama ou Groq)
+        #
+        # AVANT : `USE_OLLAMA = ... or not GROQ_API_KEY` forçait une tentative
+        # Ollama (http://localhost:11434) dès que GROQ_API_KEY n'était pas
+        # configuré — ce qui est TOUJOURS le cas sur Render, qui n'héberge
+        # aucun serveur Ollama local. Résultat : chaque message attendait
+        # ~15s (timeout de connexion), échouait silencieusement, puis
+        # retombait sur le mode simulation par mots-clés. C'est très
+        # probablement pourquoi le chatbot semblait "donner toujours les
+        # mêmes réponses" : le vrai LLM n'était jamais réellement appelé.
+        #
+        # Désormais : Ollama n'est tenté que si explicitement activé
+        # (USE_OLLAMA=1), Groq est utilisé sinon dès que GROQ_API_KEY est
+        # configuré, et on ne perd plus de temps à tenter Ollama "par défaut".
+        GROQ_API_KEY = config('GROQ_API_KEY', default='')
+        USE_OLLAMA = config('USE_OLLAMA', default=False, cast=bool)
+
+        if not USE_OLLAMA and not GROQ_API_KEY:
+            logger.warning(
+                "chatbot_view: ni GROQ_API_KEY ni USE_OLLAMA=1 ne sont configurés. "
+                "Le chatbot va systématiquement répondre en mode simulation "
+                "(réponses par mots-clés), jamais via un vrai LLM."
+            )
+
+        # A. Tentative avec Ollama (local) — uniquement si explicitement activé
         if USE_OLLAMA:
-            ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-            ollama_model = os.getenv("OLLAMA_MODEL", "mistral")
+            ollama_base_url = config('OLLAMA_BASE_URL', default='http://localhost:11434')
+            ollama_model = config('OLLAMA_MODEL', default='mistral')
             
             logger.info(f"Tentative d'appel Ollama ({ollama_model}) sur {ollama_base_url}...")
             try:

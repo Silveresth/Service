@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
+import GoogleLoginButton from '../../components/GoogleLoginButton';
 
 const LOGIN_STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;800&display=swap');
@@ -422,21 +423,25 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const redirectAfterLogin = (data) => {
+    login(data);
+    const type = data?.user?.type_compte;
+    if (data?.user?.is_staff || type === 'admin') {
+      navigate('/admin-dashboard');
+    } else if (type === 'prestataire') {
+      navigate('/prestataire-dashboard');
+    } else {
+      navigate('/services');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
       const res = await api.post('/auth/login/', form);
-      login(res.data);
-      const type = res.data?.user?.type_compte;
-      if (res.data?.user?.is_staff || type === 'admin') {
-        navigate('/admin-dashboard');
-      } else if (type === 'prestataire') {
-        navigate('/prestataire-dashboard');
-      } else {
-        navigate('/services');
-      }
+      redirectAfterLogin(res.data);
     } catch (err) {
       setError("Nom d'utilisateur ou mot de passe incorrect.");
     } finally {
@@ -572,6 +577,17 @@ export default function Login() {
                 )}
               </button>
             </form>
+
+            {/* Connexion Google */}
+            <div className="login-divider">
+              <div className="login-divider-line" />
+              <span className="login-divider-text">ou</span>
+              <div className="login-divider-line" />
+            </div>
+            <GoogleLoginButton
+              onSuccess={redirectAfterLogin}
+              onError={(msg) => setError(msg)}
+            />
 
             {/* Séparateur */}
             <div className="login-divider">

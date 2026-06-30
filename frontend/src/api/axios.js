@@ -34,6 +34,24 @@ api.interceptors.response.use(
       // On utilise /#/login pour HashRouter (obligatoire pour Capacitor)
       window.location.href = '/#/login';
     }
+
+    // Filet de sécurité global : en cas d'erreur serveur (5xx), le corps de la
+    // réponse n'est pas fiable (souvent une page HTML d'erreur, pas du JSON).
+    // On le remplace ici par un message générique structuré, afin qu'AUCUN
+    // composant (même ceux qui n'utilisent pas crudService, ex: Login/Register)
+    // ne puisse jamais afficher du HTML brut à l'utilisateur.
+    if (error.response && error.response.status >= 500) {
+      const isHtmlOrNonJson =
+        typeof error.response.data === 'string' ||
+        !error.response.data ||
+        typeof error.response.data !== 'object';
+      if (isHtmlOrNonJson) {
+        error.response.data = {
+          detail: 'Le serveur a rencontré un problème. Merci de réessayer dans quelques instants.',
+        };
+      }
+    }
+
     return Promise.reject(error);
   }
 );

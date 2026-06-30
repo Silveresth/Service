@@ -2,6 +2,14 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 class Compte(AbstractUser):
+    # Email rendu unique : avant, deux comptes pouvaient avoir le même email,
+    # ce qui posait problème pour la connexion Google (recherche par email)
+    # et pour la récupération de compte en général.
+    # null=True (et pas seulement blank=True) est important : avec une
+    # contrainte unique, plusieurs valeurs NULL sont autorisées en base,
+    # alors que plusieurs chaînes vides '' entreraient en collision.
+    email = models.EmailField('email address', unique=True, null=True, blank=True)
+
     telephone = models.CharField(max_length=20)
     adresse = models.TextField()
     

@@ -8,18 +8,45 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-fallback-do-not-use-in-prod-generate-new')
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+# Par défaut à False : si la variable d'env DEBUG n'est pas définie sur le
+# serveur, on ne veut JAMAIS exposer les stack traces par accident.
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-# Autoriser TOUTES les origines pour l'APK et le développement (plus simple pour Capacitor)
-CORS_ALLOW_ALL_ORIGINS = True
+# SECURITY WARNING: keep the secret key used in production secret!
+# Aucun fallback "insecure" en dur ici : si SECRET_KEY n'est pas fourni
+# en production, le serveur refuse de démarrer plutôt que de tourner avec
+# une clé connue de tout le monde (visible dans ce code source).
+if DEBUG:
+    SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-only-not-for-production')
+else:
+    SECRET_KEY = config('SECRET_KEY')  # lève une erreur explicite si absent
+
+# Liste blanche des domaines autorisés à appeler l'API en cross-origin.
+# On n'autorise plus TOUTES les origines (CORS_ALLOW_ALL_ORIGINS) car
+# combiné à CORS_ALLOW_CREDENTIALS=True, ça permettait à n'importe quel
+# site web de faire des requêtes authentifiées vers cette API.
+CORS_ALLOWED_ORIGINS = [
+    o.strip() for o in config('CORS_ALLOWED_ORIGINS', default='').split(',') if o.strip()
+]
+# Schémas additionnels nécessaires pour l'app mobile Capacitor.
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^capacitor://.*$',
+    r'^https://.*\.onrender\.com$',
+]
+if DEBUG:
+    CORS_ALLOWED_ORIGINS += ['http://localhost:3000', 'http://127.0.0.1:3000']
 CORS_ALLOW_CREDENTIALS = True
 
-# Configuration ALLOWED_HOSTS
-ALLOWED_HOSTS = ['*']
+# Hôtes autorisés à servir des requêtes (Host header). En prod, on liste
+# explicitement les domaines au lieu d'accepter n'importe quel Host (qui
+# ouvre la porte à des attaques de type "host header poisoning").
+ALLOWED_HOSTS = [
+    h.strip() for h in config(
+        'ALLOWED_HOSTS',
+        default='apk-back.onrender.com,.onrender.com,localhost,127.0.0.1'
+    ).split(',') if h.strip()
+]
 
 # ─── RENDER CONFIG ────────────────────────────────────────────────────────────
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -43,6 +70,7 @@ INSTALLED_APPS = [
     # Packages
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     # Ton app
     'service',
@@ -67,6 +95,16 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/min',
+        'user': '120/min',
+        'login': '10/min',       # utilisé sur /auth/login/ et /auth/register/
+        'chatbot': '20/min',     # utilisé sur /chatbot/ (appel API IA payant)
+    },
 }
 
 ROOT_URLCONF = 'service_market.urls'
@@ -74,6 +112,11 @@ ROOT_URLCONF = 'service_market.urls'
 
 # ─── PayGate Global ───────────────────────────────────────────────────────────
 PAYGATE_TOKEN = config('PAYGATE_TOKEN', default='')
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
+# Secret partagé pour vérifier l'authenticité des callbacks PayGate entrants.
+# Doit être ajouté dans l'URL de callback configurée côté PayGate, ex:
+# https://apk-back.onrender.com/api/paiement/callback/?secret=XXXX
+PAYGATE_CALLBACK_SECRET = config('PAYGATE_CALLBACK_SECRET', default='')
 PAYGATE_CALLBACK_PATH = "/api/paiement/callback/" 
 
 # ─── CHANNELS (WebSocket) ─────────────────────────────────────────────────────
@@ -169,6 +212,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -242,7 +289,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME':  timedelta(hours=12),   # était probablement 5min
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),    # 30 jours
     'ROTATE_REFRESH_TOKENS':  True,                  # nouveau refresh à chaque refresh
-    'BLACKLIST_AFTER_ROTATION': False,
+    'BLACKLIST_AFTER_ROTATION': True,                # invalide l'ancien refresh après rotation
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 

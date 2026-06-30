@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import FormField from './FormField';
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /**
  * Composant FormBuilder pour créer des formulaires dynamiques
  */
@@ -16,6 +18,42 @@ export default function FormBuilder({
   const [formData, setFormData] = useState(initialData);
   const [errors, setErrors] = useState({});
 
+  const validateField = (field, rawValue) => {
+    const value = rawValue;
+
+    if (field.required && (value === undefined || value === null || String(value).trim() === '')) {
+      return `${field.label} est requis`;
+    }
+
+    // Si le champ est vide et non requis, on ne valide pas plus loin
+    if (value === undefined || value === null || String(value).trim() === '') {
+      return null;
+    }
+
+    if (field.type === 'email' && !EMAIL_REGEX.test(String(value).trim())) {
+      return 'Email invalide';
+    }
+
+    if (field.type === 'number') {
+      const num = Number(value);
+      if (Number.isNaN(num)) {
+        return `${field.label} doit être un nombre`;
+      }
+      if (field.min !== undefined && num < field.min) {
+        return `${field.label} doit être supérieur ou égal à ${field.min}`;
+      }
+      if (field.max !== undefined && num > field.max) {
+        return `${field.label} doit être inférieur ou égal à ${field.max}`;
+      }
+    }
+
+    if (field.pattern && !new RegExp(field.pattern).test(value)) {
+      return `Format invalide pour ${field.label}`;
+    }
+
+    return null;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -24,20 +62,22 @@ export default function FormBuilder({
     }
   };
 
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    const field = fields.find(f => f.name === name);
+    if (!field) return;
+    const fieldError = validateField(field, formData[name]);
+    setErrors(prev => ({ ...prev, [name]: fieldError }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const newErrors = {};
 
-    // Validation basique
     fields.forEach(field => {
-      if (field.required && !formData[field.name]) {
-        newErrors[field.name] = `${field.label} est requis`;
-      }
-      if (field.type === 'email' && formData[field.name] && !formData[field.name].includes('@')) {
-        newErrors[field.name] = 'Email invalide';
-      }
-      if (field.pattern && formData[field.name] && !new RegExp(field.pattern).test(formData[field.name])) {
-        newErrors[field.name] = `Format invalide pour ${field.label}`;
+      const fieldError = validateField(field, formData[field.name]);
+      if (fieldError) {
+        newErrors[field.name] = fieldError;
       }
     });
 
@@ -62,6 +102,7 @@ export default function FormBuilder({
               {...field}
               value={formData[field.name]}
               onChange={handleChange}
+              onBlur={handleBlur}
               error={errors[field.name]}
               disabled={isLoading}
             />

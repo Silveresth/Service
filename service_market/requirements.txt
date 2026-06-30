@@ -18,3 +18,4 @@ uvicorn[standard]
 django-cloudinary-storage
 cloudinary
 python-dateutil
+google-auth

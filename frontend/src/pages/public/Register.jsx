@@ -470,7 +470,11 @@ export default function Register() {
       if (!form.username.trim())   errs.username   = "Nom d'utilisateur requis.";
     }
     if (step === 1) {
-      if (!form.email.trim())      errs.email      = 'Email requis.';
+      if (!form.email.trim()) {
+        errs.email = 'Email requis.';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        errs.email = 'Format d\'email invalide.';
+      }
     }
     if (step === 2) {
       if (!form.password)          errs.password   = 'Mot de passe requis.';
@@ -496,18 +500,35 @@ export default function Register() {
       await api.post('/auth/register/', { ...payload, type_compte: 'client' });
       navigate('/login');
     } catch (err) {
-      const data = err.response?.data || {};
+      const status = err.response?.status;
+      const data = err.response?.data;
+
+      // Erreur serveur ou pas de réponse du tout : message générique fixe,
+      // on n'essaie jamais d'extraire un message du corps de la réponse.
+      if (!status || status >= 500) {
+        setGlobalError('Le serveur a rencontré un problème. Merci de réessayer dans quelques instants.');
+        setLoading(false);
+        return;
+      }
+
+      // Si le corps n'est pas un objet JSON exploitable (ex: string), on ne l'affiche jamais.
+      if (!data || typeof data !== 'object') {
+        setGlobalError('Une erreur est survenue. Vérifiez vos informations.');
+        setLoading(false);
+        return;
+      }
+
       let msg = '';
       if (data.non_field_errors) {
         msg = Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors;
-      } else if (typeof data === 'string') {
-        msg = data;
+      } else if (data.detail) {
+        msg = data.detail;
       } else {
         const fieldErrors = Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v[0] : v}`).join(' | ');
         msg = fieldErrors || 'Une erreur est survenue. Vérifiez vos informations.';
         setErrors(data);
       }
-      setGlobalError(msg || 'Erreur de connexion au serveur. Réessayez.');
+      setGlobalError(msg || 'Une erreur est survenue. Vérifiez vos informations.');
     } finally { setLoading(false); }
   };
 
