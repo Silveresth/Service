@@ -1544,9 +1544,11 @@ def initier_paiement(request):
             },
             timeout=15
         )
+        logger.info(f"PayGate response status: {pg_response.status_code}, content: {pg_response.text}")
         pg_data = pg_response.json()
     except Exception as e:
-        return Response({"error": f"Erreur réseau PayGate : {str(e)}"}, status=502)
+        logger.error(f"Erreur reseau/JSON Paygate: {str(e)}")
+        return Response({"error": f"Erreur réseau/JSON PayGate : {str(e)}"}, status=502)
 
     status_code = pg_data.get('status')
     if status_code not in [0, '0']:
@@ -1558,7 +1560,9 @@ def initier_paiement(request):
             '4': "Paramètres invalides transmis à Paygate (vérifiez le numéro et le réseau)",
             '6': "Doublon détecté (cette transaction existe déjà)",
         }
-        msg = error_msgs.get(status_code, pg_data.get('message', f"Erreur Paygate (Code {status_code})"))
+        msg = error_msgs.get(status_code, pg_data.get('message'))
+        if not msg:
+            msg = f"Réponse PayGate inattendue : {pg_response.text}"
         return Response({"error": msg}, status=400)
 
     # Save the pending payment in a transaction
