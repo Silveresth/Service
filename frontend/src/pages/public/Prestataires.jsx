@@ -246,7 +246,7 @@ export default function Prestataires() {
                       {/* Footer */}
                       <div className="pr2-card-footer">
                         <Link
-                          to={`/prestataire/${userId}`}
+                          to={`/prestataire/${p.id}`}
                           className="pr2-btn-detail"
                         >
                           <i className="bi bi-person-lines-fill" />

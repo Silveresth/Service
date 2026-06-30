@@ -2221,13 +2221,32 @@ def chatbot_view(request):
                     "- L'argent n'est libéré et versé au prestataire que lorsque vous confirmez la fin des travaux !"
                 )
 
+            # Synonymes des catégories courantes au Togo
+            CATEGORY_SYNONYMS = {
+                "plomberie": ["plombier", "plombiers", "plomberie", "fuite", "tuyau", "tuyauterie", "robinet", "wc", "douche"],
+                "electricite": ["electricien", "electriciens", "electricite", "courant", "panne", "cable", "prise", "ampoule", "compteur"],
+                "menage": ["menage", "nettoyage", "propre", "balayer", "lessive", "lavage", "nettoyer", "proprete"],
+                "menuiserie": ["menuisier", "menuisiers", "menuiserie", "bois", "porte", "table", "chaise", "meuble", "lit"],
+                "informatique": ["informaticien", "informaticiens", "informatique", "ordinateur", "pc", "reparation", "logiciel", "depannage", "reseau"],
+                "mecanique": ["mecanicien", "mecaniciens", "mecanique", "voiture", "moto", "panne", "moteur", "garage", "frein"],
+                "coiffure": ["coiffeur", "coiffeuse", "coiffeuses", "coiffeurs", "coiffure", "tresses", "cheveux", "tresse", "maquillage", "ongles", "esthetique"],
+            }
+
             # 3. Match categories
             from service.models import Categorie
             categories_list = Categorie.objects.all()
             matching_categories = []
             for c in categories_list:
                 c_nom_norm = normalize_text(c.nom)
-                if c_nom_norm in user_msg_norm or user_msg_norm in c_nom_norm:
+                is_match = c_nom_norm in user_msg_norm or user_msg_norm in c_nom_norm
+                
+                if not is_match:
+                    for base_cat, syns in CATEGORY_SYNONYMS.items():
+                        if base_cat in c_nom_norm or c_nom_norm in base_cat:
+                            if any(syn in user_msg_norm for syn in syns):
+                                is_match = True
+                                break
+                if is_match:
                     matching_categories.append(c)
 
             # 4. Match services
@@ -2235,7 +2254,15 @@ def chatbot_view(request):
             for s in services:
                 s_nom_norm = normalize_text(s.nom)
                 s_cat_norm = normalize_text(s.categorie.nom if s.categorie else "")
-                if s_nom_norm in user_msg_norm or s_cat_norm in user_msg_norm:
+                is_match = s_nom_norm in user_msg_norm or s_cat_norm in user_msg_norm
+                
+                if not is_match:
+                    for base_cat, syns in CATEGORY_SYNONYMS.items():
+                        if base_cat in s_cat_norm or s_cat_norm in base_cat:
+                            if any(syn in user_msg_norm for syn in syns):
+                                is_match = True
+                                break
+                if is_match:
                     matching_services.append(s)
 
             # 5. Match prestataires
@@ -2243,7 +2270,15 @@ def chatbot_view(request):
             for p in prestataires:
                 p_name_norm = normalize_text(p.user.get_full_name() or p.user.username)
                 p_spec_norm = normalize_text(p.specialite or "")
-                if p_name_norm in user_msg_norm or (p_spec_norm and p_spec_norm in user_msg_norm):
+                is_match = p_name_norm in user_msg_norm or (p_spec_norm and p_spec_norm in user_msg_norm)
+                
+                if not is_match and p_spec_norm:
+                    for base_cat, syns in CATEGORY_SYNONYMS.items():
+                        if base_cat in p_spec_norm or p_spec_norm in base_cat:
+                            if any(syn in user_msg_norm for syn in syns):
+                                is_match = True
+                                break
+                if is_match:
                     matching_prestataires.append(p)
 
             # 6. Match ateliers
