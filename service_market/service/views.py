@@ -821,8 +821,6 @@ class SmartMatchViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'])
     def match(self, request):
-        import numpy as np
-        from sklearn.metrics.pairwise import cosine_similarity
         data = request.data
         client_lat = data.get('lat', 6.125)
         client_lon = data.get('lon', 1.232)
@@ -904,13 +902,12 @@ class SmartMatchViewSet(viewsets.ViewSet):
                 avg = Evaluation.objects.filter(reservation__service=service).aggregate(_avg=Sum('note'))['_avg']
                 nb = Evaluation.objects.filter(reservation__service=service).count()
 
-                # Fallback: éviter une valeur fixe (3.8) qui rend trop de services "identiques"
-                if nb:
+                if nb and avg is not None:
                     note_avg = float(avg) / float(nb)
                 else:
                     global_avg = Evaluation.objects.aggregate(_ga=Sum('note'))['_ga']
                     global_nb = Evaluation.objects.count()
-                    note_avg = (float(global_avg) / float(global_nb)) if global_nb else 3.5
+                    note_avg = (float(global_avg) / float(global_nb)) if (global_nb and global_avg is not None) else 3.5
 
                 note_score = max(0.0, min(note_avg / 5.0, 1.0))
 

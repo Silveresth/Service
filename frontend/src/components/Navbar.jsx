@@ -860,6 +860,14 @@ export default function Navbar() {
                           </Link>
                         </li>
 
+                        {user.type_compte === 'client' && (
+                          <li>
+                            <Link className="nb-panel-link" to="/mes-reservations">
+                              <i className="bi bi-calendar-check" /> Mes réservations
+                            </Link>
+                          </li>
+                        )}
+
                         {user.type_compte === 'prestataire' && (
                           <li>
                             <Link className="nb-panel-link" to="/prestataire-dashboard">
@@ -936,6 +944,14 @@ export default function Navbar() {
                         <i className="bi bi-person-gear" /> Mon profil
                       </Link>
                     </li>
+
+                    {user.type_compte === 'client' && (
+                      <li>
+                        <Link to="/mes-reservations" className="nb-drawer-link" style={{ animationDelay: '0.2s' }}>
+                          <i className="bi bi-calendar-check" /> Mes réservations
+                        </Link>
+                      </li>
+                    )}
 
                     {user.type_compte === 'prestataire' && (
                       <li>
