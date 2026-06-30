@@ -1535,13 +1535,12 @@ def initier_paiement(request):
         pg_response = requests.post(
             "https://paygateglobal.com/api/v1/pay",
             json={
-                "token":        settings.PAYGATE_TOKEN,
+                "auth_token":   settings.PAYGATE_TOKEN,
                 "phone_number": phone_number,
                 "amount":       total,  # SECURE: Charge the actual service price, not the client-provided amount
-                "network":      network,
+                "network":      network.upper() if network else "TMONEY",
                 "identifier":   identifier,
-                "description":  f"Réservation service #{service_id}",
-                "callback_url": request.build_absolute_uri(settings.PAYGATE_CALLBACK_PATH),
+                "description":  f"Reservation service #{service_id}",
             },
             timeout=15
         )
@@ -1549,8 +1548,18 @@ def initier_paiement(request):
     except Exception as e:
         return Response({"error": f"Erreur réseau PayGate : {str(e)}"}, status=502)
 
-    if pg_data.get('status') not in [0, '0']:
-        return Response({"error": pg_data.get('message', 'Erreur PayGate')}, status=400)
+    status_code = pg_data.get('status')
+    if status_code not in [0, '0']:
+        error_msgs = {
+            2: "Jeton d'authentification invalide (auth_token incorrect)",
+            4: "Paramètres invalides transmis à Paygate (vérifiez le numéro et le réseau)",
+            6: "Doublon détecté (cette transaction existe déjà)",
+            '2': "Jeton d'authentification invalide (auth_token incorrect)",
+            '4': "Paramètres invalides transmis à Paygate (vérifiez le numéro et le réseau)",
+            '6': "Doublon détecté (cette transaction existe déjà)",
+        }
+        msg = error_msgs.get(status_code, pg_data.get('message', f"Erreur Paygate (Code {status_code})"))
+        return Response({"error": msg}, status=400)
 
     # Save the pending payment in a transaction
     try:
@@ -1613,9 +1622,9 @@ def paygate_callback(request):
             if paiement.statut == 'confirme':
                 return JsonResponse({"ok": True, "message": "Paiement déjà confirmé."})
 
-            reservation = paiement.reservation
-
-            if statut_pg in [0, '0', 'success', 'SUCCESS']:
+            # Paygate n'envoie cette notification que lorsque le paiement est réussi,
+            # ou renvoie statut 0. Donc s'il est None ou égal à 0/'success', on valide.
+            if statut_pg is None or statut_pg in [0, '0', 'success', 'SUCCESS']:
                 paiement.statut = 'confirme'
                 paiement.save()
 
