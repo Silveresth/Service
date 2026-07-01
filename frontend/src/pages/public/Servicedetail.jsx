@@ -394,15 +394,17 @@ export default function ServiceDetail() {
                       { icon: 'shield-check',   label: 'Garantie Pro',  val: 'Satisfaction assurée', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.05)' },
                       { icon: 'bell',           label: 'Temps de réponse', val: 'Sous 24h',          color: '#ea580c', bg: 'rgba(234, 88, 12, 0.05)' },
                     ].map(info => (
-                      <div key={info.label} className="sd-info-card" style={{ borderTop: `4px solid ${info.color}` }}>
+                      <div key={info.label} className="sd-info-card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                         <div style={{ 
-                          width: 38, height: 38, borderRadius: 10, background: info.bg, 
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 
+                          width: 42, height: 42, borderRadius: 12, background: info.bg, 
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                         }}>
-                          <i className={`bi bi-${info.icon}`} style={{ color: info.color, fontSize: '1.1rem' }} />
+                          <i className={`bi bi-${info.icon}`} style={{ color: info.color, fontSize: '1.2rem' }} />
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginBottom: 2, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{info.label}</div>
-                        <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0c2340' }}>{info.val}</div>
+                        <div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: 2, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{info.label}</div>
+                          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0c2340' }}>{info.val}</div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -457,6 +459,15 @@ export default function ServiceDetail() {
                       )}
                       
                       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        {service.prestataire?.id && (
+                          <Link 
+                            to={`/prestataire/${service.prestataire.id}`} 
+                            className="sd-contact-btn profile"
+                            style={{ width: 'auto', margin: 0, padding: '10px 20px' }}
+                          >
+                            <i className="bi bi-person-badge" /> Voir le profil
+                          </Link>
+                        )}
                         {service.prestataire?.telephone && (
                           <a href={`tel:${service.prestataire.telephone}`} className="sd-contact-btn phone" style={{ width: 'auto', margin: 0, padding: '10px 20px' }}>
                             <i className="bi bi-telephone-fill" /> Appeler l'artisan

@@ -409,6 +409,19 @@
     box-shadow: 0 6px 15px rgba(2, 132, 199, 0.25);
   }
 
+  .sd-contact-btn.profile {
+    background: rgba(12, 35, 64, 0.05);
+    color: #0c2340;
+    border: 1.5px solid rgba(12, 35, 64, 0.15);
+  }
+
+  .sd-contact-btn.profile:hover {
+    background: #0c2340;
+    color: white;
+    border-color: #0c2340;
+    box-shadow: 0 6px 15px rgba(12, 35, 64, 0.25);
+  }
+
   /* --- REVIEWS RATING CARD --- */
   .sd-rating-summary {
     background: #f8fafc;
