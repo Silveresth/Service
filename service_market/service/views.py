@@ -13,7 +13,7 @@ from .serializers import (
     CompteSerializer, CompteUpdateSerializer, RegisterClientSerializer, RegisterPrestataireSerializer,
     ServiceSerializer, ReservationSerializer, PaiementSerializer,
     EvaluationSerializer, CategorieSerializer, AtelierSerializer, PrestataireSerializer,
-    MessageSerializer, NotificationSerializer, DemandeRetraitSerializer
+    MessageSerializer, NotificationSerializer, DemandeRetraitSerializer, SignalementSerializer, FavoriSerializer
 )
 
 from math import radians, sin, cos, sqrt, atan2

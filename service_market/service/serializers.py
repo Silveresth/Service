@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import DemandeRetrait
-from .models import Compte, Client, Prestataire, Service, Reservation, Paiement, Evaluation, Categorie, Atelier, Message, Notification, ServiceImage, PrestatairePortfolio
+from .models import Compte, Client, Prestataire, Service, Reservation, Paiement, Evaluation, Categorie, Atelier, Message, Notification, ServiceImage, PrestatairePortfolio, Signalement, Favori
 
 
 # ── Compte (custom user) ──────────────────────────────────────────
