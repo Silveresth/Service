@@ -528,3 +528,10 @@
   .pr2-card-footer { padding: 0 14px 14px; gap: 6px; }
   .pr2-btn-detail, .pr2-btn-wa { padding: 9px; font-size: 0.78rem; border-radius: 10px; }
 }
+
+@media (max-width: 480px) {
+  .pr2-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}

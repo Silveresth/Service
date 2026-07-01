@@ -43,7 +43,7 @@ export default function GoogleMapAteliers({
   const markersRef = useRef([]);
   const [err, setErr] = useState('');
   // Clé en dur (démo) : mise pour debug rapide. À retirer en prod.
-  const apiKey = 'AIzaSyBVTImZxaGl9u5XE4N8AOj5s39u9kCdnqo';
+  const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || 'AIzaSyBVTImZxaGl9u5XE4N8AOj5s39u9kCdnqo';
 
   const { center } = useMemo(() => {
     if (typeof searchLatLng?.lat === 'number' && typeof searchLatLng?.lng === 'number') {

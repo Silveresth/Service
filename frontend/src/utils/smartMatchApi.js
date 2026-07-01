@@ -1,23 +1,8 @@
-import axios from 'axios';
+import api from '../api/axios';
 
 export async function smartMatchRequest(payload) {
-  const apiBase = process.env.REACT_APP_API_URL || 'https://apk-back.onrender.com/api/';
-
-  // CRA (dev) => /api est proxied vers http://localhost:8000/api
-  // Prod => on utilise REACT_APP_API_URL
-  const url =
-    process.env.NODE_ENV === 'development'
-      ? '/api/smart-match/match/'
-      : `${apiBase.replace(/\/$/, '')}/smart-match/match/`;
-
-  const res = await axios.post(url, payload, {
-    headers: {
-      Authorization: localStorage.getItem('token')
-        ? `Bearer ${localStorage.getItem('token')}`
-        : undefined,
-    },
-  });
-
+  // Utilisation de l'instance axios 'api' partagée qui injecte le token et gère les erreurs
+  const res = await api.post('/smart-match/match/', payload);
   return res.data;
 }
 

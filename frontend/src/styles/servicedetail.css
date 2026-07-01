@@ -555,3 +555,25 @@
     background: #e2e8f0;
     color: #0c2340;
   }
+
+  @media (max-width: 480px) {
+    .sd-tabs-bar {
+      gap: 2px !important;
+      padding: 4px !important;
+    }
+    .sd-tab-btn {
+      padding: 10px 6px !important;
+      font-size: 0.8rem !important;
+      gap: 4px !important;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .sd-tab-btn .sd-tab-text {
+      display: none !important;
+    }
+    .sd-tab-btn {
+      font-size: 1.1rem !important;
+      padding: 12px 6px !important;
+    }
+  }

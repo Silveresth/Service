@@ -47,7 +47,12 @@
   font-family: inherit;
   position: relative;
   overflow: hidden;
-  animation: cb-pulse 2.5s infinite;
+  animation: cb-pulse 2.5s infinite, cb-float 3s ease-in-out infinite;
+}
+
+@keyframes cb-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
 
 .cb-toggle::before {
@@ -451,7 +456,8 @@
     bottom: 0;
     right: 0;
     left: 0;
-    width: 100vw;
+    width: 100% !important;
+    box-sizing: border-box !important;
     height: 82vh;
     border-radius: 24px 24px 0 0;
     max-height: 82vh;

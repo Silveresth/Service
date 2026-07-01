@@ -372,7 +372,7 @@ export default function ServiceDetail() {
                     onClick={() => setActiveTab(tab.id)}
                   >
                     <i className={`bi bi-${tab.icon}`} />
-                    {tab.label}
+                    <span className="sd-tab-text">{tab.label}</span>
                   </button>
                 ))}
               </div>

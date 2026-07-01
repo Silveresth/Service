@@ -16,7 +16,6 @@ import MonCompte from './pages/shared/MonCompte';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import MesReservations from './pages/client/MesReservations';
 import MesAteliers from './pages/prestataire/MesAteliers';
-import ModifierService from './pages/prestataire/ModifierService';
 import ModifierAtelier from './pages/prestataire/ModifierAtelier';
 import Reserver from './pages/client/Reserver';
 import Evaluer from './pages/client/Evaluer';
@@ -88,25 +87,25 @@ function AppContent() {
           <Route path="/services/:id" element={<Servicedetail />} />
           <Route path="/ateliers" element={<CarteAteliers />} />
           <Route path="/prestataires" element={<Prestataires />} />
-          <Route path="/dashboard" element={<PrestataireDashboard />} />
+          <Route path="/dashboard" element={<PrivateRoute prestataireOnly><PrestataireDashboard /></PrivateRoute>} />
           <Route path="/mon-compte" element={<MonCompte />} />
           <Route path="/admin-dashboard" element={<PrivateRoute adminOnly><AdminDashboard /></PrivateRoute>} />
           <Route path="/admin/dashboard" element={<PrivateRoute adminOnly><AdminDashboard /></PrivateRoute>} />
           <Route path="/mes-reservations" element={<MesReservations />} />
-          <Route path="/mes-ateliers" element={<MesAteliers />} />
-          <Route path="/modifier-service/:id" element={<PrestataireAjouterService />} />
-          <Route path="/modifier-atelier/:id" element={<ModifierAtelier />} />
+          <Route path="/mes-ateliers" element={<PrivateRoute prestataireOnly><MesAteliers /></PrivateRoute>} />
+          <Route path="/modifier-service/:id" element={<PrivateRoute prestataireOnly><PrestataireAjouterService /></PrivateRoute>} />
+          <Route path="/modifier-atelier/:id" element={<PrivateRoute prestataireOnly><ModifierAtelier /></PrivateRoute>} />
           <Route path="/reserver/:id" element={<Reserver />} />
           <Route path="/evaluer/:id" element={<Evaluer />} />
           <Route path="/chat/:id" element={<ChatPage />} />
-          <Route path="/ajouter-atelier" element={<AjouterAtelier />} />
+          <Route path="/ajouter-atelier" element={<PrivateRoute prestataireOnly><AjouterAtelier /></PrivateRoute>} />
           <Route path="/register-prestataire" element={<RegisterPrestataire />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/prestataire-dashboard" element={<PrestataireDashboard />} />
+          <Route path="/prestataire-dashboard" element={<PrivateRoute prestataireOnly><PrestataireDashboard /></PrivateRoute>} />
           <Route path="/prestataire/:id" element={<PrestataireProfile />} />
-          <Route path="/prestataire-ajouter-service" element={<PrestataireAjouterService />} />
-          <Route path="/prestataire-mes-services" element={<PrestataireMesServices />} />
+          <Route path="/prestataire-ajouter-service" element={<PrivateRoute prestataireOnly><PrestataireAjouterService /></PrivateRoute>} />
+          <Route path="/prestataire-mes-services" element={<PrivateRoute prestataireOnly><PrestataireMesServices /></PrivateRoute>} />
           <Route path="/admin/services" element={<PrivateRoute adminOnly><ServicesCRUD /></PrivateRoute>} />
           <Route path="/admin/categories" element={<PrivateRoute adminOnly><CategoriesCRUD /></PrivateRoute>} />
           <Route path="/admin/reservations" element={<PrivateRoute adminOnly><ReservationsCRUD /></PrivateRoute>} />

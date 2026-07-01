@@ -9,7 +9,42 @@ const ANIM = `
 @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
 .hcat { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
 .hcat:hover { transform: translateY(-8px); box-shadow: 0 20px 35px rgba(2, 132, 199, 0.18) !important; border-color: #38bdf8 !important; }
-.hsvc { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+@keyframes bounceIcon {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.18) rotate(8deg); }
+}
+.hcat:hover i {
+  display: inline-block;
+  animation: bounceIcon 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.45); }
+  70% { box-shadow: 0 0 0 15px rgba(2, 132, 199, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0); }
+}
+.btn-primary-custom {
+  animation: pulseGlow 2.5s infinite;
+}
+@keyframes shine {
+  100% { left: 125%; }
+}
+.hsvc {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.hsvc::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -75%;
+  width: 50%; height: 100%;
+  background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 100%);
+  transform: skewX(-25deg);
+  transition: none;
+}
+.hsvc:hover::after {
+  animation: shine 0.8s ease-in-out;
+}
 .hsvc:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(2, 132, 199, 0.15) !important; border-color: #7dd3fc !important; }
 .hcta-link { transition: all 0.2s ease; }
 .hcta-link:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(2, 132, 199, 0.3) !important; }
@@ -210,7 +245,7 @@ export default function Home() {
                 </div>
 
                 {/* Badge Flottant 1 (Avis) */}
-                <div style={{ 
+                <div className="badge-floating-1" style={{ 
                   position: 'absolute', 
                   top: '15%', 
                   right: '-8%', 
@@ -232,7 +267,7 @@ export default function Home() {
                 </div>
 
                 {/* Badge Flottant 2 (Sécurité) */}
-                <div style={{ 
+                <div className="badge-floating-2" style={{ 
                   position: 'absolute', 
                   bottom: '12%', 
                   left: '-10%', 
@@ -264,6 +299,14 @@ export default function Home() {
           .col-lg-6-custom { flex: 0 0 100%; maxWidth: 100%; }
           @media (min-width: 992px) {
             .col-lg-6-custom { flex: 0 0 50% !important; maxWidth: 50% !important; }
+          }
+          @media (max-width: 768px) {
+            .badge-floating-1 { right: 0px !important; top: 10% !important; transform: scale(0.9); transform-origin: right top; }
+            .badge-floating-2 { left: 0px !important; bottom: 10% !important; transform: scale(0.9); transform-origin: left bottom; }
+          }
+          @media (max-width: 480px) {
+            .badge-floating-1 { right: -6px !important; top: 8% !important; transform: scale(0.78); transform-origin: right top; }
+            .badge-floating-2 { left: -6px !important; bottom: 8% !important; transform: scale(0.78); transform-origin: left bottom; }
           }
         `}</style>
       </section>

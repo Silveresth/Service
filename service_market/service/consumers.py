@@ -46,22 +46,34 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not await self.can_send_messages(self.room_name):
             return
 
-        # Sauvegarder le message en base
-        msg = await self.save_message(self.room_name, self.user.id, message)
+        # Sauvegarder le message en base et notifier le destinataire
+        msg, recipient_id = await self.save_message_and_notify(self.room_name, self.user.id, message)
 
-        # Diffuser à tous les membres du groupe
-        timestamp = msg.date_envoi.isoformat() if msg else None
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'chat_message',
-                'message': message,
-                'sender': self.user.username,
-                'sender_id': self.user.id,
-                'timestamp': timestamp,
-                'is_me': False,
-            }
-        )
+        if msg:
+            timestamp = msg.date_envoi.isoformat()
+            # Diffuser à tous les membres du groupe du chat (pour affichage instantané)
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'chat_message',
+                    'message': message,
+                    'sender': self.user.username,
+                    'sender_id': self.user.id,
+                    'timestamp': timestamp,
+                }
+            )
+
+            # Envoyer une notification WebSocket en temps réel au destinataire via son groupe personnel
+            await self.channel_layer.group_send(
+                f"user_{recipient_id}",
+                {
+                    'type': 'notification',
+                    'message': f"Nouveau message de {self.user.username} pour '{msg.reservation.service.nom}'",
+                    'notif_type': 'chat',
+                    'level': 'info',
+                    'created_at': timestamp,
+                }
+            )
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
@@ -72,45 +84,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'timestamp': event['timestamp'],
             'is_me': event['sender_id'] == self.user.id,
         }))
-        
-        # Also send a notification when receiving a chat message (not from self)
-        if event['sender_id'] != self.user.id:
-            await self.send_chat_notification(
-                f"Nouveau message de {event['sender']}"
-            )
-
-    async def send_chat_notification(self, message):
-        """Send a WebSocket notification to the current user when receiving a chat message"""
-        try:
-            from channels.layers import get_channel_layer
-            
-            # Create notification record
-            await database_sync_to_async(self._save_notification_record)(self.user.id, message, 'chat')
-            
-            # Send real-time notification
-            channel_layer = get_channel_layer()
-            user_group = f"user_{self.user.id}"
-            
-            await channel_layer.group_send(
-                user_group,
-                {
-                    'type': 'notification',
-                    'message': message,
-                    'notif_type': 'chat',
-                    'level': 'info',
-                }
-            )
-        except Exception as e:
-            logger.exception(f"Chat notification failed for user {self.user.id if hasattr(self, 'user') else 'unknown'}: {e}")
-
-
-    def _save_notification_record(self, user_id, message, notif_type):
-        try:
-            from .models import Compte, Notification
-            user = Compte.objects.get(id=user_id)
-            Notification.objects.create(user=user, type=notif_type, message=message)
-        except Exception as e:
-            logger.error(f"Notification record save failed: {e}")
 
     @database_sync_to_async
     def get_user_from_token(self):
@@ -154,14 +127,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return False
 
     @database_sync_to_async
-    def save_message(self, reservation_id, user_id, content):
+    def save_message_and_notify(self, reservation_id, sender_id, content):
         try:
-            reservation = Reservation.objects.get(id=reservation_id)
-            user = Compte.objects.get(id=user_id)
-            return Message.objects.create(reservation=reservation, sender=user, contenu=content)
+            from django.db import transaction
+            with transaction.atomic():
+                reservation = Reservation.objects.select_related('client__user', 'service__prestataire__user').get(id=reservation_id)
+                sender = Compte.objects.get(id=sender_id)
+                msg = Message.objects.create(reservation=reservation, sender=sender, contenu=content)
+
+                # Déterminer le destinataire
+                if reservation.client.user_id == sender_id:
+                    recipient = reservation.service.prestataire.user
+                else:
+                    recipient = reservation.client.user
+
+                # Créer l'enregistrement de notification en base de données pour le destinataire
+                Notification.objects.create(
+                    user=recipient,
+                    type='chat',
+                    message=f"Nouveau message de {sender.username} pour '{reservation.service.nom}'"
+                )
+
+                return msg, recipient.id
         except Exception as e:
-            logger.error(f"Save message failed (res {reservation_id}, user {user_id}): {e}")
-            return None
+            logger.error(f"Save message and notify failed (res {reservation_id}, sender {sender_id}): {e}")
+            return None, None
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
