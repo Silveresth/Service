@@ -48,6 +48,23 @@ class Prestataire(models.Model):
         help_text="Statut d'activité en temps réel"
     )
     
+    TYPE_ABONNEMENT_CHOICES = (
+        ('gratuit', 'Gratuit'),
+        ('pro', 'Pro'),
+        ('prestige', 'Prestige'),
+    )
+    type_abonnement = models.CharField(
+        max_length=20,
+        choices=TYPE_ABONNEMENT_CHOICES,
+        default='gratuit',
+        help_text="Type d'abonnement du prestataire"
+    )
+    date_expiration_abonnement = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Date d'expiration de l'abonnement"
+    )
+    
     def __str__(self):
         return f"Prestataire: {self.user.username}"
 
@@ -318,3 +335,30 @@ class PrestatairePortfolio(models.Model):
 
     def __str__(self):
         return f"Portfolio #{self.id} de {self.prestataire.user.username}"
+
+
+class Signalement(models.Model):
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='signalements')
+    prestataire = models.ForeignKey(Prestataire, on_delete=models.CASCADE, related_name='signalements')
+    motif = models.CharField(max_length=255)
+    justification = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Signalement #{self.id} de {self.client.user.username} contre {self.prestataire.user.username}"
+
+
+class Favori(models.Model):
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='favoris')
+    prestataire = models.ForeignKey(Prestataire, on_delete=models.CASCADE, related_name='favoris')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('client', 'prestataire')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Favori: {self.client.user.username} -> {self.prestataire.user.username}"

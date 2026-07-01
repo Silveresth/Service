@@ -206,7 +206,15 @@ export default function Prestataires() {
 
                       {/* Body */}
                       <div className="pr2-card-body">
-                        <h4 className="pr2-name">{nom}</h4>
+                        <h4 className="pr2-name" style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+                          {nom}
+                          {p.type_abonnement === 'pro' && (
+                            <i className="bi bi-patch-check-fill" style={{ color: '#22c55e', fontSize: '0.98rem' }} title="Prestataire PRO" />
+                          )}
+                          {p.type_abonnement === 'prestige' && (
+                            <i className="bi bi-gem" style={{ color: '#fbbf24', fontSize: '0.98rem' }} title="Prestataire PRESTIGE" />
+                          )}
+                        </h4>
                         <span className="pr2-handle">@{p.user?.username || 'artisan'}</span>
 
                         <span className="pr2-verified">

@@ -17,6 +17,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import MesReservations from './pages/client/MesReservations';
 import MesAteliers from './pages/prestataire/MesAteliers';
 import ModifierAtelier from './pages/prestataire/ModifierAtelier';
+import MonAbonnement from './pages/prestataire/MonAbonnement';
 import Reserver from './pages/client/Reserver';
 import Evaluer from './pages/client/Evaluer';
 import ChatPage from './pages/shared/ChatPage';
@@ -39,6 +40,7 @@ import AdminEvaluations from './pages/admin/AdminEvaluations';
 import AdminAllPaiements from './pages/admin/AdminAllPaiements';
 import AdminAllCategories from './pages/admin/AdminAllCategories';
 import AdminAllServices from './pages/admin/AdminAllServices';
+import AdminAllSignalements from './pages/admin/AdminAllSignalements';
 import PrivateRoute from './components/PrivateRoute';
 import PrestataireProfile from './pages/public/PrestataireProfile';
 
@@ -99,6 +101,7 @@ function AppContent() {
           <Route path="/evaluer/:id" element={<Evaluer />} />
           <Route path="/chat/:id" element={<ChatPage />} />
           <Route path="/ajouter-atelier" element={<PrivateRoute prestataireOnly><AjouterAtelier /></PrivateRoute>} />
+          <Route path="/mon-abonnement" element={<PrivateRoute prestataireOnly><MonAbonnement /></PrivateRoute>} />
           <Route path="/register-prestataire" element={<RegisterPrestataire />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -118,8 +121,9 @@ function AppContent() {
           <Route path="/admin/all-evaluations" element={<PrivateRoute adminOnly><AdminEvaluations /></PrivateRoute>} />
           <Route path="/admin/evaluations" element={<PrivateRoute adminOnly><AdminEvaluations /></PrivateRoute>} />
           <Route path="/admin/all-paiements" element={<PrivateRoute adminOnly><AdminAllPaiements /></PrivateRoute>} />
-          <Route path="/admin/all-categories" element={<PrivateRoute adminOnly><AdminAllCategories /></PrivateRoute>} />
+           <Route path="/admin/all-categories" element={<PrivateRoute adminOnly><AdminAllCategories /></PrivateRoute>} />
           <Route path="/admin/All-services" element={<PrivateRoute adminOnly><AdminAllServices /></PrivateRoute>} />
+          <Route path="/admin/all-signalements" element={<PrivateRoute adminOnly><AdminAllSignalements /></PrivateRoute>} />
           <Route path="/inscription-client" element={<Register />} />
           <Route path="/inscription-prestataire" element={<RegisterPrestataire />} />
         </Routes>

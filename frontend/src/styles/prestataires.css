@@ -23,11 +23,11 @@
 /* ── HERO ── */
 .pr2-hero {
   background: linear-gradient(135deg, #0c2340 0%, #0a3060 55%, #0284c7 100%);
-  padding: 64px 0 48px;
+  padding: 30px 0 24px;
   color: white;
   position: relative;
   overflow: hidden;
-  margin-bottom: -44px;
+  margin-bottom: -40px;
 }
 
 .pr2-hero::before {
@@ -515,8 +515,8 @@
 
 /* ── MOBILE ── */
 @media (max-width: 680px) {
-  .pr2-hero { padding: 44px 0 32px; }
-  .pr2-hero-stats { gap: 16px; }
+  .pr2-hero { padding: 24px 0 16px !important; }
+  .pr2-hero-sub, .pr2-hero-eyebrow, .pr2-hero-stats { display: none !important; }
   .pr2-filter-card { padding: 16px; border-radius: 20px; }
   .pr2-card { border-radius: 18px; }
   .pr2-card-banner { height: 56px; }
@@ -531,7 +531,30 @@
 
 @media (max-width: 480px) {
   .pr2-grid {
-    grid-template-columns: 1fr !important;
-    gap: 16px !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .pr2-btn-detail, .pr2-btn-wa {
+    padding: 8px 6px !important;
+    font-size: 0.7rem !important;
+    border-radius: 8px !important;
+  }
+  .pr2-card-footer {
+    padding: 0 10px 10px !important;
+    gap: 4px !important;
+  }
+  .pr2-name {
+    font-size: 0.8rem !important;
+  }
+  .pr2-avatar {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 1.1rem !important;
+  }
+  .pr2-avatar-wrap {
+    margin-top: -24px !important;
   }
 }

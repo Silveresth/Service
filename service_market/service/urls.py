@@ -4,7 +4,8 @@ from .views import (
     AuthViewSet, CompteViewSet, ServiceViewSet, ReservationViewSet,
     PrestataireViewSet, AtelierViewSet, CategorieViewSet, AdminViewSet,
     EvaluationViewSet, NotificationViewSet, initier_paiement, paygate_callback, verifier_paiement, SmartMatchViewSet,
-    mes_points_fidelite, rapport_pdf_admin, ajouter_points, chatbot_view, DemandeRetraitViewSet
+    mes_points_fidelite, rapport_pdf_admin, ajouter_points, chatbot_view, DemandeRetraitViewSet,
+    SignalementViewSet, FavoriViewSet
 )
 
 router = DefaultRouter()
@@ -19,6 +20,8 @@ router.register('evaluations',   EvaluationViewSet,   basename='evaluation')
 router.register('notifications', NotificationViewSet, basename='notification')
 router.register('smart-match',   SmartMatchViewSet,   basename='smartmatch')
 router.register('retraits',      DemandeRetraitViewSet, basename='retrait')
+router.register('signalements',  SignalementViewSet,  basename='signalement')
+router.register('favoris',       FavoriViewSet,       basename='favori')
 router.register('admin',         AdminViewSet,        basename='admin')
 
 urlpatterns = router.urls + [

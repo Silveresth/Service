@@ -419,14 +419,29 @@ export default function ServiceDetail() {
                       background: 'linear-gradient(135deg, #0c2340 0%, #0284c7 100%)', 
                       color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', 
                       fontWeight: 800, fontSize: '1.8rem', flexShrink: 0,
-                      boxShadow: '0 8px 20px rgba(2, 132, 199, 0.2)'
+                      boxShadow: '0 8px 20px rgba(2, 132, 199, 0.2)',
+                      overflow: 'hidden'
                     }}>
-                      {(service.prestataire?.user?.first_name?.[0] || service.prestataire?.user?.username?.[0] || 'P').toUpperCase()}
+                      {service.prestataire?.photo_url ? (
+                        <img src={service.prestataire.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        (service.prestataire?.user?.first_name?.[0] || service.prestataire?.user?.username?.[0] || 'P').toUpperCase()
+                      )}
                     </div>
                     
                     <div style={{ flex: 1, minWidth: 200 }}>
-                      <h5 style={{ fontWeight: 800, color: '#0c2340', fontSize: '1.15rem', margin: '0 0 6px' }}>
+                      <h5 style={{ fontWeight: 800, color: '#0c2340', fontSize: '1.15rem', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         {`${service.prestataire?.user?.first_name || ''} ${service.prestataire?.user?.last_name || ''}`.trim() || service.prestataire?.user?.username}
+                        {service.prestataire?.type_abonnement === 'pro' && (
+                          <span style={{ fontSize: '0.68rem', background: '#22c55e', color: 'white', padding: '3px 8px', borderRadius: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em', border: '1px solid rgba(255,255,255,0.2)', display: 'inline-flex', alignItems: 'center' }}>
+                            <i className="bi bi-patch-check-fill" style={{ marginRight: 4 }} /> PRO
+                          </span>
+                        )}
+                        {service.prestataire?.type_abonnement === 'prestige' && (
+                          <span style={{ fontSize: '0.68rem', background: 'linear-gradient(135deg, #fbbf24, #d97706)', color: 'white', padding: '3px 8px', borderRadius: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em', border: '1px solid rgba(255,255,255,0.2)', display: 'inline-flex', alignItems: 'center', boxShadow: '0 2px 6px rgba(217,119,6,0.2)' }}>
+                            <i className="bi bi-gem" style={{ marginRight: 4 }} /> PRESTIGE
+                          </span>
+                        )}
                       </h5>
                       
                       {service.prestataire?.specialite && (

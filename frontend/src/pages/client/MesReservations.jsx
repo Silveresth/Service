@@ -18,6 +18,7 @@ const TABS = [
   { key:'confirmee',           label:'Confirmées', icon:'check-circle' },
   { key:'terminee',            label:'Terminées',  icon:'flag' },
   { key:'annulee',             label:'Annulées',   icon:'x-circle' },
+  { key:'favoris',             label:'Favoris',    icon:'heart-fill' },
 ];
 
 const fmt = d => d ? new Date(d).toLocaleString('fr-FR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
@@ -25,6 +26,7 @@ const fmt = d => d ? new Date(d).toLocaleString('fr-FR',{day:'2-digit',month:'sh
 export default function MesReservations() {
   const { user } = useAuth();
   const [reservations,  setReservations]  = useState([]);
+  const [favoris,       setFavoris]       = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [activeTab,     setActiveTab]     = useState('toutes');
   const [expanded,      setExpanded]      = useState(null);
@@ -37,7 +39,13 @@ export default function MesReservations() {
 
   useEffect(() => {
     api.get('/reservations/').then(r => setReservations(r.data)).catch(console.error).finally(() => setLoading(false));
-  }, []);
+    
+    if (user && user.type_compte === 'client') {
+      api.get('/favoris/')
+        .then(r => setFavoris(r.data || []))
+        .catch(console.error);
+    }
+  }, [user]);
 
   const showToast = (msg, type='success') => { setToast({msg,type}); setTimeout(() => setToast(null), 3500); };
 
@@ -70,7 +78,7 @@ export default function MesReservations() {
   };
 
   const filtered = activeTab === 'toutes' ? reservations : reservations.filter(r => r.statut === activeTab);
-  const counts   = Object.fromEntries(TABS.map(t => [t.key, t.key==='toutes' ? reservations.length : reservations.filter(r=>r.statut===t.key).length]));
+  const counts   = Object.fromEntries(TABS.map(t => [t.key, t.key==='toutes' ? reservations.length : t.key==='favoris' ? favoris.length : reservations.filter(r=>r.statut===t.key).length]));
 
   if (loading) return (
     <div style={{ minHeight:'70vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
@@ -132,8 +140,68 @@ export default function MesReservations() {
 
         {/* Liste */}
         <div style={{ maxWidth:900, margin:'20px auto 0', padding:'0 16px', display:'flex', flexDirection:'column', gap:14 }}>
-          {filtered.length === 0 ? (
-            <div style={{ textAlign:'center', padding:'70px 20px', animation:'fadeUp .4s ease' }}>
+          {activeTab === 'favoris' ? (
+            favoris.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'70px 20px', animation:'fadeUp .4s ease' }}>
+                <div style={{ width:72, height:72, borderRadius:20, background:'#fee2e2', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <i className="bi bi-heart-fill" style={{ fontSize:'2.2rem', color:'#f43f5e' }} />
+                </div>
+                <h4 style={{ fontWeight:800, color:'#0c2340', marginBottom:8 }}>Aucun favori</h4>
+                <p style={{ color:'#94a3b8' }}>Vous n'avez pas encore de prestataires favoris.</p>
+                <Link to="/prestataires" style={{ display:'inline-flex', alignItems:'center', gap:8, marginTop:16, padding:'11px 24px', borderRadius:12, background:'linear-gradient(135deg,#0c2340,#0284c7)', color:'#fff', textDecoration:'none', fontWeight:700, fontSize:'0.88rem' }}>
+                  <i className="bi bi-people" /> Voir les prestataires
+                </Link>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 20, animation:'fadeUp .4s ease' }}>
+                {favoris.map(fav => {
+                  const p = fav.prestataire_details;
+                  if (!p) return null;
+                  const name = `${p.user?.first_name || ''} ${p.user?.last_name || ''}`.trim() || p.user?.username || 'Artisan';
+                  return (
+                    <div key={fav.id} style={{ background: 'white', borderRadius: 20, border: '1.5px solid #e0f2fe', padding: 20, boxShadow: '0 4px 18px rgba(2,132,199,.05)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                        <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #0c2340 0%, #0284c7 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.2rem', overflow: 'hidden', flexShrink: 0 }}>
+                          {p.photo_url ? <img src={p.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : name[0]}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <h5 style={{ margin: '0 0 2px', fontWeight: 800, color: '#0c2340', fontSize: '0.92rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {name}
+                          </h5>
+                          <span style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                            {p.specialite || 'Prestataire'}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                        {p.ville ? `📍 ${p.ville}` : '—'}
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
+                        <Link to={`/prestataire/${p.id}`} style={{ flex: 1, padding: '8px 10px', fontSize: '0.78rem', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, textDecoration: 'none', background: '#0284c7', color: 'white', fontWeight: 700 }}>
+                          <i className="bi bi-person-fill" /> Profil
+                        </Link>
+                        <button 
+                          onClick={async () => {
+                            try {
+                              await api.post('/favoris/toggle/', { prestataire: p.id });
+                              setFavoris(prev => prev.filter(f => f.id !== fav.id));
+                              showToast('Favori retiré.');
+                            } catch {
+                              showToast('Erreur lors du retrait.', 'error');
+                            }
+                          }}
+                          style={{ padding: '8px 10px', borderRadius: 10, border: '1.5px solid #fca5a5', background: 'transparent', color: '#ef4444', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
+                        >
+                          Retirer
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          ) : filtered.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'70px 20px', animation:'fadeUp .4s ease' }}>
               <div style={{ width:72, height:72, borderRadius:20, background:'#e0f2fe', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
                 <i className="bi bi-calendar-x" style={{ fontSize:'2.2rem', color:'#0284c7' }} />
               </div>

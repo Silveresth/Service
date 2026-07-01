@@ -96,19 +96,15 @@ export default function GoogleMapAteliers({
         const marker = new g.maps.Marker({
           position: { lat, lng },
           map: mapRef.current,
-          label: {
-            text: a.nom ? a.nom.slice(0, 1).toUpperCase() : '',
-            color: 'white',
-          },
           title: a.nom,
-          // Personnalisation: icône via SVG data-uri (simple)
           icon: {
-            path: g.maps.SymbolPath.CIRCLE,
-            fillColor: isSelected ? '#ef4444' : '#0284c7',
+            path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+            fillColor: isSelected ? '#dc2626' : '#0284c7',
             fillOpacity: 1,
-            strokeColor: 'white',
-            strokeWeight: 3,
-            scale: isSelected ? 8.5 : 6.3,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
+            scale: isSelected ? 1.8 : 1.4,
+            anchor: new g.maps.Point(12, 22),
           },
         });
 

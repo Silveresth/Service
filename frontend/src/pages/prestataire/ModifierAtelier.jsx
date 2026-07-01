@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Geolocation } from '@capacitor/geolocation';
 import api from '../../api/axios';
 
 export default function ModifierAtelier() {
@@ -10,6 +11,9 @@ export default function ModifierAtelier() {
   const [fetchLoading, setFetchLoading] = useState(true);
   const navigate = useNavigate();
   const set = f => e => setForm(p => ({ ...p, [f]: e.type==='checkbox' ? e.target.checked : e.target.value }));
+
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
 
   useEffect(() => {
     api.get(`/ateliers/${id}/`).then(res => {
@@ -30,21 +34,68 @@ export default function ModifierAtelier() {
     }).finally(() => setFetchLoading(false));
   }, [id, navigate]);
 
+  const handleUseCurrentPosition = async () => {
+    let lat = null;
+    let lng = null;
+    try {
+      const coordinates = await Geolocation.getCurrentPosition();
+      lat = coordinates.coords.latitude;
+      lng = coordinates.coords.longitude;
+    } catch {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            const lat2 = pos.coords.latitude;
+            const lng2 = pos.coords.longitude;
+            setForm(p => ({ ...p, latitude: lat2.toFixed(6), longitude: lng2.toFixed(6) }));
+            if (mapRef.current) {
+              const latlng = [lat2, lng2];
+              mapRef.current.setView(latlng, 15);
+              if (markerRef.current) {
+                markerRef.current.setLatLng(latlng);
+              } else {
+                markerRef.current = window.L.marker(latlng).addTo(mapRef.current);
+              }
+            }
+          },
+          err => alert('Erreur de localisation : ' + err.message)
+        );
+        return;
+      } else {
+        alert("La géolocalisation n'est pas supportée par votre appareil.");
+        return;
+      }
+    }
+    if (lat && lng) {
+      setForm(p => ({ ...p, latitude: lat.toFixed(6), longitude: lng.toFixed(6) }));
+      if (mapRef.current) {
+        const latlng = [lat, lng];
+        mapRef.current.setView(latlng, 15);
+        if (markerRef.current) {
+          markerRef.current.setLatLng(latlng);
+        } else {
+          markerRef.current = window.L.marker(latlng).addTo(mapRef.current);
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     if (!window.L || fetchLoading) return;
     const existing = document.getElementById('map-modifier');
     if (existing && existing._leaflet_id) return;
     const map = window.L.map('map-modifier').setView([parseFloat(form.latitude)||6.125580, parseFloat(form.longitude)||1.232456], 14);
     window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap' }).addTo(map);
-    let marker = null;
+    mapRef.current = map;
+
     if (form.latitude && form.longitude) {
-      marker = window.L.marker([parseFloat(form.latitude), parseFloat(form.longitude)]).addTo(map);
+      markerRef.current = window.L.marker([parseFloat(form.latitude), parseFloat(form.longitude)]).addTo(map);
     }
     map.on('click', e => {
       const { lat, lng } = e.latlng;
       setForm(p => ({ ...p, latitude: lat.toFixed(6), longitude: lng.toFixed(6) }));
-      if (marker) marker.setLatLng(e.latlng);
-      else marker = window.L.marker(e.latlng).addTo(map);
+      if (markerRef.current) markerRef.current.setLatLng(e.latlng);
+      else markerRef.current = window.L.marker(e.latlng).addTo(map);
     });
   }, [fetchLoading]);
 
@@ -80,14 +131,40 @@ export default function ModifierAtelier() {
                   <div className="mb-3"><label className="form-label">Adresse</label>
                     <textarea className="form-control" value={form.adresse} onChange={set('adresse')} required />
                   </div>
-                  <div style={{ display:'flex', gap:12, marginBottom:16 }}>
-                    <div style={{ flex:1 }}>
-                      <label className="form-label">Latitude</label>
-                      <input type="number" step="0.000001" className="form-control" value={form.latitude} onChange={set('latitude')} placeholder="6.125580" />
-                    </div>
-                    <div style={{ flex:1 }}>
-                      <label className="form-label">Longitude</label>
-                      <input type="number" step="0.000001" className="form-control" value={form.longitude} onChange={set('longitude')} placeholder="1.232456" />
+                  <div style={{ marginBottom: 16 }}>
+                    <button
+                      type="button"
+                      onClick={handleUseCurrentPosition}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: '1.5px solid #bae6fd',
+                        background: '#f0f9ff',
+                        color: '#0284c7',
+                        fontWeight: '800',
+                        fontSize: '0.85rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        marginBottom: '12px',
+                        fontFamily: 'inherit'
+                      }}
+                    >
+                      <i className="bi bi-geo-alt-fill" /> Utiliser ma position actuelle
+                    </button>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="form-label">Latitude</label>
+                        <input type="number" readOnly value={form.latitude} className="form-control" style={{ background: '#f1f5f9', cursor: 'not-allowed' }} placeholder="Auto-détectée" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label className="form-label">Longitude</label>
+                        <input type="number" readOnly value={form.longitude} className="form-control" style={{ background: '#f1f5f9', cursor: 'not-allowed' }} placeholder="Auto-détectée" />
+                      </div>
                     </div>
                   </div>
                   <div className="mb-3"><label className="form-label">Sélectionner sur la carte</label>

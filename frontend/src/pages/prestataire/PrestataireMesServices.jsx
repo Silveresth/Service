@@ -77,7 +77,60 @@ const PMS_STYLES = `
     display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
     gap: 18px; max-width: 1100px; margin: 20px auto 0; padding: 0 24px;
   }
-  @media(max-width:480px) { .pms-grid { grid-template-columns: 1fr; } }
+  @media(max-width:480px) {
+    .pms-grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 10px !important;
+      padding: 0 10px !important;
+    }
+    .pms-card {
+      border-radius: 12px !important;
+    }
+    .pms-thumb {
+      height: 90px !important;
+    }
+    .pms-thumb-icon {
+      width: 44px !important;
+      height: 44px !important;
+      font-size: 1.8rem !important;
+      border-radius: 10px !important;
+    }
+    .pms-status-badge {
+      font-size: 0.6rem !important;
+      padding: 2px 6px !important;
+      top: 6px !important;
+      right: 6px !important;
+    }
+    .pms-body {
+      padding: 10px !important;
+      gap: 4px !important;
+    }
+    .pms-name {
+      font-size: 0.78rem !important;
+    }
+    .pms-cat {
+      font-size: 0.65rem !important;
+      padding: 2px 6px !important;
+    }
+    .pms-price {
+      font-size: 0.8rem !important;
+    }
+    .pms-rating {
+      font-size: 0.68rem !important;
+    }
+    .pms-footer {
+      padding: 8px !important;
+      gap: 4px !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+    }
+    .pms-btn {
+      padding: 6px !important;
+      font-size: 0.68rem !important;
+      border-radius: 6px !important;
+      justify-content: center !important;
+    }
+  }
 
   /* Card */
   .pms-card {

@@ -76,8 +76,8 @@ export default function PrestataireDashboard() {
 
   const confirmerRes = async (id) => {
     try {
-      await api.patch(`/reservations/${id}/`, { statut: 'confirmee' });
-      setRes(prev => prev.map(r => r.id === id ? { ...r, statut: 'confirmee' } : r));
+      await api.patch(`/reservations/${id}/`, { statut: 'en_attente_paiement' });
+      setRes(prev => prev.map(r => r.id === id ? { ...r, statut: 'en_attente_paiement' } : r));
       showToast('Réservation confirmée !');
     } catch { showToast('Erreur de confirmation.'); }
   };
@@ -196,6 +196,7 @@ export default function PrestataireDashboard() {
     { to: '/prestataire-ajouter-service',   icon: 'plus-circle-fill', title: 'Ajouter Service', color: '#f0fdf4', ic: '#22c55e', count: '+' },
     { to: '/mes-reservations',              icon: 'calendar-check-fill', title: 'Réservations',  color: '#fef3c7', ic: '#d97706', count: stats.total_reservations || 0 },
     { to: '/mes-ateliers',                  icon: 'geo-alt-fill',     title: 'Ateliers',         color: '#fce7f3', ic: '#ec4899', count: stats.ateliers_count || 0 },
+    { to: '/mon-abonnement',                icon: 'gem',              title: 'Abonnement Pro',   color: '#ede9fe', ic: '#6366f1', count: '★' },
   ];
 
   const METRICS = [
@@ -219,7 +220,19 @@ export default function PrestataireDashboard() {
 
             <div className="pd-greeting">
               <div className="pd-greeting-text">
-                <h1>{getGreeting()}, {user?.first_name || user?.username} 👋</h1>
+                <h1 style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: 0 }}>
+                  {getGreeting()}, {user?.first_name || user?.username} 👋
+                  {stats.type_abonnement === 'pro' && (
+                    <span style={{ fontSize: '0.72rem', background: '#22c55e', color: 'white', padding: '4px 10px', borderRadius: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid rgba(255,255,255,0.2)', display: 'inline-flex', alignItems: 'center' }}>
+                      <i className="bi bi-patch-check-fill" style={{ marginRight: 4 }} /> PRO
+                    </span>
+                  )}
+                  {stats.type_abonnement === 'prestige' && (
+                    <span style={{ fontSize: '0.72rem', background: 'linear-gradient(135deg, #fbbf24, #d97706)', color: 'white', padding: '4px 10px', borderRadius: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid rgba(255,255,255,0.2)', display: 'inline-flex', alignItems: 'center', boxShadow: '0 4px 10px rgba(217,119,6,0.2)' }}>
+                      <i className="bi bi-gem" style={{ marginRight: 4 }} /> PRESTIGE
+                    </span>
+                  )}
+                </h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
                   <p style={{ margin: 0 }}>Voici votre tableau de bord prestataire — {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                   

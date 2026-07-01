@@ -7,7 +7,16 @@ export function usePWA() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
-        .then(reg => { setSwReady(true); })
+        .then(reg => { 
+          setSwReady(true); 
+          if ('Notification' in window && Notification.permission === 'default') {
+            setTimeout(() => {
+              Notification.requestPermission().then(permission => {
+                console.log('[PWA] Notification permission:', permission);
+              });
+            }, 6000);
+          }
+        })
         .catch(err => console.warn('[PWA] Erreur SW', err));
     }
     const onOnline  = () => setIsOffline(false);

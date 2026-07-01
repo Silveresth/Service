@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
 
 const STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap');
@@ -533,12 +534,68 @@ function SkeletonServiceCard() {
 
 export default function PrestataireProfile() {
   const { id } = useParams();
+  const { user } = useAuth();
+  
   const [prestataire, setPrestataire] = useState(null);
   const [services, setServices] = useState([]);
   const [avis, setAvis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('services');
+  
+  const [isFavori, setIsFavori] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportMotif, setReportMotif] = useState('Qualité de service décevante');
+  const [reportJustification, setReportJustification] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  useEffect(() => {
+    if (user && user.type_compte === 'client' && prestataire) {
+      api.get('/favoris/')
+        .then(res => {
+          const found = res.data.some(f => f.prestataire === prestataire.id);
+          setIsFavori(found);
+        })
+        .catch(console.error);
+    }
+  }, [user, prestataire]);
+
+  const toggleFavori = async () => {
+    if (!prestataire) return;
+    try {
+      const res = await api.post('/favoris/toggle/', { prestataire: prestataire.id });
+      setIsFavori(res.data.status === 'added');
+      setToastMessage(res.data.message);
+      setTimeout(() => setToastMessage(''), 3000);
+    } catch (err) {
+      alert("Erreur lors de la mise à jour des favoris.");
+    }
+  };
+
+  const handleReport = async (e) => {
+    e.preventDefault();
+    if (!reportJustification.trim()) {
+      alert("Veuillez fournir une justification.");
+      return;
+    }
+    setSubmittingReport(true);
+    try {
+      await api.post('/signalements/', {
+        prestataire: prestataire.id,
+        motif: reportMotif,
+        justification: reportJustification
+      });
+      setShowReportModal(false);
+      setReportJustification('');
+      setToastMessage("Signalement envoyé avec succès !");
+      setTimeout(() => setToastMessage(''), 3000);
+    } catch (err) {
+      alert(err.response?.data?.error || "Erreur lors de l'envoi du signalement.");
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -676,18 +733,63 @@ export default function PrestataireProfile() {
               </div>
 
               {/* Actions */}
-              {prestataire.telephone && (
-                <div className="pp-hero-actions">
+              <div className="pp-hero-actions" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 16 }}>
+                {prestataire.telephone && (
                   <a
                     href={`https://wa.me/228${prestataire.telephone}?text=${encodeURIComponent("Bonjour, j'ai trouvé votre profil sur Service Market et je souhaite discuter de vos prestations.")}`}
                     target="_blank"
                     rel="noreferrer"
                     className="pp-btn-wa"
+                    style={{ margin: 0 }}
                   >
-                    <i className="bi bi-whatsapp" /> Contacter
+                    <i className="bi bi-whatsapp" style={{ marginRight: 6 }} /> Contacter
                   </a>
-                </div>
-              )}
+                )}
+                {user && user.type_compte === 'client' && (
+                  <>
+                    <button
+                      onClick={toggleFavori}
+                      style={{
+                        background: isFavori ? '#f43f5e' : 'rgba(255, 255, 255, 0.1)',
+                        border: isFavori ? 'none' : '1px solid rgba(255,255,255,0.3)',
+                        color: 'white',
+                        padding: '12px 20px',
+                        borderRadius: 14,
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        transition: 'all 0.2s',
+                        fontFamily: 'inherit'
+                      }}
+                    >
+                      <i className={`bi ${isFavori ? 'bi-heart-fill' : 'bi-heart'}`} />
+                      {isFavori ? 'Favori' : 'Favori'}
+                    </button>
+                    <button
+                      onClick={() => setShowReportModal(true)}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        color: '#f87171',
+                        padding: '12px 20px',
+                        borderRadius: 14,
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        transition: 'all 0.2s',
+                        fontFamily: 'inherit'
+                      }}
+                    >
+                      <i className="bi bi-exclamation-triangle" />
+                      Signaler
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -914,7 +1016,7 @@ export default function PrestataireProfile() {
                     { icon: 'bi-tools', label: 'Spécialité', value: prestataire.specialite || 'Non renseignée' },
                     { icon: 'bi-telephone', label: 'Téléphone', value: prestataire.telephone || 'Non renseigné' },
                     { icon: 'bi-geo-alt', label: 'Ville', value: prestataire.ville || 'Non renseignée' },
-                    { icon: 'bi-calendar3', label: 'Membre depuis', value: prestataire.date_inscription ? new Date(prestataire.date_inscription).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : 'N/A' },
+                    { icon: 'bi-calendar3', label: 'Membre depuis', value: prestataire.user?.date_joined ? new Date(prestataire.user.date_joined).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : 'N/A' },
                     { icon: 'bi-star-fill', label: 'Note globale', value: noteGlobale ? `${noteGlobale}/5` : 'Pas encore noté' },
                     { icon: 'bi-grid-3x3-gap', label: 'Services publiés', value: services.length },
                   ].map((item, i) => (
@@ -935,6 +1037,126 @@ export default function PrestataireProfile() {
           </div>
         </div>
       </div>
+
+      {/* TOAST MESSAGE */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          background: '#0c2340',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: 12,
+          boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+          fontWeight: 700,
+          fontSize: '0.85rem',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          animation: 'pp-up 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+        }}>
+          <i className="bi bi-info-circle-fill" style={{ color: '#0284c7' }} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* REPORT MODAL */}
+      {showReportModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(12, 35, 64, 0.4)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 20
+        }} onClick={() => setShowReportModal(false)}>
+          <div style={{
+            background: 'white',
+            borderRadius: 24,
+            width: '100%',
+            maxWidth: 460,
+            boxShadow: '0 25px 50px -12px rgba(12, 35, 64, 0.25)',
+            border: '1px solid rgba(255,255,255,0.8)',
+            overflow: 'hidden'
+          }} onClick={e => e.stopPropagation()}>
+            
+            <div style={{ padding: '20px 24px', borderBottom: '1.5px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h5 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1.15rem', color: '#0c2340', margin: 0 }}>
+                Signaler ce prestataire
+              </h5>
+              <button style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', fontSize: '1.1rem' }} onClick={() => setShowReportModal(false)}>×</button>
+            </div>
+
+            <form onSubmit={handleReport}>
+              <div style={{ padding: 24 }}>
+                <p style={{ fontSize: '0.88rem', color: '#475569', margin: '0 0 20px' }}>
+                  Votre signalement sera directement transmis à l'équipe de modération de Service Market pour vérification.
+                </p>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>
+                    Motif du signalement
+                  </label>
+                  <select
+                    value={reportMotif}
+                    onChange={e => setReportMotif(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: '0.9rem', outline: 'none', background: 'white' }}
+                  >
+                    <option value="Qualité de service décevante">Qualité de service décevante</option>
+                    <option value="Comportement inapproprié">Comportement inapproprié</option>
+                    <option value="Prix non conforme">Prix non conforme</option>
+                    <option value="Arnaque ou fraude">Arnaque ou fraude</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>
+                    Justification / Détails
+                  </label>
+                  <textarea
+                    rows={4}
+                    placeholder="Veuillez décrire précisément les faits et ajouter toute précision utile..."
+                    value={reportJustification}
+                    onChange={e => setReportJustification(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #cbd5e1', fontSize: '0.9rem', outline: 'none', resize: 'vertical' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ padding: '16px 24px', background: '#f8fafc', borderTop: '1.5px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                <button type="button" style={{ padding: '10px 18px', borderRadius: 10, border: '1.5px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: 700, fontSize: '0.84rem', cursor: 'pointer' }} onClick={() => setShowReportModal(false)} disabled={submittingReport}>
+                  Annuler
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={submittingReport || !reportJustification.trim()}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: 10,
+                    border: 'none',
+                    background: '#ef4444',
+                    color: 'white',
+                    fontWeight: 700,
+                    fontSize: '0.84rem',
+                    cursor: 'pointer',
+                    opacity: (submittingReport || !reportJustification.trim()) ? 0.5 : 1
+                  }}
+                >
+                  {submittingReport ? 'Envoi...' : 'Envoyer le signalement'}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -134,7 +134,8 @@ class PrestataireSerializer(serializers.ModelSerializer):
     class Meta:
         model = Prestataire
         fields = ['id', 'user', 'specialite', 'numero_flooz', 'numero_mix', 'photo', 'photo_url', 'solde',
-                  'services_count', 'note_moyenne', 'reservations_count', 'statut_activite', 'portfolio']
+                  'services_count', 'note_moyenne', 'reservations_count', 'statut_activite', 'portfolio',
+                  'type_abonnement', 'date_expiration_abonnement']
 
     def get_photo_url(self, obj):
         if obj.photo:
@@ -499,3 +500,29 @@ class PrestataireStatsSerializer(serializers.Serializer):
     solde = serializers.FloatField()
     statut_activite = serializers.CharField()
     portfolio = PrestatairePortfolioSerializer(many=True, required=False)
+    type_abonnement = serializers.CharField(required=False, default='gratuit')
+    date_expiration_abonnement = serializers.DateTimeField(allow_null=True, required=False)
+
+
+class SignalementSerializer(serializers.ModelSerializer):
+    client_username = serializers.CharField(source='client.user.username', read_only=True)
+    prestataire_username = serializers.CharField(source='prestataire.user.username', read_only=True)
+    prestataire_nom = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Signalement
+        fields = ['id', 'client', 'client_username', 'prestataire', 'prestataire_username', 'prestataire_nom', 'motif', 'justification', 'created_at']
+        read_only_fields = ['client']
+
+    def get_prestataire_nom(self, obj):
+        user = obj.prestataire.user
+        return user.get_full_name() or user.username
+
+
+class FavoriSerializer(serializers.ModelSerializer):
+    prestataire_details = PrestataireSerializer(source='prestataire', read_only=True)
+    
+    class Meta:
+        model = Favori
+        fields = ['id', 'client', 'prestataire', 'prestataire_details', 'created_at']
+        read_only_fields = ['client']

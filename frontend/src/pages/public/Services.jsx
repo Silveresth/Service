@@ -481,10 +481,31 @@ export default function Services() {
                             </div>
                           )
                         }
-                        <span className="sv-cat-badge">
-                          {svc.categorie?.nom || 'Général'}
-                        </span>
-                        {isMatch && (
+                         <span className="sv-cat-badge">
+                           {svc.categorie?.nom || 'Général'}
+                         </span>
+                         {svc.prestataire?.type_abonnement && svc.prestataire.type_abonnement !== 'gratuit' && (
+                           <span style={{
+                             position: 'absolute',
+                             top: 10,
+                             right: 10,
+                             background: svc.prestataire.type_abonnement === 'prestige' 
+                               ? 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)'
+                               : 'linear-gradient(135deg, #22c55e 0%, #15803d 100%)',
+                             color: 'white',
+                             padding: '4px 10px',
+                             borderRadius: '12px',
+                             fontSize: '0.65rem',
+                             fontWeight: 800,
+                             textTransform: 'uppercase',
+                             letterSpacing: '0.04em',
+                             boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+                             zIndex: 3
+                           }}>
+                             {svc.prestataire.type_abonnement}
+                           </span>
+                         )}
+                         {isMatch && (
                           <span className="sv-match-badge">
                             <i className="bi bi-stars" /> IA Recommandé
                           </span>
@@ -517,8 +538,14 @@ export default function Services() {
                               boxShadow: svc.prestataire?.statut_activite === 'occupe' ? '0 0 4px #f59e0b' : svc.prestataire?.statut_activite === 'hors_ligne' ? 'none' : '0 0 4px #22c55e'
                             }} />
                           </div>
-                          <span className="sv-provider-name" style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span className="sv-provider-name" style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             {svc.prestataire_nom || svc.prestataire?.user?.first_name || svc.prestataire?.user?.username || 'Prestataire'}
+                            {svc.prestataire?.type_abonnement === 'pro' && (
+                              <i className="bi bi-patch-check-fill" style={{ color: '#22c55e', fontSize: '0.85rem' }} title="Prestataire PRO" />
+                            )}
+                            {svc.prestataire?.type_abonnement === 'prestige' && (
+                              <i className="bi bi-gem" style={{ color: '#fbbf24', fontSize: '0.85rem' }} title="Prestataire PRESTIGE" />
+                            )}
                           </span>
                           {svc.note_avg && (
                             <span className="sv-rating" style={{ marginLeft: 'auto', background: '#fffbeb', color: '#b45309', padding: '2px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>

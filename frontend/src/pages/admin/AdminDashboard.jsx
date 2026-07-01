@@ -40,6 +40,7 @@ const QUICK_LINKS = [
   { to:'/admin/all-evaluations',  icon:'star-fill',        label:'Évaluations',   desc:'Avis et notes clients',     color:'#ec4899', bg:'#fce7f3' },
   { to:'/admin/all-categories',   icon:'tags-fill',        label:'Catégories',    desc:'Types de services',         color:'#6366f1', bg:'#e0e7ff' },
   { to:'/admin/all-ateliers',     icon:'geo-alt-fill',     label:'Ateliers',      desc:'Localisations',             color:'#14b8a6', bg:'#ccfbf1' },
+  { to:'/admin/all-signalements', icon:'exclamation-octagon-fill', label:'Signalements', desc:'Signalements clients',    color:'#ef4444', bg:'#fee2e2' },
 ];
 
 

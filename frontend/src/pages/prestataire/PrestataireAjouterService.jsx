@@ -5,6 +5,10 @@ import api from '../../api/axios';
 const PAS_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap');
 
+  .pas-page, .pas-page * {
+    box-sizing: border-box;
+  }
+
   .pas-page {
     background: #f0f8ff; min-height: 100vh; padding-bottom: 60px;
   }
@@ -48,7 +52,6 @@ const PAS_STYLES = `
   .pas-content {
     width: 100%; max-width: 800px; margin: -24px auto 0;
     padding: 0 16px; position: relative; z-index: 2;
-    box-sizing: border-box;
   }
   @media (max-width: 640px) {
     .pas-content { margin: -16px auto 0; padding: 0 12px; }
@@ -87,7 +90,7 @@ const PAS_STYLES = `
   .pas-required { color: #ef4444; }
 
   .pas-input-wrap {
-    display: flex; align-items: center;
+    display: flex; align-items: center; width: 100%;
     border: 1.5px solid #e2e8f0; border-radius: 12px; background: #fafbfc;
     transition: border-color .2s, box-shadow .2s, background .2s;
   }
@@ -100,7 +103,7 @@ const PAS_STYLES = `
   .pas-input {
     flex: 1; border: none; background: transparent;
     padding: 12px 14px; font-size: 0.9rem; color: #0c2340;
-    outline: none; font-family: inherit;
+    outline: none; font-family: inherit; min-width: 0;
   }
   .pas-input::placeholder { color: #9ca3af; }
   .pas-suffix { padding: 0 14px; color: #64748b; font-weight: 700; font-size: 0.88rem; flex-shrink: 0; }
@@ -199,7 +202,7 @@ const PAS_STYLES = `
   @keyframes pas-spin { to { transform: rotate(360deg); } }
 
   @media(max-width:560px) {
-    .pas-card-body { padding: 16px; }
+    .pas-card-body { padding: 12px; }
     .pas-hero { padding: 24px 0 44px; }
   }
 `;

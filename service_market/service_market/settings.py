@@ -239,6 +239,10 @@ MIX_ADMIN_NUM = config('MIX_ADMIN_NUM', default='93354922')
 FEE_PERCENT = 0.03  # 3% frais
 PHONE_PREFIX = '228'  # Togo
 
+# Configuration E-mail (fallback notifications hors-ligne)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@servicemarket.tg'
+
 # Logging
 import os as _os
 _os.makedirs(BASE_DIR / 'logs', exist_ok=True)

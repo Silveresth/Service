@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Geolocation } from '@capacitor/geolocation';
 import api from '../../api/axios';
@@ -26,11 +26,11 @@ const STYLES = `
 /* ── HERO ── */
 .at-hero {
   background: linear-gradient(135deg, #0c2340 0%, #0a3060 50%, #0369a1 100%);
-  padding: 60px 0 50px;
+  padding: 30px 0 24px;
   color: white;
   position: relative;
   overflow: hidden;
-  margin-bottom: -44px;
+  margin-bottom: -40px;
 }
 
 .at-hero::before {
@@ -507,9 +507,43 @@ const STYLES = `
 
 /* ── RESPONSIVE HERO ── */
 @media (max-width: 640px) {
-  .at-hero { padding: 40px 0 36px; }
-  .at-hero-kpis { gap: 16px; }
-  .at-filter-card { padding: 16px; border-radius: 20px; }
+  .at-hero { padding: 24px 0 16px !important; }
+  .at-hero-sub, .at-hero-eyebrow, .at-hero-kpis { display: none !important; }
+  .at-filter-card { padding: 12px; border-radius: 18px; margin-bottom: 16px; }
+  .at-search-input {
+    padding: 10px 36px 10px 38px !important;
+    font-size: 0.82rem !important;
+    border-radius: 12px !important;
+  }
+  .at-search-icon {
+    left: 14px !important;
+    font-size: 0.85rem !important;
+  }
+  .at-search-clear {
+    right: 10px !important;
+    width: 22px !important;
+    height: 22px !important;
+  }
+  .at-chip {
+    padding: 6px 12px !important;
+    font-size: 0.76rem !important;
+  }
+  .at-select {
+    padding: 8px 10px !important;
+    font-size: 0.78rem !important;
+    border-radius: 10px !important;
+  }
+  .at-filters-row {
+    gap: 8px !important;
+  }
+  .at-toggle-label {
+    font-size: 0.78rem !important;
+  }
+  .at-btn-locate {
+    padding: 8px 10px !important;
+    font-size: 0.78rem !important;
+    border-radius: 10px !important;
+  }
 }
 `;
 
@@ -527,6 +561,7 @@ export function CarteAteliers() {
   const [selectedAtelier, setSelectedAtelier] = useState(null);
   const [center, setCenter] = useState({ lat: 6.125580, lng: 1.232456 });
   const [googleZoom, setGoogleZoom] = useState(7);
+
 
   useEffect(() => {
     Promise.all([
@@ -579,7 +614,7 @@ export function CarteAteliers() {
     }
   }, []);
 
-  const locateMe = async () => {
+  const handleUseCurrentPosition = async () => {
     try {
       const coordinates = await Geolocation.getCurrentPosition();
       setCenter({ lat: coordinates.coords.latitude, lng: coordinates.coords.longitude });
@@ -594,6 +629,8 @@ export function CarteAteliers() {
       }
     }
   };
+
+  const locateMe = handleUseCurrentPosition;
 
   const resetFilters = () => {
     setSearch(''); setCatFiltre('all'); setFiltreVille('all');
@@ -1010,8 +1047,57 @@ export function AjouterAtelier() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+
   const set = f => e =>
     setForm(p => ({ ...p, [f]: e.type === 'checkbox' ? e.target.checked : e.target.value }));
+
+  const handleUseCurrentPosition = async () => {
+    let lat = null;
+    let lng = null;
+    try {
+      const coordinates = await Geolocation.getCurrentPosition();
+      lat = coordinates.coords.latitude;
+      lng = coordinates.coords.longitude;
+    } catch {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            const lat2 = pos.coords.latitude;
+            const lng2 = pos.coords.longitude;
+            setForm(p => ({ ...p, latitude: lat2.toFixed(6), longitude: lng2.toFixed(6) }));
+            if (mapRef.current) {
+              const latlng = [lat2, lng2];
+              mapRef.current.setView(latlng, 15);
+              if (markerRef.current) {
+                markerRef.current.setLatLng(latlng);
+              } else {
+                markerRef.current = window.L.marker(latlng).addTo(mapRef.current);
+              }
+            }
+          },
+          err => alert('Erreur de localisation : ' + err.message)
+        );
+        return;
+      } else {
+        alert("La géolocalisation n'est pas supportée par votre appareil.");
+        return;
+      }
+    }
+    if (lat && lng) {
+      setForm(p => ({ ...p, latitude: lat.toFixed(6), longitude: lng.toFixed(6) }));
+      if (mapRef.current) {
+        const latlng = [lat, lng];
+        mapRef.current.setView(latlng, 15);
+        if (markerRef.current) {
+          markerRef.current.setLatLng(latlng);
+        } else {
+          markerRef.current = window.L.marker(latlng).addTo(mapRef.current);
+        }
+      }
+    }
+  };
 
   useEffect(() => {
     if (!window.L) return;
@@ -1019,12 +1105,19 @@ export function AjouterAtelier() {
     if (existing && existing._leaflet_id) return;
     const map = window.L.map('map-ajouter').setView([6.125580, 1.232456], 7);
     window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
-    let marker = null;
+    mapRef.current = map;
+    
+    if (form.latitude && form.longitude) {
+      const latlng = [parseFloat(form.latitude), parseFloat(form.longitude)];
+      map.setView(latlng, 14);
+      markerRef.current = window.L.marker(latlng).addTo(map);
+    }
+
     map.on('click', e => {
       const { lat, lng } = e.latlng;
       setForm(p => ({ ...p, latitude: lat.toFixed(6), longitude: lng.toFixed(6) }));
-      if (marker) marker.setLatLng(e.latlng);
-      else marker = window.L.marker(e.latlng).addTo(map);
+      if (markerRef.current) markerRef.current.setLatLng(e.latlng);
+      else markerRef.current = window.L.marker(e.latlng).addTo(map);
     });
   }, []);
 
@@ -1081,15 +1174,43 @@ export function AjouterAtelier() {
                     <textarea value={form.adresse} onChange={set('adresse')} required rows={2} className="atf-input" style={{ resize: 'vertical' }} placeholder="Ex: Quartier Bè, près du marché, Lomé" />
                   </div>
 
-                  {/* Lat/Lng */}
-                  <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
-                    <div style={{ flex: 1 }}>
-                      <label className="atf-field-label">Latitude</label>
-                      <input type="number" step="0.000001" value={form.latitude} onChange={set('latitude')} className="atf-input" placeholder="6.125580" />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label className="atf-field-label">Longitude</label>
-                      <input type="number" step="0.000001" value={form.longitude} onChange={set('longitude')} className="atf-input" placeholder="1.232456" />
+                  {/* Lat/Lng and Geoloc Button */}
+                  <div style={{ marginBottom: 18 }}>
+                    <button
+                      type="button"
+                      onClick={handleUseCurrentPosition}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '12px',
+                        border: '1.5px solid #bae6fd',
+                        background: '#f0f9ff',
+                        color: '#0284c7',
+                        fontWeight: '800',
+                        fontSize: '0.88rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        marginBottom: '14px',
+                        fontFamily: 'inherit'
+                      }}
+                      onMouseOver={e => e.currentTarget.style.background = '#e0f2fe'}
+                      onMouseOut={e => e.currentTarget.style.background = '#f0f9ff'}
+                    >
+                      <i className="bi bi-geo-alt-fill" /> Utiliser ma position actuelle
+                    </button>
+                    <div style={{ display: 'flex', gap: 14 }}>
+                      <div style={{ flex: 1 }}>
+                        <label className="atf-field-label">Latitude</label>
+                        <input type="number" readOnly value={form.latitude} className="atf-input" style={{ background: '#f1f5f9', cursor: 'not-allowed' }} placeholder="Auto-détectée" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label className="atf-field-label">Longitude</label>
+                        <input type="number" readOnly value={form.longitude} className="atf-input" style={{ background: '#f1f5f9', cursor: 'not-allowed' }} placeholder="Auto-détectée" />
+                      </div>
                     </div>
                   </div>
 

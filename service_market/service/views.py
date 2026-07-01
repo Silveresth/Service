@@ -276,6 +276,21 @@ class ServiceViewSet(viewsets.ModelViewSet):
         prestataire, created = Prestataire.objects.get_or_create(user=self.request.user)
         if created:
             logger.info(f"Created missing Prestataire profile for user {self.request.user.username}")
+        
+        # Enforce subscription plan limits
+        current_count = Service.objects.filter(prestataire=prestataire).count()
+        plan = prestataire.type_abonnement
+        limit = 3
+        if plan == 'pro':
+            limit = 10
+        elif plan == 'prestige':
+            limit = 1000  # Virtual unlimited
+            
+        if current_count >= limit:
+            raise serializers.ValidationError({
+                'error': f"Limite de services atteinte pour votre forfait {plan.upper()} ({limit} services maximum). Veuillez mettre à niveau votre abonnement."
+            })
+            
         service = serializer.save(prestataire=prestataire)
         
         # Enregistrer les images additionnelles
@@ -345,6 +360,69 @@ class PrestataireViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         # Exclure les administrateurs (is_staff = True) de la liste publique des prestataires
         return Prestataire.objects.select_related('user').filter(user__is_staff=False)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def souscrire_abonnement(self, request):
+        """Allows a provider to purchase or upgrade/downgrade their subscription plan"""
+        try:
+            prestataire = Prestataire.objects.select_related('user').get(user=request.user)
+        except Prestataire.DoesNotExist:
+            return Response({'error': 'Profil prestataire non trouvé.'}, status=404)
+
+        plan = request.data.get('plan')
+        if plan not in ['gratuit', 'pro', 'prestige']:
+            return Response({'error': "Plan invalide. Choisissez 'gratuit', 'pro' ou 'prestige'."}, status=400)
+
+        # Downgrading to Gratuit is free and immediate
+        if plan == 'gratuit':
+            prestataire.type_abonnement = 'gratuit'
+            prestataire.date_expiration_abonnement = None
+            prestataire.save()
+            
+            try:
+                create_notification(
+                    request.user,
+                    "Votre abonnement a été réinitialisé à la formule gratuite.",
+                    "compte"
+                )
+            except Exception:
+                pass
+                
+            return Response(PrestataireSerializer(prestataire, context={'request': request}).data)
+
+        # Subscription costs
+        costs = {
+            'pro': 5000,
+            'prestige': 10000
+        }
+        cost = costs[plan]
+
+        if prestataire.solde < cost:
+            return Response({
+                'error': f"Solde insuffisant. Le coût de l'abonnement {plan.upper()} est de {cost:,} FCFA. Votre solde actuel est de {float(prestataire.solde):,} FCFA. Veuillez recharger votre compte."
+            }, status=400)
+
+        # Deduct cost from balance and set subscription parameters
+        from django.db import transaction
+        with transaction.atomic():
+            prestataire = Prestataire.objects.select_for_update().get(id=prestataire.id)
+            prestataire.solde -= cost
+            prestataire.type_abonnement = plan
+            from django.utils import timezone
+            prestataire.date_expiration_abonnement = timezone.now() + timezone.timedelta(days=30)
+            prestataire.save()
+
+        # Create notification for the provider
+        try:
+            create_notification(
+                request.user,
+                f"Félicitations ! Votre abonnement {plan.upper()} a été activé avec succès pour 30 jours (débit de {cost:,} FCFA).",
+                "compte"
+            )
+        except Exception:
+            pass
+
+        return Response(PrestataireSerializer(prestataire, context={'request': request}).data)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def stats(self, request):
@@ -469,6 +547,8 @@ class PrestataireViewSet(viewsets.ReadOnlyModelViewSet):
             'solde': float(prestataire.solde or 0),
             'statut_activite': prestataire.statut_activite,
             'portfolio': prestataire.portfolio.all(),
+            'type_abonnement': prestataire.type_abonnement,
+            'date_expiration_abonnement': prestataire.date_expiration_abonnement,
         }
 
         
@@ -1627,8 +1707,24 @@ def initier_paiement(request):
 
             service_obj = reservation.service
             prix   = float(service_obj.prix)
-            # Les 3% sont déduits du montant fixé par le prestataire (pas ajoutés au client)
-            frais  = round(prix * 0.03, 2)
+            
+            # Dynamic commission based on provider subscription
+            prestataire = service_obj.prestataire
+            plan = prestataire.type_abonnement
+            
+            from django.utils import timezone
+            if plan in ['pro', 'prestige'] and prestataire.date_expiration_abonnement and prestataire.date_expiration_abonnement < timezone.now():
+                plan = 'gratuit'
+                prestataire.type_abonnement = 'gratuit'
+                prestataire.save(update_fields=['type_abonnement'])
+                
+            commission_rate = 0.10
+            if plan == 'pro':
+                commission_rate = 0.03
+            elif plan == 'prestige':
+                commission_rate = 0.00
+                
+            frais  = round(prix * commission_rate, 2)
             montant_prestataire = round(prix - frais, 2)
             total  = int(prix)  # Le client paie exactement le prix fixé par le prestataire
             
@@ -2547,11 +2643,96 @@ def chatbot_view(request):
                     "- **[Plomberie](/services?q=plomberie)** | **[Électricité](/services?q=électricité)** | **[Ménage](/services?q=ménage)**"
                 )
 
-            bot_reply = reply.strip()
-
-        return Response({'reply': bot_reply})
+            return Response({'reply': bot_reply})
 
     except Exception as e:
         logger.error(f"Chatbot Exception: {str(e)}", exc_info=True)
         return Response({'reply': "Désolé, je rencontre une petite difficulté technique. N'hésitez pas à réécrire dans quelques instants !"})
+
+
+class SignalementViewSet(viewsets.ModelViewSet):
+    serializer_class = SignalementSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        from .models import Signalement, Client
+        user = self.request.user
+        if user.is_staff:
+            return Signalement.objects.select_related('client__user', 'prestataire__user').all()
+        try:
+            client = Client.objects.get(user=user)
+            return Signalement.objects.select_related('client__user', 'prestataire__user').filter(client=client)
+        except Client.DoesNotExist:
+            return Signalement.objects.none()
+
+    def perform_create(self, serializer):
+        from .models import Client, Signalement
+        try:
+            client = Client.objects.get(user=self.request.user)
+        except Client.DoesNotExist:
+            raise serializers.ValidationError({'error': "Seuls les clients peuvent signaler un prestataire."})
+            
+        signalement = serializer.save(client=client)
+        
+        # Notify all admins (is_staff = True)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        admins = User.objects.filter(is_staff=True)
+        prestataire_name = signalement.prestataire.user.get_full_name() or signalement.prestataire.user.username
+        
+        for admin in admins:
+            try:
+                create_notification(
+                    admin,
+                    f"SIGNALEMENT : Le prestataire {prestataire_name} a été signalé par {self.request.user.username} (Motif: {signalement.motif}).",
+                    "compte"
+                )
+            except Exception as e:
+                logger.error(f"Failed to notify admin {admin.username} for signalement: {e}")
+
+
+class FavoriViewSet(viewsets.ModelViewSet):
+    serializer_class = FavoriSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        from .models import Favori, Client
+        try:
+            client = Client.objects.get(user=self.request.user)
+            return Favori.objects.select_related('client__user', 'prestataire__user').filter(client=client)
+        except Client.DoesNotExist:
+            return Favori.objects.none()
+
+    def perform_create(self, serializer):
+        from .models import Client
+        try:
+            client = Client.objects.get(user=self.request.user)
+        except Client.DoesNotExist:
+            raise serializers.ValidationError({'error': "Seuls les clients ont une liste de favoris."})
+        serializer.save(client=client)
+
+    @action(detail=False, methods=['post'])
+    def toggle(self, request):
+        from .models import Client, Prestataire, Favori
+        try:
+            client = Client.objects.get(user=request.user)
+        except Client.DoesNotExist:
+            return Response({'error': "Seuls les clients ont des favoris."}, status=403)
+            
+        prestataire_id = request.data.get('prestataire')
+        if not prestataire_id:
+            return Response({'error': "ID du prestataire manquant."}, status=400)
+            
+        try:
+            prestataire = Prestataire.objects.get(id=prestataire_id)
+        except Prestataire.DoesNotExist:
+            return Response({'error': "Prestataire non trouvé."}, status=404)
+            
+        favori_qs = Favori.objects.filter(client=client, prestataire=prestataire)
+        if favori_qs.exists():
+            favori_qs.delete()
+            return Response({'status': 'removed', 'message': 'Prestataire retiré des favoris.'})
+        else:
+            Favori.objects.create(client=client, prestataire=prestataire)
+            return Response({'status': 'added', 'message': 'Prestataire ajouté aux favoris.'})
 
