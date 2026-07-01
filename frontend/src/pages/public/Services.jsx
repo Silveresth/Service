@@ -481,10 +481,6 @@ export default function Services() {
                             </div>
                           )
                         }
-                        
-                        <span className="sv-cat-badge">
-                          {svc.categorie?.nom || 'Général'}
-                        </span>
 
                         {isPremium && (
                           <span className={`sv-tier-badge badge-${abonneTier}`}>
@@ -523,6 +519,11 @@ export default function Services() {
                               <i className="bi bi-star-fill" /> {parseFloat(svc.note_avg).toFixed(1)}
                             </span>
                           )}
+                        </div>
+
+                        {/* Category text above title */}
+                        <div className="sv-card-category-text">
+                          {svc.categorie?.nom || 'Général'}
                         </div>
 
                         <h4 className="sv-card-title">{svc.nom}</h4>
