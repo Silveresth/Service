@@ -273,35 +273,28 @@ export default function Services() {
 
       <div className="sv-page">
 
-        {/* ── HERO ── */}
-        <div className="sv-hero">
-          <div className="sv-hero-orb1" />
-          <div className="sv-hero-orb2" />
-          <div className="container sv-hero-inner">
-            <div className="sv-hero-eyebrow">
-              <i className="bi bi-grid-3x3-gap-fill" style={{ color: '#38bdf8' }} />
-              Catalogue complet
-            </div>
-            <h1 className="sv-hero-title">
-              Tous les services<br />
-              <em>à portée de main</em>
-            </h1>
-            <p className="sv-hero-sub">
-              Réservez instantanément des professionnels certifiés au Togo.
-              Plomberie, électricité, menuiserie et bien plus.
-            </p>
-            <div className="sv-hero-kpis">
-              <div className="sv-kpi">
-                <span className="sv-kpi-val">{services.length || '—'}</span>
-                <span className="sv-kpi-lbl">Services</span>
+        {/* ── COMPACT HEADER ── */}
+        <div className="sv-compact-header">
+          <div className="sv-compact-header-orb" />
+          <div className="container sv-compact-header-inner">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <h1 className="sv-compact-title">
+                  Catalogue des <span className="highlight">Services</span>
+                </h1>
+                <p className="sv-compact-sub">
+                  Trouvez et réservez instantanément des professionnels certifiés au Togo.
+                </p>
               </div>
-              <div className="sv-kpi">
-                <span className="sv-kpi-val">{categories.length || '—'}</span>
-                <span className="sv-kpi-lbl">Catégories</span>
-              </div>
-              <div className="sv-kpi">
-                <span className="sv-kpi-val">⚡ IA</span>
-                <span className="sv-kpi-lbl">SmartMatch</span>
+              <div className="sv-compact-kpis">
+                <div className="sv-compact-kpi">
+                  <span className="sv-compact-kpi-val">{services.length || '—'}</span>
+                  <span className="sv-compact-kpi-lbl">Services</span>
+                </div>
+                <div className="sv-compact-kpi">
+                  <span className="sv-compact-kpi-val">{categories.length || '—'}</span>
+                  <span className="sv-compact-kpi-lbl">Catégories</span>
+                </div>
               </div>
             </div>
           </div>
@@ -461,12 +454,20 @@ export default function Services() {
                 : servicesFiltres.map((svc, idx) => {
                   const isMatch = matchIds.has(svc.id);
                   const gradIdx = (svc.id || 0) % GRADIENTS.length;
+                  const abonneTier = svc.prestataire?.type_abonnement || 'gratuit';
+                  const isPremium = abonneTier === 'pro' || abonneTier === 'prestige';
                   return (
                     <div
                       key={svc.id}
-                      className="sv-card"
+                      className={`sv-card ${abonneTier !== 'gratuit' ? `sv-premium-${abonneTier}` : ''} ${isMatch ? 'sv-matched-highlight' : ''}`}
                       style={{ animationDelay: `${Math.min(idx, 8) * 0.045}s` }}
                     >
+                      {isMatch && (
+                        <div className="sv-match-banner">
+                          <i className="bi bi-stars" /> IA RECOMMANDÉ
+                        </div>
+                      )}
+
                       {/* Image */}
                       <div className="sv-card-img">
                         {svc.image_url
@@ -477,80 +478,49 @@ export default function Services() {
                               style={{ background: GRADIENTS[gradIdx] }}
                             >
                               <i className={`bi ${svc.categorie?.icone || 'bi-briefcase'}`} />
-                              <span>{svc.categorie?.nom || 'Service'}</span>
                             </div>
                           )
                         }
-                         <span className="sv-cat-badge">
-                           {svc.categorie?.nom || 'Général'}
-                         </span>
-                         {svc.prestataire?.type_abonnement && svc.prestataire.type_abonnement !== 'gratuit' && (
-                           <span style={{
-                             position: 'absolute',
-                             top: 10,
-                             right: 10,
-                             background: svc.prestataire.type_abonnement === 'prestige' 
-                               ? 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)'
-                               : 'linear-gradient(135deg, #22c55e 0%, #15803d 100%)',
-                             color: 'white',
-                             padding: '4px 10px',
-                             borderRadius: '12px',
-                             fontSize: '0.65rem',
-                             fontWeight: 800,
-                             textTransform: 'uppercase',
-                             letterSpacing: '0.04em',
-                             boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
-                             zIndex: 3
-                           }}>
-                             {svc.prestataire.type_abonnement}
-                           </span>
-                         )}
-                         {isMatch && (
-                          <span className="sv-match-badge">
-                            <i className="bi bi-stars" /> IA Recommandé
-                          </span>
-                        )}
-                        {svc.disponibilite && (
-                          <span className="sv-dispo-badge">
-                            <span className="sv-dispo-dot" /> Disponible
+                        
+                        <span className="sv-cat-badge">
+                          {svc.categorie?.nom || 'Général'}
+                        </span>
+
+                        {isPremium && (
+                          <span className={`sv-tier-badge badge-${abonneTier}`}>
+                            {abonneTier === 'prestige' ? (
+                              <><i className="bi bi-gem" /> Prestige</>
+                            ) : (
+                              <><i className="bi bi-patch-check-fill" /> Pro</>
+                            )}
                           </span>
                         )}
                       </div>
 
                       {/* Body */}
                       <div className="sv-card-body">
-                        <div className="sv-card-provider" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                          <div style={{ position: 'relative', width: 22, height: 22, borderRadius: '50%', background: '#0284c7', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>
+                        {/* Provider information */}
+                        <div className="sv-provider-row">
+                          <div className="sv-provider-avatar-container">
                             {svc.prestataire?.photo_url ? (
-                              <img src={svc.prestataire.photo_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                              <img src={svc.prestataire.photo_url} alt="" className="sv-provider-avatar" />
                             ) : (
-                              (svc.prestataire_nom || svc.prestataire?.user?.first_name || svc.prestataire?.user?.username || 'P')[0].toUpperCase()
+                              <div className="sv-provider-avatar-text">
+                                {(svc.prestataire_nom || svc.prestataire?.user?.first_name || svc.prestataire?.user?.username || 'P')[0].toUpperCase()}
+                              </div>
                             )}
-                            <span style={{
-                              position: 'absolute',
-                              bottom: -2,
-                              right: -2,
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              background: svc.prestataire?.statut_activite === 'occupe' ? '#f59e0b' : svc.prestataire?.statut_activite === 'hors_ligne' ? '#94a3b8' : '#22c55e',
-                              border: '1.5px solid white',
-                              boxShadow: svc.prestataire?.statut_activite === 'occupe' ? '0 0 4px #f59e0b' : svc.prestataire?.statut_activite === 'hors_ligne' ? 'none' : '0 0 4px #22c55e'
-                            }} />
+                            {svc.disponibilite && (
+                              <span className="sv-provider-status-dot" title="Disponible" />
+                            )}
                           </div>
-                          <span className="sv-provider-name" style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          
+                          <span className="sv-provider-name-text">
                             {svc.prestataire_nom || svc.prestataire?.user?.first_name || svc.prestataire?.user?.username || 'Prestataire'}
-                            {svc.prestataire?.type_abonnement === 'pro' && (
-                              <i className="bi bi-patch-check-fill" style={{ color: '#22c55e', fontSize: '0.85rem' }} title="Prestataire PRO" />
-                            )}
-                            {svc.prestataire?.type_abonnement === 'prestige' && (
-                              <i className="bi bi-gem" style={{ color: '#fbbf24', fontSize: '0.85rem' }} title="Prestataire PRESTIGE" />
-                            )}
                           </span>
+
                           {svc.note_avg && (
-                            <span className="sv-rating" style={{ marginLeft: 'auto', background: '#fffbeb', color: '#b45309', padding: '2px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
-                              <i className="bi bi-star-fill" style={{ color: '#f59e0b', fontSize: '0.7rem' }} />
-                              {parseFloat(svc.note_avg).toFixed(1)}
+                            <span className="sv-card-rating-badge">
+                              <i className="bi bi-star-fill" /> {parseFloat(svc.note_avg).toFixed(1)}
                             </span>
                           )}
                         </div>
@@ -566,13 +536,13 @@ export default function Services() {
                             {svc.prix
                               ? <div className="sv-price-val">
                                   {parseFloat(svc.prix).toLocaleString('fr-FR')}
-                                  <small>FCFA</small>
+                                  <small> FCFA</small>
                                 </div>
                               : <div className="sv-price-devis">Sur devis</div>
                             }
                           </div>
                           <Link to={`/services/${svc.id}`} className="sv-btn-detail">
-                            Voir & Réserver <i className="bi bi-arrow-right" />
+                            Réserver <i className="bi bi-arrow-right-short" />
                           </Link>
                         </div>
                       </div>

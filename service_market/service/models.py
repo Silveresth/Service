@@ -169,7 +169,25 @@ class Paiement(models.Model):
         'Reservation', 
         on_delete=models.CASCADE, 
         related_name='paiement_set_associes',
-        verbose_name="Réservation liée"
+        verbose_name="Réservation liée",
+        null=True,
+        blank=True
+    )
+
+    prestataire = models.ForeignKey(
+        'Prestataire',
+        on_delete=models.CASCADE,
+        related_name='paiements_abonnement',
+        verbose_name="Prestataire payeur",
+        null=True,
+        blank=True
+    )
+
+    type_abonnement_vise = models.CharField(
+        max_length=50,
+        verbose_name="Type d'abonnement visé",
+        null=True,
+        blank=True
     )
 
     montant_total = models.DecimalField(

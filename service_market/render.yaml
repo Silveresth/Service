@@ -8,7 +8,7 @@ services:
     runtime: python
     plan: free
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --fake service migration_fidelite || true && python manage.py migrate"
-    startCommand: "gunicorn -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT service_market.asgi:application"
+    startCommand: "gunicorn -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT service_market.asgi:application --forwarded-allow-ips='*'"
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: service_market.settings

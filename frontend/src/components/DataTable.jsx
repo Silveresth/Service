@@ -97,35 +97,37 @@ export default function DataTable({
                 </td>
               ))}
               {(onEdit || onDelete || actions.length > 0) && (
-                <td style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {onEdit && (
-                    <button 
-                      onClick={() => onEdit(item)} 
-                      className="btn-outline-primary-custom btn-sm-custom"
-                      title="Modifier"
-                    >
-                      <i className="bi bi-pencil"></i>
-                    </button>
-                  )}
-                  {onDelete && (
-                    <button 
-                      onClick={() => setDeleteConfirm(item)} 
-                      className="btn-outline-danger-custom btn-sm-custom"
-                      title="Supprimer"
-                    >
-                      <i className="bi bi-trash"></i>
-                    </button>
-                  )}
-                  {actions.map((action, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => onAction?.(item, action.key)}
-                      className={`btn-outline-${action.color || 'primary'}-custom btn-sm-custom`}
-                      title={action.label}
-                    >
-                      <i className={`bi bi-${action.icon}`}></i>
-                    </button>
-                  ))}
+                <td>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {onEdit && (
+                      <button 
+                        onClick={() => onEdit(item)} 
+                        className="btn-outline-primary-custom btn-sm-custom"
+                        title="Modifier"
+                      >
+                        <i className="bi bi-pencil"></i>
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button 
+                        onClick={() => setDeleteConfirm(item)} 
+                        className="btn-outline-danger-custom btn-sm-custom"
+                        title="Supprimer"
+                      >
+                        <i className="bi bi-trash"></i>
+                      </button>
+                    )}
+                    {actions.map((action, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => onAction?.(item, action.key)}
+                        className={`btn-outline-${action.color || 'primary'}-custom btn-sm-custom`}
+                        title={action.label}
+                      >
+                        <i className={`bi bi-${action.icon}`}></i>
+                      </button>
+                    ))}
+                  </div>
                 </td>
               )}
             </tr>

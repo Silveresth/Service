@@ -68,30 +68,28 @@ export default function Prestataires() {
       
       <div className="pr2-page">
 
-        {/* ── HERO ── */}
-        <div className="pr2-hero">
-          <div className="container pr2-hero-inner">
-            <div className="pr2-hero-eyebrow">
-              <i className="bi bi-patch-check-fill" style={{ color: '#38bdf8' }} />
-              Artisans certifiés au Togo
-            </div>
-            <h1 className="pr2-hero-title">Trouvez le bon expert<br />pour chaque besoin</h1>
-            <p className="pr2-hero-sub">
-              Des prestataires qualifiés, évalués par des clients réels,
-              disponibles à Lomé, Kara, Kpalimé et partout au Togo.
-            </p>
-            <div className="pr2-hero-stats">
-              <div className="pr2-hero-stat">
-                <span className="pr2-hero-stat-val">{prestataires.length || '—'}</span>
-                <span className="pr2-hero-stat-lbl">Artisans actifs</span>
+        {/* ── COMPACT HEADER ── */}
+        <div className="pr2-compact-header">
+          <div className="pr2-compact-header-orb" />
+          <div className="container pr2-compact-header-inner">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <h1 className="pr2-compact-title">
+                  Nos <span className="highlight">Prestataires</span>
+                </h1>
+                <p className="pr2-compact-sub">
+                  Trouvez et réservez instantanément des artisans qualifiés et certifiés au Togo.
+                </p>
               </div>
-              <div className="pr2-hero-stat">
-                <span className="pr2-hero-stat-val">{specialites.length - 1 || '—'}</span>
-                <span className="pr2-hero-stat-lbl">Métiers</span>
-              </div>
-              <div className="pr2-hero-stat">
-                <span className="pr2-hero-stat-val">98%</span>
-                <span className="pr2-hero-stat-lbl">Satisfaction</span>
+              <div className="pr2-compact-kpis">
+                <div className="pr2-compact-kpi">
+                  <span className="pr2-compact-kpi-val">{prestataires.length || '—'}</span>
+                  <span className="pr2-compact-kpi-lbl">Artisans</span>
+                </div>
+                <div className="pr2-compact-kpi">
+                  <span className="pr2-compact-kpi-val">{specialites.length - 1 || '—'}</span>
+                  <span className="pr2-compact-kpi-lbl">Métiers</span>
+                </div>
               </div>
             </div>
           </div>

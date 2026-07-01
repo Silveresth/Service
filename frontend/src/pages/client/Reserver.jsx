@@ -423,7 +423,7 @@ export default function Reserver() {
                     <div style={{ animation: 'fadeUp .4s ease' }}>
                       {/* Résumé date sélectionnée */}
                       <div style={{ background: '#ecfdf5', border: '1.5px solid #a7f3d0', borderRadius: 16, padding: '14px 18px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 14 }}>
-                        <div style={{ background: '#d1fae5', width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyCenter: 'center', paddingLeft: 8 }}><i className="bi bi-calendar-check-fill" style={{ color: '#059669', fontSize: '1.25rem' }} /></div>
+                        <div style={{ background: '#d1fae5', width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className="bi bi-calendar-check-fill" style={{ color: '#059669', fontSize: '1.25rem' }} /></div>
                         <div>
                           <div style={{ fontWeight: 800, color: '#065f46', fontSize: '0.92rem' }}>{fmtDateFr(selDate)}</div>
                           <div style={{ color: '#059669', fontSize: '0.82rem', fontWeight: 700 }}><i className="bi bi-clock-fill me-1" />{selHeure}</div>

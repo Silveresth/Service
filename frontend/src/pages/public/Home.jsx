@@ -358,7 +358,7 @@ export default function Home() {
                   alignItems: 'center',
                   gap: 12
                 }}>
-                  <div style={{ background: '#fef08a', width: 38, height: 38, borderRadius: 12, display: 'flex', alignItems: 'center', justifyCenter: 'center', fontSize: '1.1rem', paddingLeft: 8 }}>⭐</div>
+                  <div style={{ background: '#fef08a', width: 38, height: 38, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>⭐</div>
                   <div>
                     <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>4.9/5 Général</div>
                     <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 600 }}>Plus de 800 avis</div>
@@ -380,7 +380,7 @@ export default function Home() {
                   alignItems: 'center',
                   gap: 12
                 }}>
-                  <div style={{ background: '#d1fae5', width: 38, height: 38, borderRadius: 12, display: 'flex', alignItems: 'center', justifyCenter: 'center', paddingLeft: 9 }}><i className="bi bi-shield-check" style={{ color: '#10b981', fontSize: '1.2rem' }}></i></div>
+                  <div style={{ background: '#d1fae5', width: 38, height: 38, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className="bi bi-shield-check" style={{ color: '#10b981', fontSize: '1.2rem' }}></i></div>
                   <div>
                     <div style={{ color: '#0c2340', fontWeight: 800, fontSize: '0.88rem' }}>Profils Vérifiés</div>
                     <div style={{ color: '#64748b', fontSize: '0.72rem', fontWeight: 600 }}>Identités 100% sûres</div>
@@ -563,7 +563,7 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12, marginTop: 'auto' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12, marginTop: 'auto' }}>
                         <div>
                           <div style={{ fontSize: '0.62rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>À partir de</div>
                           <span style={{ fontWeight: 800, color: '#38bdf8', fontSize: '0.98rem' }}>

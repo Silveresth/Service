@@ -23,112 +23,86 @@ const STYLES = `
   padding-bottom: 80px;
 }
 
-/* ── HERO ── */
-.at-hero {
+/* ── COMPACT HEADER ── */
+.at-compact-header {
   background: linear-gradient(135deg, #0c2340 0%, #0a3060 50%, #0369a1 100%);
-  padding: 30px 0 24px;
+  padding: 36px 0 28px;
   color: white;
   position: relative;
   overflow: hidden;
-  margin-bottom: -40px;
 }
-
-.at-hero::before {
-  content: '';
+.at-compact-header-orb {
   position: absolute;
-  top: -100px; right: -80px;
-  width: 500px; height: 500px;
+  top: -120px; right: -80px;
+  width: 450px; height: 450px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(56,189,248,0.15) 0%, transparent 70%);
-  filter: blur(60px);
+  filter: blur(50px);
   pointer-events: none;
 }
-
-.at-hero::after {
-  content: '';
-  position: absolute;
-  bottom: -60px; left: 20%;
-  width: 300px; height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%);
-  filter: blur(60px);
-  pointer-events: none;
-}
-
-.at-hero-inner {
+.at-compact-header-inner {
   position: relative;
   z-index: 2;
-  animation: at-up 0.6s cubic-bezier(0.22,1,0.36,1) both;
+  animation: at-up 0.5s cubic-bezier(0.22,1,0.36,1) both;
 }
-
-.at-hero-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255,255,255,0.1);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 30px;
-  padding: 6px 16px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  margin-bottom: 16px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.at-hero-title {
+.at-compact-title {
   font-family: 'Outfit', sans-serif;
   font-weight: 800;
-  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
-  margin: 0 0 10px;
-  letter-spacing: -0.02em;
+  font-size: 2.2rem;
+  margin: 0 0 6px;
+  letter-spacing: -0.025em;
   line-height: 1.2;
 }
-
-.at-hero-sub {
+.at-compact-title .highlight {
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.at-compact-sub {
   color: rgba(255,255,255,0.7);
   font-size: 0.95rem;
-  margin: 0 0 24px;
+  margin: 0;
   max-width: 480px;
-  line-height: 1.6;
 }
-
-.at-hero-kpis {
+.at-compact-kpis {
   display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
+  gap: 16px;
 }
-
-.at-hero-kpi {
+.at-compact-kpi {
   display: flex;
   flex-direction: column;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 6px 14px;
+  min-width: 90px;
+  align-items: center;
 }
-
-.at-hero-kpi-val {
+.at-compact-kpi-val {
   font-family: 'Outfit', sans-serif;
   font-weight: 800;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   color: #38bdf8;
   line-height: 1;
 }
-
-.at-hero-kpi-lbl {
-  font-size: 0.68rem;
+.at-compact-kpi-lbl {
+  font-size: 0.62rem;
   color: rgba(255,255,255,0.5);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
   font-weight: 700;
   margin-top: 3px;
+  letter-spacing: 0.04em;
 }
 
 /* ── FILTER CARD ── */
 .at-filter-card {
   background: white;
-  border-radius: 24px;
+  border-radius: 20px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 20px 40px rgba(12,35,64,0.06);
-  padding: 22px;
+  box-shadow: 0 12px 36px rgba(12,35,64,0.05);
+  padding: 20px;
+  margin-top: 24px;
   margin-bottom: 24px;
   position: relative;
   z-index: 5;
@@ -328,8 +302,8 @@ const STYLES = `
 
 @media (max-width: 768px) {
   .at-layout { flex-direction: column; }
-  .at-map-wrap { width: 100% !important; flex: none !important; }
-  .at-list-wrap { width: 100% !important; max-width: 100% !important; max-height: 320px !important; }
+  .at-map-wrap { width: 100% !important; flex: none !important; height: 35vh !important; position: static !important; }
+  .at-list-wrap { width: 100% !important; max-width: 100% !important; max-height: none !important; overflow-y: visible !important; }
 }
 
 .at-map-wrap {
@@ -656,30 +630,28 @@ export function CarteAteliers() {
       <style>{STYLES}</style>
       <div className="at-page">
 
-        {/* ── HERO ── */}
-        <div className="at-hero">
-          <div className="container at-hero-inner">
-            <div className="at-hero-eyebrow">
-              <i className="bi bi-geo-alt-fill" style={{ color: '#38bdf8' }} />
-              Carte interactive
-            </div>
-            <h1 className="at-hero-title">Ateliers & Experts<br />près de chez vous</h1>
-            <p className="at-hero-sub">
-              Localisez les ateliers de vos artisans, obtenez leur itinéraire GPS
-              et contactez-les directement.
-            </p>
-            <div className="at-hero-kpis">
-              <div className="at-hero-kpi">
-                <span className="at-hero-kpi-val">{ateliers.filter(a => a.est_actif).length}</span>
-                <span className="at-hero-kpi-lbl">Ateliers actifs</span>
+        {/* ── COMPACT HEADER ── */}
+        <div className="at-compact-header">
+          <div className="at-compact-header-orb" />
+          <div className="container at-compact-header-inner">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <h1 className="at-compact-title">
+                  Carte des <span className="highlight">Ateliers</span>
+                </h1>
+                <p className="at-compact-sub">
+                  Localisez les ateliers de vos artisans au Togo et obtenez leur itinéraire GPS.
+                </p>
               </div>
-              <div className="at-hero-kpi">
-                <span className="at-hero-kpi-val">{villes.length - 1}</span>
-                <span className="at-hero-kpi-lbl">Villes couvertes</span>
-              </div>
-              <div className="at-hero-kpi">
-                <span className="at-hero-kpi-val">{categories.length}</span>
-                <span className="at-hero-kpi-lbl">Catégories</span>
+              <div className="at-compact-kpis">
+                <div className="at-compact-kpi">
+                  <span className="at-compact-kpi-val">{ateliers.filter(a => a.est_actif).length}</span>
+                  <span className="at-compact-kpi-lbl">Ateliers</span>
+                </div>
+                <div className="at-compact-kpi">
+                  <span className="at-compact-kpi-val">{villes.length - 1}</span>
+                  <span className="at-compact-kpi-lbl">Villes</span>
+                </div>
               </div>
             </div>
           </div>

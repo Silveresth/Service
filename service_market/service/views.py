@@ -1142,7 +1142,9 @@ class SmartMatchViewSet(viewsets.ViewSet):
                     if budget_max is not None and float(service_prix) > float(budget):
                         prix_norm = 0.05
                     else:
-                        prix_norm = min(service_prix / (budget or 1.0), 1.0)
+                        # Correction : Plus le prix est bas par rapport au budget max, plus le score est élevé.
+                        ratio = service_prix / (budget or 1.0)
+                        prix_norm = 1.0 - (ratio * 0.8)
 
                     # Note (0..5) calculée sur les évaluations du service
                     avg = Evaluation.objects.filter(reservation__service=service).aggregate(_avg=Sum('note'))['_avg']
@@ -2414,11 +2416,12 @@ def chatbot_view(request):
         # (USE_OLLAMA=1), Groq est utilisé sinon dès que GROQ_API_KEY est
         # configuré, et on ne perd plus de temps à tenter Ollama "par défaut".
         GROQ_API_KEY = config('GROQ_API_KEY', default='')
+        MISTRAL_API_KEY = config('MISTRAL_API_KEY', default='')
         USE_OLLAMA = config('USE_OLLAMA', default=False, cast=bool)
 
-        if not USE_OLLAMA and not GROQ_API_KEY:
+        if not USE_OLLAMA and not GROQ_API_KEY and not MISTRAL_API_KEY:
             logger.warning(
-                "chatbot_view: ni GROQ_API_KEY ni USE_OLLAMA=1 ne sont configurés. "
+                "chatbot_view: ni GROQ_API_KEY, ni MISTRAL_API_KEY, ni USE_OLLAMA=1 ne sont configurés. "
                 "Le chatbot va systématiquement répondre en mode simulation "
                 "(réponses par mots-clés), jamais via un vrai LLM."
             )
@@ -2479,6 +2482,34 @@ def chatbot_view(request):
                     logger.error(f"Groq API Error {response.status_code}: {response.text}")
             except Exception as e:
                 logger.error(f"Erreur d'appel Groq: {str(e)}")
+
+        # C. Tentative avec Mistral (cloud) si les autres ne sont pas configurés
+        if not bot_reply and MISTRAL_API_KEY:
+            base_url = "https://api.mistral.ai/v1"
+            url = f"{base_url}/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {MISTRAL_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": config('MISTRAL_MODEL', default='open-mistral-7b'),
+                "messages": [
+                    {"role": "system", "content": f"{system_prompt}\n\nDONNÉES DE LA PLATEFORME :\n{context_data[:5000]}"},
+                    {"role": "user", "content": user_message}
+                ],
+                "temperature": 0.6,
+                "max_tokens": 1024
+            }
+            
+            logger.info(f"Appel Mistral pour message: {user_message[:50]}...")
+            try:
+                response = requests.post(url, headers=headers, json=payload, timeout=15)
+                if response.status_code == 200:
+                    bot_reply = response.json()['choices'][0]['message']['content']
+                else:
+                    logger.error(f"Mistral API Error {response.status_code}: {response.text}")
+            except Exception as e:
+                logger.error(f"Erreur d'appel Mistral: {str(e)}")
 
         # C. Fallback Simulation (si aucun LLM n'est opérationnel ou disponible)
         if not bot_reply:
@@ -2643,7 +2674,9 @@ def chatbot_view(request):
                     "- **[Plomberie](/services?q=plomberie)** | **[Électricité](/services?q=électricité)** | **[Ménage](/services?q=ménage)**"
                 )
 
-            return Response({'reply': bot_reply})
+            return Response({'reply': reply})
+
+        return Response({'reply': bot_reply})
 
     except Exception as e:
         logger.error(f"Chatbot Exception: {str(e)}", exc_info=True)

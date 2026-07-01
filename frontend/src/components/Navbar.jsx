@@ -631,7 +631,8 @@ const NAVBAR_STYLES = `
   .nb-inner { padding: 0 16px; }
   .nb-auth-login { padding: 7px 12px; font-size: 0.82rem; }
   .nb-auth-register { padding: 7px 14px; font-size: 0.82rem; }
-  .nb-notif-panel {
+  .nb-notif-panel,
+  .nb-user-panel {
     position: fixed;
     top: 64px;
     right: 12px;
