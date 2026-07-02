@@ -515,20 +515,6 @@ export default function Register() {
         return;
       }
 
-      // Cas particulier : "nom d'utilisateur / email déjà pris". Comme on vient
-      // de soumettre ces informations à l'instant, c'est très probablement le
-      // signe que le compte a déjà été créé (ex: une tentative précédente a
-      // réussi côté serveur malgré un timeout côté client). On redirige donc
-      // aussi vers la connexion plutôt que de bloquer l'utilisateur ici.
-      if (status === 400 && data && typeof data === 'object') {
-        const text = JSON.stringify(data).toLowerCase();
-        if (text.includes('déjà pris') || text.includes('déjà') || text.includes('existe déjà')) {
-          setLoading(false);
-          navigate('/login');
-          return;
-        }
-      }
-
       // Si le corps n'est pas un objet JSON exploitable (ex: string), on ne l'affiche jamais.
       if (!data || typeof data !== 'object') {
         setGlobalError('Une erreur est survenue. Vérifiez vos informations.');
@@ -545,6 +531,15 @@ export default function Register() {
         const fieldErrors = Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v[0] : v}`).join(' | ');
         msg = fieldErrors || 'Une erreur est survenue. Vérifiez vos informations.';
         setErrors(data);
+
+        // Repositionne sur l'étape contenant l'erreur pour que l'utilisateur la voie
+        if (data.username || data.email || data.first_name || data.last_name) {
+          setStep(0);
+        } else if (data.telephone || data.adresse) {
+          setStep(1);
+        } else if (data.password || data.password_confirm) {
+          setStep(2);
+        }
       }
       setGlobalError(msg || 'Une erreur est survenue. Vérifiez vos informations.');
     } finally { setLoading(false); }
