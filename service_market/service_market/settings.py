@@ -118,7 +118,10 @@ GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
 # Doit être ajouté dans l'URL de callback configurée côté PayGate, ex:
 # https://apk-back.onrender.com/api/paiement/callback/?secret=XXXX
 PAYGATE_CALLBACK_SECRET = config('PAYGATE_CALLBACK_SECRET', default='')
-PAYGATE_CALLBACK_PATH = "/api/paiement/callback/" 
+PAYGATE_CALLBACK_PATH = "/api/paiement/callback/"
+
+# Activer la simulation des paiements sans activer DEBUG=True (pour test sur Render)
+SIMULATE_PAYMENTS = config('SIMULATE_PAYMENTS', default=False, cast=bool) 
 
 # ─── CHANNELS (WebSocket) ─────────────────────────────────────────────────────
 ASGI_APPLICATION = 'service_market.asgi.application'

@@ -23,15 +23,26 @@ const SmartMatchButton = ({ onMatches, setMatches, setShowModal, categories = []
 
   const getCurrentLocation = async () => {
     try {
+      // Vérifier et demander les permissions de localisation sur mobile
+      const permStatus = await Geolocation.checkPermissions();
+      if (permStatus.location !== 'granted' && permStatus.coarseLocation !== 'granted') {
+        const reqStatus = await Geolocation.requestPermissions();
+        if (reqStatus.location !== 'granted' && reqStatus.coarseLocation !== 'granted') {
+          throw new Error('geoloc_permission_denied');
+        }
+      }
       const coordinates = await Geolocation.getCurrentPosition();
       return { lat: coordinates.coords.latitude, lon: coordinates.coords.longitude };
     } catch (e) {
       console.warn('Capacitor Geolocation error in SmartMatch, falling back to Web API:', e);
       return new Promise((resolve, reject) => {
-        if (!navigator.geolocation) { reject('Géolocalisation non supportée.'); return; }
+        if (!navigator.geolocation) {
+          reject('Géolocalisation non supportée.');
+          return;
+        }
         navigator.geolocation.getCurrentPosition(
           pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-          err => reject(err.message)
+          err => reject(err)
         );
       });
     }
@@ -69,9 +80,12 @@ const SmartMatchButton = ({ onMatches, setMatches, setShowModal, categories = []
         setStep('error');
       }
     } catch (err) {
-      const msg = typeof err === 'string' && err.toLowerCase().includes('geoloc')
-        ? 'Localisation refusée. Activez-la dans votre navigateur.'
-        : 'Erreur réseau. Vérifiez votre connexion.';
+      console.error('[smartmatch] error:', err);
+      const errMsg = (typeof err === 'string' ? err : err?.message || JSON.stringify(err) || '').toLowerCase();
+      const isGeolocError = errMsg.includes('geoloc') || errMsg.includes('permission') || errMsg.includes('location') || errMsg.includes('position') || errMsg.includes('denied');
+      const msg = isGeolocError
+        ? 'Localisation refusée ou désactivée. Veuillez autoriser la localisation GPS dans les paramètres de votre appareil et activer le GPS.'
+        : 'Erreur de connexion. Veuillez vérifier votre connexion réseau.';
       setError(msg);
       setStep('error');
     }

@@ -22,6 +22,21 @@ allprojects {
         google()
         mavenCentral()
     }
+
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                signingConfigs {
+                    debug {
+                        storeFile file("${rootProject.projectDir}/debug.keystore")
+                        storePassword 'android'
+                        keyAlias 'androiddebugkey'
+                        keyPassword 'android'
+                    }
+                }
+            }
+        }
+    }
 }
 
 task clean(type: Delete) {

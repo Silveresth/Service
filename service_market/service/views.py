@@ -1733,8 +1733,8 @@ def initier_paiement(request):
             reservation.montant = total
             reservation.save()
 
-            # ── MODE SIMULATION (DEBUG) ──────────────────────────────
-            if settings.DEBUG:
+            # ── MODE SIMULATION (DEBUG ou SIMULATE_PAYMENTS) ──────────
+            if settings.DEBUG or getattr(settings, 'SIMULATE_PAYMENTS', False):
                 paiement = Paiement.objects.create(
                     reservation=reservation,
                     methode=network.lower() if network else 'flooz',
