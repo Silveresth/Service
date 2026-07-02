@@ -33,7 +33,9 @@ const NAVBAR_STYLES = `
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
-  padding: 0;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
   transition: background 0.3s;
 }
 
@@ -548,7 +550,10 @@ const NAVBAR_STYLES = `
 .nb-drawer-overlay {
   display: none;
   position: fixed;
-  inset: 64px 0 0;
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.6);
   z-index: 190;
   backdrop-filter: blur(4px);
@@ -556,7 +561,7 @@ const NAVBAR_STYLES = `
 
 .nb-drawer {
   position: fixed;
-  top: 64px;
+  top: calc(64px + env(safe-area-inset-top, 0px));
   left: 0;
   right: 0;
   background: #0a1220;
@@ -629,17 +634,28 @@ const NAVBAR_STYLES = `
 
 @media (max-width: 600px) {
   .nb-inner { padding: 0 16px; }
+  .nb-logo { margin-right: 16px; }
   .nb-auth-login { padding: 7px 12px; font-size: 0.82rem; }
   .nb-auth-register { padding: 7px 14px; font-size: 0.82rem; }
   .nb-notif-panel,
   .nb-user-panel {
     position: fixed;
-    top: 64px;
+    top: calc(64px + env(safe-area-inset-top, 0px));
     right: 12px;
     left: 12px;
     width: auto;
     max-width: none;
   }
+}
+
+@media (max-width: 500px) {
+  .nb-actions .nb-auth-text { display: none; }
+  .nb-actions .nb-auth-login,
+  .nb-actions .nb-auth-register {
+    padding: 8px 10px;
+    font-size: 0.88rem;
+  }
+  .nb-inner { padding: 0 12px; }
 }
 `;
 
@@ -904,10 +920,10 @@ export default function Navbar() {
               ) : (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <Link to="/login" className="nb-auth-login">
-                    <i className="bi bi-box-arrow-in-right" /> Connexion
+                    <i className="bi bi-box-arrow-in-right" /> <span className="nb-auth-text">Connexion</span>
                   </Link>
                   <Link to="/register" className="nb-auth-register">
-                    <i className="bi bi-person-plus" /> S'inscrire
+                    <i className="bi bi-person-plus" /> <span className="nb-auth-text">S'inscrire</span>
                   </Link>
                 </div>
               )}

@@ -32,12 +32,12 @@ CORS_ALLOWED_ORIGINS = [
 # Schémas additionnels nécessaires pour l'app mobile Capacitor.
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^capacitor://.*$',
+    r'^https?://localhost(:[0-9]+)?$',
     r'^https://.*\.onrender\.com$',
 ]
 if DEBUG:
     CORS_ALLOWED_ORIGINS += ['http://localhost:3000', 'http://127.0.0.1:3000']
 CORS_ALLOW_CREDENTIALS = True
-
 # Hôtes autorisés à servir des requêtes (Host header). En prod, on liste
 # explicitement les domaines au lieu d'accepter n'importe quel Host (qui
 # ouvre la porte à des attaques de type "host header poisoning").

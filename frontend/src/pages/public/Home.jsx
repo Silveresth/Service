@@ -191,6 +191,18 @@ export default function Home() {
     );
   }, [allServices]);
 
+  const recommendedServices = useMemo(() => {
+    const pro = allServices.filter(s => 
+      s.prestataire && 
+      (s.prestataire.type_abonnement === 'pro' || s.prestataire.type_abonnement === 'prestige')
+    );
+    const standard = allServices.filter(s => 
+      !s.prestataire || 
+      (s.prestataire.type_abonnement !== 'pro' && s.prestataire.type_abonnement !== 'prestige')
+    );
+    return [...pro, ...standard].slice(0, 6);
+  }, [allServices]);
+
   useEffect(() => {
     if (testimonials.length <= 1) return;
     const timer = setInterval(() => {
@@ -651,7 +663,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="home-services-grid">
-              {services.map((s, i) => (
+              {recommendedServices.map((s, i) => (
                 <div key={s.id} className="hsvc" style={{ 
                   background: '#fff', 
                   borderRadius: 22, 
@@ -672,6 +684,29 @@ export default function Home() {
                     <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(12, 35, 64, 0.85)', backdropFilter: 'blur(8px)', color: '#fff', padding: '4px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 800, border: '1px solid rgba(255,255,255,0.1)' }}>
                       {s.categorie?.nom || 'Général'}
                     </div>
+                    {s.prestataire && (s.prestataire.type_abonnement === 'pro' || s.prestataire.type_abonnement === 'prestige') && (
+                      <div style={{ 
+                        position: 'absolute', 
+                        top: 12, 
+                        right: 12, 
+                        background: s.prestataire.type_abonnement === 'prestige' 
+                          ? 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)' 
+                          : 'linear-gradient(135deg, #22c55e 0%, #15803d 100%)', 
+                        color: '#fff', 
+                        padding: '4px 10px', 
+                        borderRadius: 20, 
+                        fontSize: '0.68rem', 
+                        fontWeight: 800, 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}>
+                        <i className={`bi ${s.prestataire.type_abonnement === 'prestige' ? 'bi-star-fill' : 'bi-patch-check-fill'}`} />
+                        {s.prestataire.type_abonnement === 'prestige' ? 'Prestige' : 'Pro'}
+                      </div>
+                    )}
                   </div>
 
                   {/* Détails du Service */}

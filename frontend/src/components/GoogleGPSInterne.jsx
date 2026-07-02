@@ -96,7 +96,7 @@ export default function GoogleGPSInterne({ atelier, onClose }) {
   const watchIdRef = useRef(null);
 
   // Clé : ne pas mettre en dur en prod
-  const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || 'AlzaSyBVTImZxaGl9u5XE4N8AOj5s39u9kCdnqo';
+  const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || 'AIzaSyBVTImZxaGl9u5XE4N8AOj5s39u9kCdnqo';
 
 
   const destLat = parseFloat(atelier?.latitude);
