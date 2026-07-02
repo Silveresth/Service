@@ -1,6 +1,16 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/axios';
+import '../../styles/services.css';
+
+const GRADIENTS = [
+  'linear-gradient(135deg, #0f172a 0%, #0284c7 100%)',
+  'linear-gradient(135deg, #0c2340 0%, #4f46e5 100%)',
+  'linear-gradient(135deg, #0f172a 0%, #059669 100%)',
+  'linear-gradient(135deg, #1e1b4b 0%, #db2777 100%)',
+  'linear-gradient(135deg, #1a0a2e 0%, #7c3aed 100%)',
+  'linear-gradient(135deg, #0c2340 0%, #d97706 100%)',
+];
 
 const ANIM = `
 @keyframes fadeUp  { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
@@ -662,83 +672,99 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <div className="home-services-grid">
-              {recommendedServices.map((s, i) => (
-                <div key={s.id} className="hsvc" style={{ 
-                  background: '#fff', 
-                  borderRadius: 22, 
-                  overflow: 'hidden', 
-                  border: '1px solid #e2e8f0', 
-                  boxShadow: '0 10px 25px rgba(2,132,199,0.04)', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  animation: `fadeUp .5s ease ${i * 0.08}s both` 
-                }}>
-                  {/* Image & Badge */}
-                  <div className="hsvc-img-box" style={{ overflow: 'hidden', background: 'linear-gradient(135deg, #e0f2fe, #f0f9ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
-                    {s.image_url ? (
-                      <img src={s.image_url} alt={s.nom} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <i className={`bi ${s.categorie?.icone || 'bi-briefcase'}`} style={{ fontSize: '3.6rem', color: '#0284c7', opacity: 0.35 }} />
-                    )}
-                    <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(12, 35, 64, 0.85)', backdropFilter: 'blur(8px)', color: '#fff', padding: '4px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 800, border: '1px solid rgba(255,255,255,0.1)' }}>
-                      {s.categorie?.nom || 'Général'}
-                    </div>
-                    {s.prestataire && (s.prestataire.type_abonnement === 'pro' || s.prestataire.type_abonnement === 'prestige') && (
-                      <div style={{ 
-                        position: 'absolute', 
-                        top: 12, 
-                        right: 12, 
-                        background: s.prestataire.type_abonnement === 'prestige' 
-                          ? 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)' 
-                          : 'linear-gradient(135deg, #22c55e 0%, #15803d 100%)', 
-                        color: '#fff', 
-                        padding: '4px 10px', 
-                        borderRadius: 20, 
-                        fontSize: '0.68rem', 
-                        fontWeight: 800, 
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
-                      }}>
-                        <i className={`bi ${s.prestataire.type_abonnement === 'prestige' ? 'bi-star-fill' : 'bi-patch-check-fill'}`} />
-                        {s.prestataire.type_abonnement === 'prestige' ? 'Prestige' : 'Pro'}
-                      </div>
-                    )}
-                  </div>
+            <div className="sv-grid">
+              {recommendedServices.map((s, i) => {
+                const abonneTier = s.prestataire?.type_abonnement || 'gratuit';
+                const isPremium = abonneTier === 'pro' || abonneTier === 'prestige';
+                const gradIdx = (s.id || 0) % GRADIENTS.length;
+                return (
+                  <div
+                    key={s.id}
+                    className={`sv-card ${abonneTier !== 'gratuit' ? `sv-premium-${abonneTier}` : ''}`}
+                    style={{ animationDelay: `${Math.min(i, 8) * 0.045}s` }}
+                  >
+                    {/* Image */}
+                    <div className="sv-card-img">
+                      {s.image_url ? (
+                        <img src={s.image_url} alt={s.nom} />
+                      ) : (
+                        <div
+                          className="sv-card-img-placeholder"
+                          style={{ background: GRADIENTS[gradIdx] }}
+                        >
+                          <i className={`bi ${s.categorie?.icone || 'bi-briefcase'}`} />
+                        </div>
+                      )}
 
-                  {/* Détails du Service */}
-                  <div className="hsvc-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <h5 className="hsvc-title" style={{ margin: 0, fontWeight: 800, color: '#0c2340', lineHeight: 1.35 }}>{s.nom}</h5>
-                    <p className="hsvc-desc" style={{ margin: 0, color: '#64748b', fontSize: '0.85rem', lineHeight: 1.6, flex: 1 }}>
-                      {s.description?.split(' ').slice(0, 16).join(' ')}{s.description?.split(' ').length > 16 ? '…' : ''}
-                    </p>
-                    
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1.5px solid #f1f5f9', paddingTop: 14, marginTop: 4 }}>
-                      <div>
-                        <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>À partir de</div>
-                        <span className="hsvc-price" style={{ fontWeight: 900, color: '#0284c7' }}>
-                          {parseFloat(s.prix).toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>FCFA</span>
+                      {isPremium && (
+                        <span className={`sv-tier-badge badge-${abonneTier}`}>
+                          {abonneTier === 'prestige' ? (
+                            <><i className="bi bi-gem" /> Prestige</>
+                          ) : (
+                            <><i className="bi bi-patch-check-fill" /> Pro</>
+                          )}
                         </span>
+                      )}
+                    </div>
+
+                    {/* Body */}
+                    <div className="sv-card-body">
+                      {/* Provider information */}
+                      <div className="sv-provider-row">
+                        <div className="sv-provider-avatar-container">
+                          {s.prestataire?.photo_url ? (
+                            <img src={s.prestataire.photo_url} alt="" className="sv-provider-avatar" />
+                          ) : (
+                            <div className="sv-provider-avatar-text">
+                              {(s.prestataire_nom || s.prestataire?.user?.first_name || s.prestataire?.user?.username || 'P')[0].toUpperCase()}
+                            </div>
+                          )}
+                          {s.disponibilite && (
+                            <span className="sv-provider-status-dot" title="Disponible" />
+                          )}
+                        </div>
+
+                        <span className="sv-provider-name-text">
+                          {s.prestataire_nom || s.prestataire?.user?.first_name || s.prestataire?.user?.username || 'Prestataire'}
+                        </span>
+
+                        {s.note_avg && (
+                          <span className="sv-card-rating-badge">
+                            <i className="bi bi-star-fill" /> {parseFloat(s.note_avg).toFixed(1)}
+                          </span>
+                        )}
                       </div>
-                      <Link to={`/services/${s.id}`} className="hsvc-btn" style={{ 
-                        textDecoration: 'none', 
-                        background: 'linear-gradient(135deg, #0c2340, #0284c7)', 
-                        color: '#fff', 
-                        fontWeight: 800, 
-                        display: 'inline-flex', 
-                        alignItems: 'center', 
-                        gap: 6,
-                        boxShadow: '0 4px 12px rgba(12,35,64,0.15)'
-                      }}>
-                        Réserver <i className="bi bi-arrow-right" />
-                      </Link>
+
+                      {/* Category text above title */}
+                      <div className="sv-card-category-text">
+                        {s.categorie?.nom || 'Général'}
+                      </div>
+
+                      <h4 className="sv-card-title">{s.nom}</h4>
+                      <p className="sv-card-desc">
+                        {s.description || 'Aucune description disponible pour ce service.'}
+                      </p>
+
+                      <div className="sv-card-footer">
+                        <div>
+                          <div className="sv-price-lbl">Tarif indicatif</div>
+                          {s.prix ? (
+                            <div className="sv-price-val">
+                              {parseFloat(s.prix).toLocaleString('fr-FR')}
+                              <small> FCFA</small>
+                            </div>
+                          ) : (
+                            <div className="sv-price-devis">Sur devis</div>
+                          )}
+                        </div>
+                        <Link to={`/services/${s.id}`} className="sv-btn-detail">
+                          Réserver <i className="bi bi-arrow-right-short" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
